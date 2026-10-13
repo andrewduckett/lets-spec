@@ -8,59 +8,28 @@ artifacts:
     template: brainstorm.md
     instruction: |
       Shape the story with the user before any spec is written. One change
-      delivers one story.
+      delivers one story. Run the `brainstorm-the-story` skill: it says how to
+      question the user, how to fill the ledger and when to split the story.
 
-      Be a thinking partner, not a form to fill in:
-      - Grounded: read the code, tests and specs before you ask. Run
-        `openspec list --specs` for the project's capabilities, and read
-        each one the story touches in full with
-        `openspec show <spec-id> --type spec`. Never ask the user for a
-        fact you can check.
-      - Skeptical: question the story's assumptions, the user's and your
-        own. Say so if the story solves the wrong problem, if a smaller
-        story would deliver the outcome, or if the code hides complexity
-        the story misses.
-      - Honest: if something is unclear, dig deeper; never fake
-        understanding. Never invent the user's intent, priorities or
-        constraints: ask.
-      - Visual: when a flow, a set of states or a choice is hard to hold in
-        words, draw it. Use plain ASCII only (`+ - | --> v`), since other
-        characters can misalign in a terminal.
-
-      1. Find the story. lets-build picks and claims it, and names the
-         change after it, before it creates the change. Use the issue you
-         were given. Otherwise look for an open issue assigned to you whose
-         title starts with the change's name and ` — `: that is this
-         change's story. If there is none, stop: say that a change starts
-         from the `lets-build` skill, which picks and claims its story.
-      2. Read the story packet: the issue body.
-      3. Grill the user until you share one understanding of the story:
-         - Ask one question at a time, with your recommended answer. Say
-           why it matters: the decision it settles.
-         - Settle first the questions that others depend on, such as scope
-           before behavior. If an answer changes an earlier one, go back to
-           it.
-         - Skip questions whose answer would not change the plan.
-         - Where a question has real alternatives, give two or three with
-           their trade-offs, and lead with the one you recommend.
-         - Settle scope, behavior and acceptance: the what and the why. This
-           flow has no design step, so settle only as much of the how as the
-           tasks need.
-      4. Write the first line, `**Why:**`, in one sentence: the problem this
-         change solves, and why now. This flow has no other place for it.
-      5. Write the ledger with the template: one row per resolved question.
-         Source is `User` when the user decided, `Evidence: <where>` when the
-         code or a document settled it, and `Assumption` when neither did.
-         Silence is not agreement: a recommendation the user did not
-         accept is an `Assumption`.
-         Keep each row to one line.
-      6. List the changes from the story: what was cut, added or split out.
-         File split-out work as a new issue with lets-shape's story
-         template, set its kind and priority with
-         `bash .agents/skills/lets-shape/scripts/backlog.sh`, and link it.
-      7. Show the Why line and the ledger, and ask the user to confirm them.
-         Only then change the last line to `Confirmed by user: yes`. Until
-         then it stays `no`.
+      1. Find the story. `lets-build` picked and claimed it, and named the
+         change after it. Use the issue you were given. Otherwise look for an
+         open issue assigned to you whose title starts with the change's name
+         and ` — `. If there is none, stop: a change starts from the
+         `lets-build` skill, which picks and claims its story.
+      2. Read the story packet: the issue body. Then read the code, tests and
+         specs it touches. `openspec list --specs` lists the project's
+         capabilities, and `openspec show <spec-id> --type spec` prints one.
+      3. Question the user as the skill says, until you share one
+         understanding of scope, behavior and acceptance. This flow has no
+         design step, so settle as much of the how as the tasks will need.
+      4. Write brainstorm.md from the template. Its first line is `**Why:**`
+         and one sentence: the problem this change solves, and why now. This
+         flow has no other place for it. Then the story line, one ledger row
+         per resolved question, and the changes from the story. File any
+         split-out work as a new issue, as the skill says.
+      5. Show the Why line, the ledger and the changes, and ask the user to
+         confirm them. Only then change the last line to
+         `Confirmed by user: yes`. Until then it stays `no`.
 
       Commit brainstorm.md on its own as `docs:`. Then push the branch and
       open a draft pull request whose description says `Closes #<n>`.

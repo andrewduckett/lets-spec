@@ -4,10 +4,25 @@
 {
   standard = {
     schema = "standard";
-    skills = [ "lets-build" "test-driven-development" "peer-plan-review" "peer-code-review" ];
+    skills = [
+      "lets-build"
+      "brainstorm-the-story"
+      "writing-specs"
+      "writing-adrs"
+      "writing-tasks"
+      "test-driven-development"
+      "peer-plan-review"
+      "peer-code-review"
+    ];
   };
   minimal = {
     schema = "minimal";
-    skills = [ "lets-build" "test-driven-development" ];
+    skills = [
+      "lets-build"
+      "brainstorm-the-story"
+      "writing-specs"
+      "writing-tasks"
+      "test-driven-development"
+    ];
   };
 }

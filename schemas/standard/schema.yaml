@@ -7,47 +7,30 @@ artifacts:
     description: Decision ledger from grilling the story with the user, before any plan is written
     template: brainstorm.md
     instruction: |
-      Be a thinking partner, not a form to fill in:
-      - Grounded: read the code, tests and specs before you ask. Run `openspec list --specs` for the project's
-        capabilities, and read each one the story touches in full with `openspec show <spec-id> --type spec`. Never
-        ask the user for a fact you can check.
-      - Patient: don't rush to conclusions, let the shape of the problem emerge
-      - Skeptical: question the story's assumptions, the user's and your own. Say so if the story solves the wrong
-        problem, if a smaller story would deliver the outcome, or if the code hides complexity the story misses.
-      - Honest: if something is unclear, dig deeper; never fake understanding. Never invent the user's intent,
-        priorities or constraints: ask.
-      - Visual: when a flow, a set of states or a choice is hard to hold in words, draw it. Use plain ASCII only
-        (`+ - | --> v`), since other characters can misalign in a terminal.
+      Shape the story with the user before any plan is written. One change
+      delivers one story. Run the `brainstorm-the-story` skill: it says how to
+      question the user, how to fill the ledger and when to split the story.
 
-      At the start of exploring any new feature, open problem, or requirement, you MUST make an explicit decision: **Is a brainstorm necessary?**
+      1. Find the story. `lets-build` picked and claimed it, and named the
+         change after it. Use the issue you were given. Otherwise look for an
+         open issue assigned to you whose title starts with the change's name
+         and ` — `. If there is none, stop: a change starts from the
+         `lets-build` skill, which picks and claims its story.
+      2. Read the story packet: the issue body. Then read the code, tests and
+         specs it touches. `openspec list --specs` lists the project's
+         capabilities, and `openspec show <spec-id> --type spec` prints one.
+      3. Question the user as the skill says, until you share one
+         understanding of scope, behavior and acceptance. Leave the how to
+         design.md.
+      4. Write brainstorm.md from the template: the story line, one ledger row
+         per resolved question, and the changes from the story. File any
+         split-out work as a new issue, as the skill says.
+      5. Show the ledger and the changes, and ask the user to confirm them.
+         Only then change the last line to `Confirmed by user: yes`. Until
+         then it stays `no`.
 
-      Evaluate:
-      1. Is the requirement open-ended or ambiguous?
-      2. Are there multiple viable UX, product, or architectural paths?
-      3. Are new domain terms or entities emerging that are not in the glossary?
-      4. Does this significantly touch core journeys in `openspec/discovery.md`?
-
-      **If YES to any of the above:**
-
-      1. Grill the user until you share one understanding of the story:
-         - Ask one question at a time, with your recommended answer. Say why it matters: the decision it settles.
-         - Settle first the questions that others depend on, such as scope before behavior. If an answer changes an
-           earlier one, go back to it.
-         - Skip questions whose answer would not change the plan.
-         - Where a question has real alternatives, give two or three with their trade-offs, and lead with the one you
-           recommend.
-         - Settle scope, behavior and acceptance: the what and the why. Leave the how to design.
-
-      2. Write the ledger with the template: one row per resolved question. code or a document settled it, and
-         `Assumption` when neither did. Silence is not agreement: a recommendation the user did not accept is an
-         `Assumption`. Keep each row to one line; design explains the why and the how.
-
-
-      **If NO (e.g. straightforward bug fix, mechanical refactor, well-specified task):**
-      State concisely why brainstorming is unnecessary (e.g. "Scope is concrete and well-bounded: [reason]").
-
-      Commit brainstorm on its own as `docs:`. Then push the branch and open a draft pull request.
-      If you have an issue <n> say `Closes #<n>`.
+      Commit brainstorm.md on its own as `docs:`. Then push the branch and
+      open a draft pull request whose description says `Closes #<n>`.
     requires: []
 
   - id: proposal
