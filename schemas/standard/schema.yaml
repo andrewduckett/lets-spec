@@ -1,6 +1,6 @@
 name: standard
 version: 1
-description: Custom OpenSpec workflow - brainstorm → proposal → specs → design → [adr] → review → tasks
+description: OpenSpec workflow for normal feature work - brainstorm → proposal → specs → design → adr → review → tasks
 artifacts:
   - id: brainstorm
     generates: brainstorm.md
@@ -38,39 +38,35 @@ artifacts:
     description: Initial proposal document outlining the change
     template: proposal.md
     instruction: |
-      First, read brainstorm.md. If its last line is not `Confirmed by user: yes`, stop: the brainstorm is unfinished,
-      so return to it. Build the proposal from the story and the ledger. Cite a ledger row by number, such as (D2),
-      rather than repeating it.
+      Read brainstorm.md. If its last line is not `Confirmed by user: yes`,
+      stop: the brainstorm is unfinished, so return to it.
 
-      Create the proposal document that establishes WHY this change is needed.
+      Write proposal.md from the template: why this change is needed and what
+      it changes. Build it from the story and the ledger, and cite a ledger
+      row by number, such as (D2), rather than repeating it. Keep it to one or
+      two pages, and leave the how to design.md.
 
-      Sections:
-      - **Why**: 1-2 sentences on the problem or opportunity. What problem does this solve? Why now?
-      - **What Changes**: Bullet list of changes. Be specific about new capabilities, modifications,
-        or removals. Mark breaking changes with **BREAKING**.
-      - **Capabilities**: Identify which specs will be created or modified:
-        - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`.
-          Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the
-          project's existing spec organization.
-        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level
-          behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path
-          under `openspec/specs/`. Leave empty if no requirement changes.
-      - **Impact**: Affected code, APIs, dependencies, or systems.
+      - Why: one or two sentences. What problem, and why now.
+      - What Changes: a bullet list. Name new capabilities, modifications and
+        removals. Mark a breaking change **BREAKING**.
+      - Capabilities: the contract with the specs step. Run
+        `openspec list --specs` and read the specs this change touches before
+        you fill it in.
+        - New Capabilities: each becomes `specs/<capability-path>/spec.md`.
+          New path segments are kebab-case, such as `user-auth` or
+          `identity/user-auth`, and follow the project's existing layout.
+        - Modified Capabilities: only those whose requirements change, not
+          their implementation. Use the exact existing path under
+          `openspec/specs/`. Leave it empty when no requirement changes.
+      - Impact: affected code, APIs, dependencies and systems.
 
-      IMPORTANT: The Capabilities section is critical. It creates the contract between proposal and specs phases. Research
-      existing specs before filling this in. Each capability listed here will need a corresponding spec file.
+      A change declares at least one capability, or opts out of specs:
+      `openspec validate` rejects a change with no deltas unless the change's
+      `.openspec.yaml` sets `skip_specs: true`. Use that only when no behavior
+      changes, such as a pure refactor, tooling or docs. Never invent a
+      requirement to pass validation.
 
-      Every change must either declare at least one capability (new or modified) or explicitly opt out of specs:
-      `openspec validate` rejects a change with zero deltas unless the change's `.openspec.yaml` sets
-      `skip_specs: true`. Use `skip_specs: true` only when no spec-level behavior changes (pure refactor, tooling,
-      docs) - specs describe behavior, so if behavior does not change, no spec should change either. Do not invent a
-      requirement just to satisfy validation.
-
-      Keep it concise (1-2 pages). Focus on the "why" not the "how" - implementation details belong in design.md.
-
-      This is the foundation - specs, design, and tasks all build on this.
-
-      Commit the proposal on its own as `docs:`, then push the branch.
+      Commit proposal.md on its own as `docs:`, then push the branch.
     requires:
       - brainstorm
 
