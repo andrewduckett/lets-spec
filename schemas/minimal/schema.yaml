@@ -8,59 +8,28 @@ artifacts:
     template: brainstorm.md
     instruction: |
       Shape the story with the user before any spec is written. One change
-      delivers one story.
+      delivers one story. Run the `brainstorming` skill: it says how to
+      question the user, how to fill the ledger and when to split the story.
 
-      Be a thinking partner, not a form to fill in:
-      - Grounded: read the code, tests and specs before you ask. Run
-        `openspec list --specs` for the project's capabilities, and read
-        each one the story touches in full with
-        `openspec show <spec-id> --type spec`. Never ask the user for a
-        fact you can check.
-      - Skeptical: question the story's assumptions, the user's and your
-        own. Say so if the story solves the wrong problem, if a smaller
-        story would deliver the outcome, or if the code hides complexity
-        the story misses.
-      - Honest: if something is unclear, dig deeper; never fake
-        understanding. Never invent the user's intent, priorities or
-        constraints: ask.
-      - Visual: when a flow, a set of states or a choice is hard to hold in
-        words, draw it. Use plain ASCII only (`+ - | --> v`), since other
-        characters can misalign in a terminal.
-
-      1. Find the story. lets-build picks and claims it, and names the
-         change after it, before it creates the change. Use the issue you
-         were given. Otherwise look for an open issue assigned to you whose
-         title starts with the change's name and ` — `: that is this
-         change's story. If there is none, stop: say that a change starts
-         from the `lets-build` skill, which picks and claims its story.
-      2. Read the story packet: the issue body.
-      3. Grill the user until you share one understanding of the story:
-         - Ask one question at a time, with your recommended answer. Say
-           why it matters: the decision it settles.
-         - Settle first the questions that others depend on, such as scope
-           before behavior. If an answer changes an earlier one, go back to
-           it.
-         - Skip questions whose answer would not change the plan.
-         - Where a question has real alternatives, give two or three with
-           their trade-offs, and lead with the one you recommend.
-         - Settle scope, behavior and acceptance: the what and the why. This
-           flow has no design step, so settle only as much of the how as the
-           tasks need.
-      4. Write the first line, `**Why:**`, in one sentence: the problem this
-         change solves, and why now. This flow has no other place for it.
-      5. Write the ledger with the template: one row per resolved question.
-         Source is `User` when the user decided, `Evidence: <where>` when the
-         code or a document settled it, and `Assumption` when neither did.
-         Silence is not agreement: a recommendation the user did not
-         accept is an `Assumption`.
-         Keep each row to one line.
-      6. List the changes from the story: what was cut, added or split out.
-         File split-out work as a new issue with lets-shape's story
-         template, set its kind and priority with
-         `bash .agents/skills/lets-shape/scripts/backlog.sh`, and link it.
-      7. Show the Why line and the ledger, and ask the user to confirm them.
-         Only then change the last line to `Confirmed by user: yes`. Until
-         then it stays `no`.
+      1. Find the story. `lets-build` picked and claimed it, and named the
+         change after it. Use the issue you were given. Otherwise look for an
+         open issue assigned to you whose title starts with the change's name
+         and ` — `. If there is none, stop: a change starts from the
+         `lets-build` skill, which picks and claims its story.
+      2. Read the story packet: the issue body. Then read the code, tests and
+         specs it touches. `openspec list --specs` lists the project's
+         capabilities, and `openspec show <spec-id> --type spec` prints one.
+      3. Question the user as the skill says, until you share one
+         understanding of scope, behavior and acceptance. This flow has no
+         design step, so settle as much of the how as the tasks will need.
+      4. Write brainstorm.md from the template. Its first line is `**Why:**`
+         and one sentence: the problem this change solves, and why now. This
+         flow has no other place for it. Then the story line, one ledger row
+         per resolved question, and the changes from the story. File any
+         split-out work as a new issue, as the skill says.
+      5. Show the Why line, the ledger and the changes, and ask the user to
+         confirm them. Only then change the last line to
+         `Confirmed by user: yes`. Until then it stays `no`.
 
       Commit brainstorm.md on its own as `docs:`. Then push the branch and
       open a draft pull request whose description says `Closes #<n>`.
@@ -71,94 +40,45 @@ artifacts:
     description: Detailed specifications for the change
     template: spec.md
     instruction: |
-      Create specification files that define WHAT the system should do.
+      Write one spec file per capability this change adds, or whose
+      requirements it changes. The ledger in brainstorm.md says which. The
+      `writing-specs` skill says what belongs in a requirement, how to write a
+      scenario a test can assert, and how to change an existing requirement.
+      This step says where the files go and what the parser needs.
 
-      A spec is a behavior contract, not an implementation plan.
+      Where each file goes. `<capability-path>` is the directory under
+      `specs/`, such as `user-auth` or `identity/user-auth`.
+      - A new capability: `specs/<capability-path>/spec.md`. New path segments
+        are kebab-case. Follow the project's layout; do not add a domain level
+        when the project's specs are flat.
+      - A modified capability: `specs/<capability-path>/spec.md`, at the exact
+        path of the existing spec. Do not move or rename the capability.
+      - The existing specs live under `<planningHome.root>/openspec/specs/`.
+        Take `planningHome.root` from the `openspec instructions ... --json`
+        output. It is the repository, or the store when the change lives in
+        one.
 
-      Good spec content:
-      - Observable behavior users or downstream systems rely on
-      - Inputs, outputs, and error conditions
-      - External constraints (security, privacy, reliability, compatibility)
-      - Scenarios that can be tested or explicitly validated
+      There must be at least one spec file, unless no behavior changes. Then
+      set `skip_specs: true` in the change's `.openspec.yaml`, or
+      `openspec validate` rejects the change. Never invent a requirement to
+      pass validation.
 
-      Avoid in specs:
-      - Internal class/function names
-      - Library or framework choices
-      - Step-by-step implementation details
-      - Detailed execution plans (those belong in design.md or tasks.md)
-
-      Quick test: if the implementation can change without changing externally visible behavior, it likely does not 
-      belong in the spec.
-
-      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the 
-      spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path:
-      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment 
-        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a 
-        new domain level when the project uses a flat layout.
-      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the 
-        delta at `specs/<capability-path>/spec.md`. Do not move or rename the capability.
-
-      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes. 
-      If the proposal lists no capabilities and `skip_specs` is not set, revisit the proposal first.
-
-      Delta operations (use ## headers):
-      - **ADDED Requirements**: New capabilities
-      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
-      - **REMOVED Requirements**: Deprecated features - MUST include **Reason** and **Migration**
-      - **RENAMED Requirements**: Name changes only - use FROM:/TO: format
-
-      Format requirements:
-      - Each requirement: `### Requirement: <name>` followed by description
-      - Use SHALL/MUST for normative requirements (avoid should/may)
-      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
-      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
-      - Every requirement MUST have at least one scenario.
-
-      New capabilities only: 
-      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict` 
-      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates; 
-      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by 
-      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's 
-      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit 
-      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the 
-      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the 
-      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a 
-      global default store - and to the current repository otherwise. Do not try to work out which case applies; the 
-      field already has.
-
-      MODIFIED requirements workflow:
-      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md` 
-         (the same store-aware root as above)
-      2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
-      3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
-      4. Ensure header text matches exactly (whitespace-insensitive)
-
-      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without 
-      changing existing behavior, use ADDED instead.
-
-      Example (a new capability, so it opens with `## Purpose`):
-      ```
-      ## Purpose
-
-      Lets users take their data out of the product in a portable format.
-
-      ## ADDED Requirements
-
-      ### Requirement: User can export data
-      The system SHALL allow users to export their data in CSV format.
-
-      #### Scenario: Successful export
-      - **WHEN** user clicks "Export" button
-      - **THEN** system downloads a CSV file with all user data
-
-      ## REMOVED Requirements
-
-      ### Requirement: Legacy export
-      **Reason**: Replaced by new export system
-      **Migration**: Use new export endpoint at /api/v2/export
-      ```
-
-      Specs should be testable - each scenario is a potential test case.
+      What the parser needs. Validation and archive read these exactly.
+      - Delta sections are `## ADDED Requirements`, `## MODIFIED Requirements`,
+        `## REMOVED Requirements` and `## RENAMED Requirements`.
+      - Each requirement is `### Requirement: <name>` followed by its text.
+      - Each scenario is `#### Scenario: <name>`, with four hashes, followed by
+        `- **WHEN** ...` and `- **THEN** ...` lines. Three hashes or a bullet
+        fail silently.
+      - Every requirement has at least one scenario.
+      - MODIFIED carries the whole requirement block, with its heading
+        identical to the existing one. REMOVED carries **Reason** and
+        **Migration**. RENAMED uses `FROM:` and `TO:` lines.
+      - A new capability starts with `## Purpose`: one or two sentences of at
+        least 50 characters, or `openspec validate --strict` reports it as too
+        brief. Archive copies it into the new main spec. A delta on an existing
+        capability has no `## Purpose`. To change an existing Purpose, edit the
+        main spec directly.
 
       Commit the spec files together, on their own, as `docs:`.
     requires:
@@ -169,32 +89,21 @@ artifacts:
     description: Implementation checklist with trackable tasks
     template: tasks.md
     instruction: |
-      Create the task list that breaks down the implementation work.
+      Break the change into tasks. The `writing-tasks` skill says how to size,
+      order, tag and verify them. Read brainstorm.md and the specs first: this
+      flow has no design, so the ledger holds the decisions the tasks follow.
 
-      Before writing tasks, check design.md for Open Questions. If any of them
-      would change what gets built, resolve them with the user first - do not
-      bake an unstated assumption into the task list.
+      Write tasks.md from the template. The apply step parses it, so every
+      task is one checkbox line:
+      `- [ ] X.Y [tags] <behavior> (verify: <command>)`
+      A task that is not a `- [ ]` line is not tracked. The tags the apply
+      step reads are `[easy]`, `[medium]` and `[complex]`. This flow builds
+      tasks in order, so it has no parallel tags.
 
-      **IMPORTANT: Follow the template below exactly.** The apply phase parses
-      checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
+      If a decision that is costly to reverse comes up while planning, stop
+      and ask the user. This flow has no design step to hold it.
 
-      Sizing & Task Rhythm (from writing-plans):
-      - **5-12 tasks total**: If larger, recommend slicing into separate stories/changes.
-      - **TDD rhythm**: Group work to write failing tests depicting intent → run to verify failure →
-        minimal code → run to verify pass.
-      - **Complexity ratings**: Tag each task with `[easy]`, `[medium]`, or `[complex]` to guide
-        model/subagent assignment.
-      - **Hard Stop**: If an ADR-tier decision is required during task planning, STOP and return to design.
-
-      Parallel Execution & Dependency Guidelines:
-      - Structure phases:
-        * Phase 1: Shared contracts, types, migrations (Sequential prerequisite)
-        * Phase 2+: Independent workstreams labeled with `[depends-on: <phase>]`
-        * Final Phase: Integration and end-to-end verification `[depends-on: <all>]`
-      - Annotate parallelizable tasks with `[parallel]` within workstreams so orchestrators
-        can dispatch subagents concurrently.
-      - Each task MUST be a checkbox: `- [ ] X.Y [tags] Task description (verify: <command>)`.
-      - Each task MUST state how to verify completion (e.g. `cargo test`, `pnpm test`, `pnpm check`).
+      Commit tasks.md on its own as `docs:`.
     requires:
       - specs
 
@@ -202,18 +111,22 @@ apply:
   requires: [ tasks ]
   tracks: tasks.md
   instruction: |
-    Read brainstorm.md, the specs and tasks.md. Then work through the
-    pending tasks yourself, in order: no subagents. Pause if you hit
-    blockers or need clarification.
+    Read brainstorm.md, the specs and tasks.md. Then work through the pending
+    tasks yourself, in order: no subagents.
 
-    Work on each task test-first, with the `test-driven-development`
-    skill: write the test, watch it fail for the right reason, then write
-    the code that makes it pass.
+    Work on each task test-first with the `test-driven-development` skill:
+    write the test, watch it fail for the right reason, then write the code
+    that makes it pass.
 
-    Commit each task on its own, with its real type: `feat:`, `fix:`,
-    `refactor:` or `test:`. Include the task's checkbox in the same commit.
+    Tick a task `- [x]` only with its evidence on the same line, such as
+    `(✓ <command> passed)`. Never tick ahead. Commit each task on its own with
+    its real type, `feat:`, `fix:`, `refactor:` or `test:`, and include the
+    ticked checkbox in the same commit.
 
-    This flow has no code review step. When every task is done, run the
-    `openspec-verify-change` skill. If it reports a problem, stop and show
-    it to the user. Otherwise archive the change as the Archive section of the
-    lets-build skill says.
+    Stop and ask the user about a departure from the plan that changes a
+    guarantee, a trust boundary or a data schema. Stop too on an unexpected
+    blocker, or a test that keeps failing.
+
+    When every task is done, follow the Archive section of the `lets-build`
+    skill. This flow has no code review, so it runs the
+    `openspec-verify-change` skill and archives the change.

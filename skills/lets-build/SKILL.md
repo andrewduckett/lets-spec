@@ -68,21 +68,24 @@ Run `openspec instructions apply --change <branch> --json`, and read
 |---|---|---|
 | `blocked` | The plan is not finished. | Invoke `openspec-propose` to continue the change `<branch>`. Stop when it stops. |
 | `ready` | Tasks are left. | Invoke `openspec-apply-change` for `<branch>`. The schema's apply instruction carries on through verify and archive. |
-| `all_done` | Every task is ticked. | Run the `openspec-verify-change` skill. If it reports a problem, stop and show it to the user. Otherwise archive the change as [Archive](#archive) says. |
+| `all_done` | Every task is ticked. | Follow [Archive](#archive). It reviews, verifies and archives, in that order. |
 | any other `state` | OpenSpec has a state this skill does not know. | Show the user the `instruction` from the CLI's output, and stop. |
 
 ## Archive
 
 The schema's apply instruction comes here when every task is done, and so
-does the `all_done` state above.
+does the `all_done` state above. The order matters: review before verify, so
+that verify checks the fixed code.
 
 1. If `.agents/skills/` holds the `peer-code-review` skill, the change
-   needs a code review. If the pull request description
-   has no **Code review** section, run the skill now. Otherwise check
-   the section as the skill's *Before archive* section says, and run the
-   skill again only when it tells you to.
-2. Archive the change, then commit it on its own as `chore:`.
-3. Mark the pull request ready for review.
+   needs a code review. If the pull request description has no
+   **Code review** section, run the skill now. Otherwise check the section
+   as the skill's *Before archive* section says, and run the skill again
+   only when it tells you to.
+2. Run the `openspec-verify-change` skill. If it reports a problem, stop
+   and show it to the user.
+3. Archive the change, then commit it on its own as `chore:`.
+4. Mark the pull request ready for review.
 
 ## Rules
 

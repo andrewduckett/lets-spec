@@ -2,7 +2,7 @@
 
 - **Review round**: <!-- 1, 2, ... -->
 - **Prior round**: <!-- none | one-line summary of previous round's verdict -->
-- **Reviewer context**: <!-- cross-model (which model/CLI) / fresh-context subagent -->
+- **Reviewer context**: <!-- cross-model (<family>, <tool>) | same family in a fresh process -->
 - **Independent**: <!-- yes | no, and why -->
 - **Tool restrictions**: <!-- read-only: view, grep, glob only -->
 - **Artifacts reviewed**: brainstorm.md, proposal.md, design.md, specs/, adr.md, relevant source files
@@ -31,7 +31,7 @@
 
 VERDICT: <VALUE>
 
-## Required Changes (if APPROVE WITH CHANGES)
+## Required Changes (if APPROVE_WITH_CHANGES)
 
 <!-- Numbered list of specific edits required. -->
 
@@ -41,4 +41,4 @@ CHANGES_APPLIED: <VALUE>
 
 ## Rebuttals
 
-<!-- For each finding: fixed (cite the change) or rebutted (reasoning, and "accepted by reviewer" where needed). -->
+<!-- For each finding: fixed (cite the edit) or rebutted (cite the evidence; a Critical needs a file and line). -->
