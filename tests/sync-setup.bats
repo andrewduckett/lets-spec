@@ -2,7 +2,7 @@ load support/common
 load support/release
 load support/project
 
-# lets-spec-sync creates the files a project owns when they are missing, then
+# lets-sync creates the files a project owns when they are missing, then
 # never edits them. It warns about their settings, and exits 0 when it
 # warns, so a problem never stops a dev shell from starting.
 
@@ -103,8 +103,8 @@ load support/project
 @test "sync prints its usage" {
   run sync_project --help
   [ "$status" -eq 0 ]
-  [[ "$output" == "lets-spec-sync: set up a project"* ]]
-  [[ "$output" == *"Usage: lets-spec-sync [--check]"* ]]
+  [[ "$output" == "lets-sync: set up a project"* ]]
+  [[ "$output" == *"Usage: lets-sync [--check]"* ]]
 }
 
 @test "sync refuses an unknown option" {
@@ -114,7 +114,7 @@ load support/project
 }
 
 @test "sync refuses to run without a release" {
-  run env -u WORKFLOW_RELEASE bash "$repo/bin/lets-spec-sync.sh"
+  run env -u WORKFLOW_RELEASE bash "$repo/bin/lets-sync.sh"
   [ "$status" -eq 1 ]
   [[ "$output" == *"WORKFLOW_RELEASE is not set"* ]]
 }

@@ -36,7 +36,7 @@ These rules come from lets-spec, and apply to every agent.
   deleted.
 - **Never edit what lets-spec puts in the project:** this section,
   between its markers, the skills in `.agents/skills/` and the schema
-  folder in `openspec/schemas/`. `lets-spec-sync` rewrites this section, and
+  folder in `openspec/schemas/`. `lets-sync` rewrites this section, and
   the skills and the schema are read-only links into the Nix store that
   git ignores. Change lets-spec instead. Never run `openspec init` or
   `openspec update`; they write skills of their own.

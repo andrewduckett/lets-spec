@@ -2,11 +2,11 @@ load support/common
 load support/release
 load support/project
 
-# lets-spec-sync links each skill and the schema from the release into the
+# lets-sync links each skill and the schema from the release into the
 # project, and lists the links in a section of .git/info/exclude, so git
 # ignores them. The section is also its record of what to clean up.
 
-# managed_links: every path lets-spec-sync should link in this project.
+# managed_links: every path lets-sync should link in this project.
 managed_links() {
   local skill
   for skill in $(shipped_skills); do
@@ -81,9 +81,9 @@ managed_links() {
 @test "sync leaves an exclude section with an unpaired marker unchanged, links nothing, and warns" {
   local exclude=.git/info/exclude
   local -a broken=(
-    $'# BEGIN lets-spec links. lets-spec-sync rewrites this section.\n/.agents/skills/lets-build\n/mine\n'
+    $'# BEGIN lets-spec links. lets-sync rewrites this section.\n/.agents/skills/lets-build\n/mine\n'
     $'/mine\n# END lets-spec links\n'
-    $'# END lets-spec links\n/mine\n# BEGIN lets-spec links. lets-spec-sync rewrites this section.\n'
+    $'# END lets-spec links\n/mine\n# BEGIN lets-spec links. lets-sync rewrites this section.\n'
   )
   local text
   for text in "${broken[@]}"; do
