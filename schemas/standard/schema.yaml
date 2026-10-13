@@ -184,9 +184,10 @@ artifacts:
     instruction: |
       Run the `peer-plan-review` skill on this change's plan: brainstorm.md,
       proposal.md, design.md, specs/ and adr.md. The skill picks a reviewer
-      from another model family, runs it read-only, and says how to judge
-      severity, rebuttals and rounds. Use design.md's scrutiny tier as the
-      reviewer's effort.
+      from another model family when one is installed, and says so in the
+      review when it cannot. It runs the reviewer read-only, and says how to
+      judge severity, rebuttals and rounds. Use design.md's scrutiny tier as
+      the reviewer's effort.
 
       Add these checks to the reviewer's prompt, beside the skill's own.
       - Assumption rows. Read brainstorm.md first. An `Assumption` row the

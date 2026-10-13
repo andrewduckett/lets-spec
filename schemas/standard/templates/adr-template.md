@@ -8,7 +8,7 @@ description: Architecture decision record (ADR) for [Title]
 
 <!--
 Rules for every ADR made from this template. The writing-adrs skill explains them.
-- Record one decision: a real fork, or a choice that is costly to reverse.
+- Record one decision that passes the skill's test: a real fork whose reversal would be costly.
 - Stand alone. Give the context the reader needs here.
 - Link at most one other ADR: the one this decision supersedes or builds on.
 - Never reference issues, milestones, pull requests or the roadmap.

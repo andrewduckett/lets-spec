@@ -50,6 +50,8 @@ Name the behavior, not the file.
 
 ## Stop conditions
 
-If, while planning tasks, you find a decision that is costly to reverse and
-the design does not make it, stop. Tell the user and return to the design.
-Never bake the decision into the task list.
+If, while planning tasks, you find a decision that is costly to reverse that
+no earlier artifact makes, stop and tell the user. The schema that called
+this skill says where the decision goes: the design, when the flow has one,
+or the user's answer, when it does not. Never bake the decision into the
+task list.
