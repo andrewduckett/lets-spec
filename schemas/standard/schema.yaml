@@ -126,37 +126,31 @@ artifacts:
     description: Technical design document with implementation details
     template: design.md
     instruction: |
-      Create the design document that explains HOW to implement the change.
+      Write design.md from the template: how to build what the proposal and
+      the specs describe. The proposal holds the why; do not restate it.
 
-      Guidelines:
-      - Focus on how the change will be implemented, not why it's needed
-        (that's in the proposal).
-      - Document decisions made and alternatives considered, with rationale.
-      - Highlight risks, trade-offs, and mitigation strategies.
-      - Identify the primary test seam at the highest viable architectural point
-        (the Highest Seam Principle).
-      - Classify the scrutiny tier based on blast radius.
+      Fill each section the template names.
+      - Context: only the current state and constraints that shape the
+        approach.
+      - Goals and Non-Goals: design-level boundaries, not the proposal's
+        scope.
+      - Test Seams: where the change will be tested, as the template's note
+        defines a seam. Prefer seams that exist. Fewer is better; one is
+        ideal.
+      - Scrutiny Tier and Blast Radius: `low`, `medium` or `high`, by the
+        template's scale. The review step uses the tier to set how hard the
+        reviewer looks.
+      - Decisions: each technical choice, the alternatives, and why this one.
+        A decision that is costly to reverse gets a record in the ADR step.
+        Here, make the decision and name it.
+      - Risks and Trade-offs: each as `[Risk] → Mitigation`.
+      - Migration and Rollback: deploy steps, data migrations and how to
+        undo. `N/A` when nothing changes shape.
+      - Open Questions: unknowns that can wait without changing the specs,
+        the approach or the tasks. The tasks step reads this section. Omit it
+        when there are none.
 
-      Sections:
-      - **Context**: Only the current state and constraints needed to explain the approach.
-        Reference the proposal for motivation instead of restating it.
-      - **Goals / Non-Goals**: What this design achieves and explicitly excludes.
-        Don't restate the proposal's scope - add only design-level boundaries.
-      - **Test Seams (Highest Seam Principle)**: Sketch out the seams at which the feature
-        will be tested. Existing seams should be preferred to new ones. Propose test seams
-        at the highest possible architectural point (the fewer seams across the codebase,
-        the better — ideal is one).
-      - **Scrutiny Tier & Blast Radius**: Classify blast radius:
-        * `low`: Narrow fix or polish; single package; no new contracts, schema, or authz.
-        * `medium`: Standard single-subsystem slice on established patterns; contained blast radius.
-        * `high`: Multi-package; new contracts/events/migrations; authz or trust boundaries;
-          architecture-changing (new-ADR territory); novel external dependency.
-      - **Decisions**: Key technical choices with rationale (why X over Y?). Include alternatives
-        considered for each decision.
-      - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation.
-      - **Migration & Rollback**: Steps to deploy, database migrations, rollback strategy (if applicable).
-      - **Open Questions**: Unknowns that can safely be answered later without changing the specs,
-        the approach, or the task breakdown. Omit if none.
+      Commit design.md on its own as `docs:`.
     requires:
       - proposal
 
