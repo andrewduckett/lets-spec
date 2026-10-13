@@ -124,8 +124,8 @@ apply:
     ticked checkbox in the same commit.
 
     Stop and ask the user about a departure from the plan that changes a
-    guarantee, a trust boundary or a data schema, and about an unexpected
-    blocker or a test that keeps failing.
+    guarantee, a trust boundary or a data schema. Stop too on an unexpected
+    blocker, or a test that keeps failing.
 
     When every task is done, follow the Archive section of the `lets-build`
     skill. This flow has no code review, so it runs the
