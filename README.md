@@ -242,39 +242,28 @@ agent questions you about it until you agree on what to build.
 
 ### `standard`
 
-```mermaid
-flowchart LR
-    b[brainstorm] --> p[proposal] --> s[specs] --> d[design] --> a[ADR] --> r[review] --> t[tasks]
-    t --> apply[apply] --> cr[code review] --> v[verify] --> ar[archive]
-```
-
-| Step | What the agent does | Output |
-|---|---|---|
-| brainstorm | Questions you one at a time about scope, behavior and acceptance, and records each answer and where it came from | `brainstorm.md` |
-| proposal | States why the change is needed and what it changes | `proposal.md` |
-| specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
-| design | Explains how to build it, when the change needs that | `design.md` |
-| ADR | Writes an architecture decision record (ADR) in your project's `docs/decisions/`, only for a choice that is costly to reverse | `adr.md`, plus any new ADRs |
-| review | A model from another family reviews the whole plan with `peer-plan-review` | `review.md` |
-| tasks | Breaks the work into a checklist | `tasks.md` |
-| apply | Builds each task, one commit per task | Commits |
-| code review | A model from another family reviews the branch with `peer-code-review` | A **Code review** section in the pull request |
-| verify, archive | Checks the code matches the plan, then archives the change and its specs | An archive commit |
+| # | Step | What the agent does | Output |
+|---|---|---|---|
+| 1. | brainstorm | Questions you one at a time about scope, behavior and acceptance, and records each answer and where it came from | `brainstorm.md` |
+| 2. | proposal | States why the change is needed and what it changes | `proposal.md` |
+| 3. | specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
+| 4. | design | Explains how to build it, when the change needs that | `design.md` |
+| 5. | ADR | Writes an architecture decision record (ADR) in your project's `docs/decisions/`, only for a choice that is costly to reverse | `adr.md`, plus any new ADRs |
+| 6. | review | A model from another family reviews the whole plan with `peer-plan-review` | `review.md` |
+| 7. | tasks | Breaks the work into a checklist | `tasks.md` |
+| 8. | apply | Builds each task, one commit per task | Commits |
+| 9. | code review | A model from another family reviews the branch with `peer-code-review` | A **Code review** section in the pull request |
+| 10. | verify, archive | Checks the code matches the plan, then archives the change and its specs | An archive commit |
 
 ### `minimal`
 
-```mermaid
-flowchart LR
-    b[brainstorm] --> s[specs] --> t[tasks] --> apply[apply, test-first] --> v[verify] --> ar[archive]
-```
-
-| Step | What the agent does | Output |
-|---|---|---|
-| brainstorm | Writes one line on why the change is needed, then questions you as in `standard` | `brainstorm.md` |
-| specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
-| tasks | Breaks the work into a checklist | `tasks.md` |
-| apply | Builds the tasks in order with test-driven development (TDD): a failing test first, then the code. One commit per task. | Commits |
-| verify, archive | Checks the code matches the plan, then archives the change | An archive commit |
+| # | Step | What the agent does | Output |
+|---|---|---|---|
+| 1. | brainstorm | Writes one line on why the change is needed, then questions you as in `standard` | `brainstorm.md` |
+| 2. | specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
+| 3. | tasks | Breaks the work into a checklist | `tasks.md` |
+| 4. | apply | Builds the tasks in order with test-driven development (TDD): a failing test first, then the code. One commit per task. | Commits |
+| 5. | verify, archive | Checks the code matches the plan, then archives the change | An archive commit |
 
 A minimal change has no `proposal.md`, so `openspec show <change>` fails
 on it. Status, validate, list and archive all work, and nothing in the
