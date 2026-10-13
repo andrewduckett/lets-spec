@@ -111,18 +111,22 @@ apply:
   requires: [ tasks ]
   tracks: tasks.md
   instruction: |
-    Read brainstorm.md, the specs and tasks.md. Then work through the
-    pending tasks yourself, in order: no subagents. Pause if you hit
-    blockers or need clarification.
+    Read brainstorm.md, the specs and tasks.md. Then work through the pending
+    tasks yourself, in order: no subagents.
 
-    Work on each task test-first, with the `test-driven-development`
-    skill: write the test, watch it fail for the right reason, then write
-    the code that makes it pass.
+    Work on each task test-first with the `test-driven-development` skill:
+    write the test, watch it fail for the right reason, then write the code
+    that makes it pass.
 
-    Commit each task on its own, with its real type: `feat:`, `fix:`,
-    `refactor:` or `test:`. Include the task's checkbox in the same commit.
+    Tick a task `- [x]` only with its evidence on the same line, such as
+    `(✓ <command> passed)`. Never tick ahead. Commit each task on its own with
+    its real type, `feat:`, `fix:`, `refactor:` or `test:`, and include the
+    ticked checkbox in the same commit.
 
-    This flow has no code review step. When every task is done, run the
-    `openspec-verify-change` skill. If it reports a problem, stop and show
-    it to the user. Otherwise archive the change as the Archive section of the
-    lets-build skill says.
+    Stop and ask the user about a departure from the plan that changes a
+    guarantee, a trust boundary or a data schema, and about an unexpected
+    blocker or a test that keeps failing.
+
+    When every task is done, follow the Archive section of the `lets-build`
+    skill. This flow has no code review, so it runs the
+    `openspec-verify-change` skill and archives the change.

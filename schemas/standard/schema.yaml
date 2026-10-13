@@ -258,22 +258,24 @@ apply:
   requires: [ tasks ]
   tracks: tasks.md
   instruction: |
-    Execution discipline:
-    - **Tick = Evidence**: A checkbox is ticked `- [x]` only with its verification evidence recorded inline:
-      `- [x] 1.1 Add audio chunk parser (✓ cargo test parser passed)`. A ticked box without evidence is invalid.
-      Never tick ahead; commit as you go.
-    - **Atomic commits**: Commit per completed task with real Conventional Commit types (`feat:`, `fix:`, `test:`,
-      `refactor:`).
-    - **Parallel dispatch**: Orchestrating agent may launch concurrent subagents for independent workstreams whose
-      `[depends-on]` prerequisites are complete.
-    - **Deviations ledger**: Append any minor deviations into a `## Deviations Ledger` section in tasks.md. Stop and
-      surface material ones (changed guarantees, authz, schema).
-    - **Stop triggers**: STOP immediately when hitting unexpected blockers, repeated test failures, or if an ADR-level
-      fork arises.
+    Read brainstorm.md, design.md, the specs and tasks.md. Then work through
+    the pending tasks in order. You may run `[parallel]` tasks in concurrent
+    subagents once the sections they depend on are done.
 
-    Commit each task on its own, with its real type: `feat:`, `fix:`, `refactor:` or `test:`. Include the task's
-    checkbox in the same commit.
+    Work on each task test-first with the `test-driven-development` skill:
+    write the test, watch it fail for the right reason, then write the code
+    that makes it pass.
 
-    When every task is done, run the `peer-code-review` skill on the branch. Then run the `openspec-verify-change`
-    skill. If it reports a problem, stop and show it to the user. Otherwise archive the change as the Archive section
-    of the lets-build skill says.
+    Tick a task `- [x]` only with its evidence on the same line, such as
+    `(✓ <command> passed)`. Never tick ahead. Commit each task on its own with
+    its real type, `feat:`, `fix:`, `refactor:` or `test:`, and include the
+    ticked checkbox in the same commit.
+
+    Record a small departure from the plan under `## Deviations Ledger` in
+    tasks.md. Stop and ask the user about a large one: a changed guarantee, a
+    trust boundary, a data schema, or a decision that is costly to reverse.
+    Stop too on an unexpected blocker, or a test that keeps failing.
+
+    When every task is done, follow the Archive section of the `lets-build`
+    skill. It runs the `peer-code-review` skill, then the
+    `openspec-verify-change` skill, then archives the change.
