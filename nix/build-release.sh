@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the release for one flow and one backlog: the files lets-spec-sync
+# Build the release for one flow and one backlog: the files lets-sync
 # links into a project and creates in it. The flake runs it once for each
 # pair of a recipe in flows.nix and a backlog, with the skills of both.
 #
@@ -13,11 +13,11 @@
 #   skill      each folder in skills/ to ship
 #
 # The release has three folders:
-#   overlay/    files lets-spec-sync links into a project, at the same
+#   overlay/    files lets-sync links into a project, at the same
 #               paths: the skills and the schema
-#   init/       files lets-spec-sync creates in a project when they are
+#   init/       files lets-sync creates in a project when they are
 #               missing
-#   fragments/  text lets-spec-sync keeps in a marked block of the project's
+#   fragments/  text lets-sync keeps in a marked block of the project's
 #               file at the same path
 set -euo pipefail
 
@@ -45,14 +45,14 @@ skills="$overlay/.agents/skills"
 mkdir -p "$overlay/openspec/schemas" "$skills" "$out/fragments"
 cp -R "$source/schemas/$schema" "$overlay/openspec/schemas/$schema"
 # overlays/ holds the files a project gets, at their paths in the project.
-# AGENTS.md is a fragment, and lets-spec-sync creates each other file.
+# AGENTS.md is a fragment, and lets-sync creates each other file.
 cp -R "$source/overlays" "$out/init"
 # The Nix store is read-only, and so are copies made from it.
 chmod -R u+w "$out"
 mv "$out/init/AGENTS.md" "$out/fragments/AGENTS.md"
 
-# The config lets-spec-sync creates names the flow's schema, which
-# lets-spec-sync then expects.
+# The config lets-sync creates names the flow's schema, which
+# lets-sync then expects.
 config="$out/init/openspec/config.yaml"
 sed "s/^schema: .*/schema: $schema/" "$config" >"$config.new"
 mv "$config.new" "$config"

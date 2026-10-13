@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# lets-spec-sync: set up a project for lets-spec, and keep it set up. The dev
+# lets-sync: set up a project for lets-spec, and keep it set up. The dev
 # shell runs it each time it starts, and it is safe to run any number of
 # times.
 #
-# Usage: lets-spec-sync [--check]
+# Usage: lets-sync [--check]
 #
 # Keeps the lets-spec rules in a marked block of AGENTS.md: creates
 # AGENTS.md with only the block when it is missing, appends the block when
@@ -20,7 +20,7 @@
 # through a section of .git/info/exclude, so nothing it links is ever
 # committed. A link to an earlier release is replaced, and one the release
 # no longer ships is removed. A file or folder the project owns is never
-# replaced; lets-spec-sync warns instead.
+# replaced; lets-sync warns instead.
 #
 # Then it warns if:
 # - the rules block in AGENTS.md has a marker without its pair
@@ -44,9 +44,9 @@ set -euo pipefail
 #             .agents/skills/ holds every skill: the flow's, the backlog's
 #             and the generated openspec-*. Its openspec/schemas/ holds the
 #             flow's one schema.
-#   init/       files lets-spec-sync creates when missing, which the project
+#   init/       files lets-sync creates when missing, which the project
 #               then owns
-#   fragments/  the rules lets-spec-sync keeps in a marked block of AGENTS.md
+#   fragments/  the rules lets-sync keeps in a marked block of AGENTS.md
 skills_dst=".agents/skills"
 config="openspec/config.yaml"
 schemas_dst="openspec/schemas"
@@ -54,13 +54,13 @@ agents="AGENTS.md"
 
 # The markers around the rules block in AGENTS.md. HTML comments, so they
 # do not show when the file is rendered.
-rules_begin="<!-- BEGIN lets-spec rules. lets-spec-sync rewrites this block: change lets-spec, not this text. -->"
+rules_begin="<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->"
 rules_end="<!-- END lets-spec rules -->"
 rules_begin_pattern='^<!-- BEGIN lets-spec rules'
 rules_end_pattern='^<!-- END lets-spec rules -->$'
 
 # The name of the release's store path, which the Nix build sets. A link
-# whose target contains it was made by lets-spec-sync, so lets-spec-sync may
+# whose target contains it was made by lets-sync, so lets-sync may
 # replace or remove it. Anything else belongs to the project.
 release_name="-lets-spec-release/"
 
@@ -95,7 +95,7 @@ config_value() {
   yq -r "$1 // \"\"" "$config"
 }
 
-# Print the rules block as lets-spec-sync writes it.
+# Print the rules block as lets-sync writes it.
 rules_block() {
   echo "$rules_begin"
   cat "$release/fragments/$agents"
@@ -142,11 +142,11 @@ case "${1:-}" in
     usage
     exit 0
     ;;
-  *) die "unknown option $1. Usage: lets-spec-sync [--check]" ;;
+  *) die "unknown option $1. Usage: lets-sync [--check]" ;;
 esac
 
 release="${WORKFLOW_RELEASE:-}"
-[ -n "$release" ] || die "WORKFLOW_RELEASE is not set. Run lets-spec-sync from the lets-spec flake."
+[ -n "$release" ] || die "WORKFLOW_RELEASE is not set. Run lets-sync from the lets-spec flake."
 require_release "$release"
 schema_name="$(release_schema "$release")"
 
@@ -159,8 +159,8 @@ cd "$root"
 if $check; then
   case "$(rules_state)" in
     current) exit 0 ;;
-    absent | missing) echo "lets-spec: $agents has no lets-spec rules. Run lets-spec-sync, then commit $agents." >&2 ;;
-    stale) echo "lets-spec: $agents's lets-spec rules are out of date. Run lets-spec-sync, then commit $agents." >&2 ;;
+    absent | missing) echo "lets-spec: $agents has no lets-spec rules. Run lets-sync, then commit $agents." >&2 ;;
+    stale) echo "lets-spec: $agents's lets-spec rules are out of date. Run lets-sync, then commit $agents." >&2 ;;
     unpaired) echo "lets-spec: $agents has a lets-spec rules marker without its pair." >&2 ;;
   esac
   exit 1
@@ -199,7 +199,7 @@ case "$(rules_state)" in
     echo "lets-spec: updated the lets-spec rules in $agents. Commit it."
     ;;
   unpaired)
-    warnings+=("$agents has a lets-spec rules marker without its pair, so its rules were not updated. Delete the marker, and the rules text with it, then run lets-spec-sync again.")
+    warnings+=("$agents has a lets-spec rules marker without its pair, so its rules were not updated. Delete the marker, and the rules text with it, then run lets-sync again.")
     ;;
 esac
 
@@ -226,7 +226,7 @@ if [ ! -e .claude/skills ] && [ ! -L .claude/skills ]; then
   echo "lets-spec: linked .claude/skills to ../.agents/skills."
 fi
 
-# Succeed if the path is a link that lets-spec-sync made.
+# Succeed if the path is a link that lets-sync made.
 ours() {
   [ -L "$1" ] && [[ "$(readlink "$1")" == *"$release_name"* ]]
 }
@@ -245,7 +245,7 @@ srcs+=("$release/overlay/$schemas_dst/$schema_name")
 # The exclude section lists what the last run linked, so it is also the
 # record of what to clean up.
 exclude="$(git rev-parse --git-path info/exclude)"
-section_begin="# BEGIN lets-spec links. lets-spec-sync rewrites this section."
+section_begin="# BEGIN lets-spec links. lets-sync rewrites this section."
 section_end="# END lets-spec links"
 begin_pattern='^# BEGIN lets-spec links'
 end_pattern='^# END lets-spec links$'
@@ -311,7 +311,7 @@ if [ -f "$exclude" ]; then
 fi
 case "$exclude_markers" in
   "" | be) link_release ;;
-  *) warnings+=("$exclude has a lets-spec links marker without its pair, so nothing was linked. Delete the marker, and the lines between the markers, then run lets-spec-sync again.") ;;
+  *) warnings+=("$exclude has a lets-spec links marker without its pair, so nothing was linked. Delete the marker, and the lines between the markers, then run lets-sync again.") ;;
 esac
 
 # The files the project owns.

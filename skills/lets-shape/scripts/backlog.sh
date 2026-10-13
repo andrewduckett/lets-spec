@@ -37,7 +37,7 @@ require_number() {
 require_mode() {
   case "$mode" in
     labels | fields) ;;
-    *) die "this copy has no backlog mode. Run the copy lets-spec-sync links into .agents/skills/lets-shape/." ;;
+    *) die "this copy has no backlog mode. Run the copy lets-sync links into .agents/skills/lets-shape/." ;;
   esac
 }
 

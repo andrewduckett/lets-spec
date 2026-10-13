@@ -52,7 +52,7 @@
           default = [ package ];
           defaultText = lib.literalExpression ''[ inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}" ]'';
           description = ''
-            The pinned OpenSpec CLI and lets-spec-sync for the chosen flow and
+            The pinned OpenSpec CLI and lets-sync for the chosen flow and
             backlog, with the gh and jq the skills' scripts call. Add these
             to the project's development shell.
           '';
@@ -60,8 +60,8 @@
         shellHook = lib.mkOption {
           type = lib.types.str;
           readOnly = true;
-          default = "${package}/bin/lets-spec-sync";
-          defaultText = lib.literalExpression ''"''${inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}"}/bin/lets-spec-sync"'';
+          default = "${package}/bin/lets-sync";
+          defaultText = lib.literalExpression ''"''${inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}"}/bin/lets-sync"'';
           description = ''
             Creates the project's missing files, keeps the workflow rules in
             AGENTS.md, links the skills and the schema into the project, and

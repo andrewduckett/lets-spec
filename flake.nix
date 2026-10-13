@@ -65,8 +65,8 @@
             bash ${./nix/generate-skills.sh} ${./nix/openspec.json} "$out"
           '';
 
-        # What lets-spec-sync links and creates for one flow and backlog.
-        # lets-spec-sync knows its own links by this store path's name, so keep
+        # What lets-sync links and creates for one flow and backlog.
+        # lets-sync knows its own links by this store path's name, so keep
         # the name.
         # The build writes the backlog's mode into the skills' scripts.
         release = flow: backlog: let recipe = flows.${flow}; in
@@ -76,15 +76,15 @@
               ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
           '';
 
-        # lets-spec-sync, bound to one release.
-        lets-spec-sync = flow: backlog:
-          pkgs.runCommand "lets-spec-sync"
+        # lets-sync, bound to one release.
+        lets-sync = flow: backlog:
+          pkgs.runCommand "lets-sync"
             { nativeBuildInputs = [ pkgs.makeWrapper ]; }
             ''
               mkdir -p $out/bin $out/libexec
-              cp ${./bin/lets-spec-sync.sh} $out/libexec/lets-spec-sync.sh
-              makeWrapper ${pkgs.bash}/bin/bash $out/bin/lets-spec-sync \
-                --add-flags $out/libexec/lets-spec-sync.sh \
+              cp ${./bin/lets-sync.sh} $out/libexec/lets-sync.sh
+              makeWrapper ${pkgs.bash}/bin/bash $out/bin/lets-sync \
+                --add-flags $out/libexec/lets-sync.sh \
                 --set WORKFLOW_RELEASE ${release flow backlog} \
                 --prefix PATH : ${lib.makeBinPath [ pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.git pkgs.yq-go ]}
             '';
@@ -93,14 +93,14 @@
         # scripts run in the shell, so it carries the gh and jq they call.
         bundle = flow: backlog: pkgs.buildEnv {
           name = "lets-spec-${flow}-${backlog}";
-          paths = [ openspec (lets-spec-sync flow backlog) pkgs.gh pkgs.jq ];
+          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq ];
         };
       in
         { inherit openspec openspec-skills; default = bundle "standard" "github-labels"; }
         // lib.listToAttrs (map (p: lib.nameValuePair "${p.flow}-${p.backlog}" (bundle p.flow p.backlog)) pairs));
 
       apps = forAllSystems (pkgs: {
-        lets-spec-sync = app pkgs "lets-spec-sync" "Set up this project for lets-spec, link it in, and warn about anything to fix";
+        lets-sync = app pkgs "lets-sync" "Set up this project for lets-spec, link it in, and warn about anything to fix";
       });
 
       checks = forAllSystems (pkgs: {
@@ -132,16 +132,16 @@
             cd project
             git init --quiet
             # The first run creates the project's files.
-            lets-spec-sync >/dev/null 2>&1
+            lets-sync >/dev/null 2>&1
             # A context the pinned OpenSpec CLI must pass on to agents.
             yq -i '.context = "CONTEXT-MARKER"' openspec/config.yaml
-            lets-spec-sync 2>warnings
+            lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
             [ -f .agents/skills/openspec-propose/SKILL.md ]
             [ -f .claude/skills/test-driven-development/SKILL.md ]
             # Agents read the rules from AGENTS.md, through CLAUDE.md for Claude.
             grep -q '^## Workflow$' CLAUDE.md
-            lets-spec-sync --check
+            lets-sync --check
 
             openspec new change gate </dev/null >/dev/null 2>&1
             openspec instructions brainstorm --change gate </dev/null >instructions 2>stderr
@@ -162,8 +162,8 @@
             cd minimal
             git init --quiet
             minimal=${(packagesFor pkgs).minimal-github-labels}
-            $minimal/bin/lets-spec-sync >/dev/null 2>&1
-            $minimal/bin/lets-spec-sync 2>warnings
+            $minimal/bin/lets-sync >/dev/null 2>&1
+            $minimal/bin/lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
             [ "$(yq -r .schema openspec/config.yaml)" = minimal ]
             [ -f openspec/schemas/minimal/schema.yaml ]
