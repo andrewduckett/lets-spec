@@ -130,7 +130,7 @@ well.
 > Agents need the dev shell to use the skills. A cloud session or a clone
 > without Nix still reads the committed rules, but gets no skills.
 
-## 🗂️ The backlog
+## 📋 The backlog
 
 The backlog is your repository's GitHub issues. You work with it through
 two entry points.
