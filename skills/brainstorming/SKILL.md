@@ -1,9 +1,9 @@
 ---
-name: brainstorm-the-story
+name: brainstorming
 description: Use when an OpenSpec change's brainstorm step questions the user about a story and records the decisions in a ledger. Says how to think, what to ask, how to fill the ledger and when to split the story. The schema says which files to write.
 ---
 
-# Brainstorm the story
+# Brainstorming
 
 Reach one shared understanding of a story with the user before anyone plans
 it. The schema that calls this skill says which files to write and when to

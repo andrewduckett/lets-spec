@@ -8,7 +8,7 @@ artifacts:
     template: brainstorm.md
     instruction: |
       Shape the story with the user before any spec is written. One change
-      delivers one story. Run the `brainstorm-the-story` skill: it says how to
+      delivers one story. Run the `brainstorming` skill: it says how to
       question the user, how to fill the ledger and when to split the story.
 
       1. Find the story. `lets-build` picked and claimed it, and named the

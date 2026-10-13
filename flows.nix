@@ -6,7 +6,7 @@
     schema = "standard";
     skills = [
       "lets-build"
-      "brainstorm-the-story"
+      "brainstorming"
       "writing-specs"
       "writing-adrs"
       "writing-tasks"
@@ -19,7 +19,7 @@
     schema = "minimal";
     skills = [
       "lets-build"
-      "brainstorm-the-story"
+      "brainstorming"
       "writing-specs"
       "writing-tasks"
       "test-driven-development"
