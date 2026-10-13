@@ -89,32 +89,21 @@ artifacts:
     description: Implementation checklist with trackable tasks
     template: tasks.md
     instruction: |
-      Create the task list that breaks down the implementation work.
+      Break the change into tasks. The `writing-tasks` skill says how to size,
+      order, tag and verify them. Read brainstorm.md and the specs first: this
+      flow has no design, so the ledger holds the decisions the tasks follow.
 
-      Before writing tasks, check design.md for Open Questions. If any of them
-      would change what gets built, resolve them with the user first - do not
-      bake an unstated assumption into the task list.
+      Write tasks.md from the template. The apply step parses it, so every
+      task is one checkbox line:
+      `- [ ] X.Y [tags] <behavior> (verify: <command>)`
+      A task that is not a `- [ ]` line is not tracked. The tags the apply
+      step reads are `[easy]`, `[medium]` and `[complex]`. This flow builds
+      tasks in order, so it has no parallel tags.
 
-      **IMPORTANT: Follow the template below exactly.** The apply phase parses
-      checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
+      If a decision that is costly to reverse comes up while planning, stop
+      and ask the user. This flow has no design step to hold it.
 
-      Sizing & Task Rhythm (from writing-plans):
-      - **5-12 tasks total**: If larger, recommend slicing into separate stories/changes.
-      - **TDD rhythm**: Group work to write failing tests depicting intent → run to verify failure →
-        minimal code → run to verify pass.
-      - **Complexity ratings**: Tag each task with `[easy]`, `[medium]`, or `[complex]` to guide
-        model/subagent assignment.
-      - **Hard Stop**: If an ADR-tier decision is required during task planning, STOP and return to design.
-
-      Parallel Execution & Dependency Guidelines:
-      - Structure phases:
-        * Phase 1: Shared contracts, types, migrations (Sequential prerequisite)
-        * Phase 2+: Independent workstreams labeled with `[depends-on: <phase>]`
-        * Final Phase: Integration and end-to-end verification `[depends-on: <all>]`
-      - Annotate parallelizable tasks with `[parallel]` within workstreams so orchestrators
-        can dispatch subagents concurrently.
-      - Each task MUST be a checkbox: `- [ ] X.Y [tags] Task description (verify: <command>)`.
-      - Each task MUST state how to verify completion (e.g. `cargo test`, `pnpm test`, `pnpm check`).
+      Commit tasks.md on its own as `docs:`.
     requires:
       - specs
 
