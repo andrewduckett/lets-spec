@@ -136,19 +136,19 @@ The backlog is your repository's GitHub issues. You work with it through
 two entry points.
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
 flowchart LR
-    idea([A big idea, PRD or issue]) --> shape[lets-shape]
-    shape --> issues[(Stories as GitHub issues)]
+    idea(["A big idea,<br/>PRD, or issue"]) --> shape[lets-shape]
+    shape --> issues[("Stories as<br/>GitHub issues")]
     issues --> build[lets-build]
-    build --> pr([One pull request per story])
+    build --> pr(["One pull request<br/>per story"])
 ```
 
 | You want to | Run |
 |---|---|
 | Split or prioritize a large piece of work | `lets-shape` |
 | Start the next story, or carry on the change on your current branch | `lets-build` |
-| Think something through with no story yet | `openspec-explore` |
-| Fix a bug, CI or tooling with no change in behavior | Nothing: use an ordinary branch and pull request |
+| Fix a bug, CI or tooling with no change in behavior | use an ordinary branch and pull request |
 
 ### `lets-shape`: turn an idea into stories
 
