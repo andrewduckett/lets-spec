@@ -51,3 +51,58 @@ mentions() {
     [ -f "$repo/schemas/${mention#openspec/schemas/}" ] || { echo "no such template: $mention"; false; }
   done < <(mentions 'openspec/schemas/[a-z-]+/templates/[a-z-]+\.md')
 }
+
+# flow_skills <flow>: the skills flows.nix ships with the flow, one per line.
+flow_skills() {
+  sed -n "/^  $1 = {/,/^  };/p" "$repo/flows.nix" |
+    grep -o 'skills = \[[^]]*\]' | grep -o '"[^"]*"' | tr -d '"'
+}
+
+# named_skills <file>: each name the file calls a skill, as `name` skill,
+# even across a line break.
+named_skills() {
+  tr -s '[:space:]' ' ' <"$1" | grep -oE '`[a-z-]+` skill' | cut -d'`' -f2 | sort -u
+}
+
+@test "each skill a flow ships, other than an entry point, is named by its schema" {
+  local flow skill
+  for flow in standard minimal; do
+    for skill in $(flow_skills "$flow"); do
+      case "$skill" in lets-build | lets-shape) continue ;; esac
+      named_skills "$repo/schemas/$flow/schema.yaml" | grep -qx "$skill" ||
+        { echo "$flow ships $skill, but its schema never names it"; false; }
+    done
+  done
+}
+
+@test "each skill a schema names is one its flow ships, or a generated OpenSpec skill" {
+  local flow skill
+  for flow in standard minimal; do
+    for skill in $(named_skills "$repo/schemas/$flow/schema.yaml"); do
+      case "$skill" in openspec-*) continue ;; esac
+      flow_skills "$flow" | grep -qx "$skill" ||
+        { echo "the $flow schema names $skill, which the flow does not ship"; false; }
+    done
+  done
+}
+
+@test "each marker a schema reads is one its templates write" {
+  local flow marker
+  for flow in standard minimal; do
+    for marker in 'Confirmed by user:' 'VERDICT:' 'CHANGES_APPLIED:'; do
+      grep -qF "$marker" "$repo/schemas/$flow/schema.yaml" || continue
+      grep -qF "$marker" "$repo/schemas/$flow/templates/"*.md ||
+        { echo "the $flow schema reads $marker, but no template writes it"; false; }
+    done
+  done
+}
+
+@test "every instruction block is a literal block, so its line breaks survive" {
+  run grep -n 'instruction: *[^| ]' "$repo"/schemas/*/schema.yaml
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "the prose has no trailing whitespace" {
+  run grep -n ' $' $(prose)
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}

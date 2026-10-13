@@ -87,18 +87,18 @@ artifacts:
       - Step-by-step implementation details
       - Detailed execution plans (those belong in design.md or tasks.md)
 
-      Quick test: if the implementation can change without changing externally visible behavior, it likely does not 
+      Quick test: if the implementation can change without changing externally visible behavior, it likely does not
       belong in the spec.
 
-      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the 
+      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the
       spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path:
-      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment 
-        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a 
+      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment
+        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a
         new domain level when the project uses a flat layout.
-      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the 
+      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the
         delta at `specs/<capability-path>/spec.md`. Do not move or rename the capability.
 
-      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes. 
+      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes.
       If the proposal lists no capabilities and `skip_specs` is not set, revisit the proposal first.
 
       Delta operations (use ## headers):
@@ -114,26 +114,26 @@ artifacts:
       - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
       - Every requirement MUST have at least one scenario.
 
-      New capabilities only: 
-      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict` 
-      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates; 
-      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by 
-      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's 
-      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit 
-      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the 
-      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the 
-      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a 
-      global default store - and to the current repository otherwise. Do not try to work out which case applies; the 
+      New capabilities only:
+      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict`
+      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates;
+      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by
+      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's
+      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit
+      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the
+      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the
+      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a
+      global default store - and to the current repository otherwise. Do not try to work out which case applies; the
       field already has.
 
       MODIFIED requirements workflow:
-      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md` 
+      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md`
          (the same store-aware root as above)
       2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
       3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
       4. Ensure header text matches exactly (whitespace-insensitive)
 
-      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without 
+      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without
       changing existing behavior, use ADDED instead.
 
       Example (a new capability, so it opens with `## Purpose`):

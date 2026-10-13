@@ -8,15 +8,15 @@ artifacts:
     template: brainstorm.md
     instruction: |
       Be a thinking partner, not a form to fill in:
-      - Grounded: read the code, tests and specs before you ask. Run `openspec list --specs` for the project's 
-        capabilities, and read each one the story touches in full with `openspec show <spec-id> --type spec`. Never 
+      - Grounded: read the code, tests and specs before you ask. Run `openspec list --specs` for the project's
+        capabilities, and read each one the story touches in full with `openspec show <spec-id> --type spec`. Never
         ask the user for a fact you can check.
       - Patient: don't rush to conclusions, let the shape of the problem emerge
-      - Skeptical: question the story's assumptions, the user's and your own. Say so if the story solves the wrong 
+      - Skeptical: question the story's assumptions, the user's and your own. Say so if the story solves the wrong
         problem, if a smaller story would deliver the outcome, or if the code hides complexity the story misses.
-      - Honest: if something is unclear, dig deeper; never fake understanding. Never invent the user's intent, 
+      - Honest: if something is unclear, dig deeper; never fake understanding. Never invent the user's intent,
         priorities or constraints: ask.
-      - Visual: when a flow, a set of states or a choice is hard to hold in words, draw it. Use plain ASCII only 
+      - Visual: when a flow, a set of states or a choice is hard to hold in words, draw it. Use plain ASCII only
         (`+ - | --> v`), since other characters can misalign in a terminal.
 
       At the start of exploring any new feature, open problem, or requirement, you MUST make an explicit decision: **Is a brainstorm necessary?**
@@ -31,22 +31,22 @@ artifacts:
 
       1. Grill the user until you share one understanding of the story:
          - Ask one question at a time, with your recommended answer. Say why it matters: the decision it settles.
-         - Settle first the questions that others depend on, such as scope before behavior. If an answer changes an 
+         - Settle first the questions that others depend on, such as scope before behavior. If an answer changes an
            earlier one, go back to it.
          - Skip questions whose answer would not change the plan.
          - Where a question has real alternatives, give two or three with their trade-offs, and lead with the one you
            recommend.
          - Settle scope, behavior and acceptance: the what and the why. Leave the how to design.
-      
-      2. Write the ledger with the template: one row per resolved question. code or a document settled it, and 
-         `Assumption` when neither did. Silence is not agreement: a recommendation the user did not accept is an 
+
+      2. Write the ledger with the template: one row per resolved question. code or a document settled it, and
+         `Assumption` when neither did. Silence is not agreement: a recommendation the user did not accept is an
          `Assumption`. Keep each row to one line; design explains the why and the how.
 
 
       **If NO (e.g. straightforward bug fix, mechanical refactor, well-specified task):**
       State concisely why brainstorming is unnecessary (e.g. "Scope is concrete and well-bounded: [reason]").
 
-      Commit brainstorm on its own as `docs:`. Then push the branch and open a draft pull request. 
+      Commit brainstorm on its own as `docs:`. Then push the branch and open a draft pull request.
       If you have an issue <n> say `Closes #<n>`.
     requires: []
 
@@ -55,32 +55,32 @@ artifacts:
     description: Initial proposal document outlining the change
     template: proposal.md
     instruction: |
-      First, read brainstorm.md. If its last line is not `Confirmed by user: yes`, stop: the brainstorm is unfinished, 
-      so return to it. Build the proposal from the story and the ledger. Cite a ledger row by number, such as (D2), 
+      First, read brainstorm.md. If its last line is not `Confirmed by user: yes`, stop: the brainstorm is unfinished,
+      so return to it. Build the proposal from the story and the ledger. Cite a ledger row by number, such as (D2),
       rather than repeating it.
 
       Create the proposal document that establishes WHY this change is needed.
 
       Sections:
       - **Why**: 1-2 sentences on the problem or opportunity. What problem does this solve? Why now?
-      - **What Changes**: Bullet list of changes. Be specific about new capabilities, modifications, 
+      - **What Changes**: Bullet list of changes. Be specific about new capabilities, modifications,
         or removals. Mark breaking changes with **BREAKING**.
       - **Capabilities**: Identify which specs will be created or modified:
-        - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`. 
-          Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the 
+        - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`.
+          Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the
           project's existing spec organization.
-        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level 
-          behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path 
+        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level
+          behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path
           under `openspec/specs/`. Leave empty if no requirement changes.
       - **Impact**: Affected code, APIs, dependencies, or systems.
 
-      IMPORTANT: The Capabilities section is critical. It creates the contract between proposal and specs phases. Research 
+      IMPORTANT: The Capabilities section is critical. It creates the contract between proposal and specs phases. Research
       existing specs before filling this in. Each capability listed here will need a corresponding spec file.
 
-      Every change must either declare at least one capability (new or modified) or explicitly opt out of specs: 
-      `openspec validate` rejects a change with zero deltas unless the change's `.openspec.yaml` sets 
-      `skip_specs: true`. Use `skip_specs: true` only when no spec-level behavior changes (pure refactor, tooling, 
-      docs) - specs describe behavior, so if behavior does not change, no spec should change either. Do not invent a 
+      Every change must either declare at least one capability (new or modified) or explicitly opt out of specs:
+      `openspec validate` rejects a change with zero deltas unless the change's `.openspec.yaml` sets
+      `skip_specs: true`. Use `skip_specs: true` only when no spec-level behavior changes (pure refactor, tooling,
+      docs) - specs describe behavior, so if behavior does not change, no spec should change either. Do not invent a
       requirement just to satisfy validation.
 
       Keep it concise (1-2 pages). Focus on the "why" not the "how" - implementation details belong in design.md.
@@ -112,18 +112,18 @@ artifacts:
       - Step-by-step implementation details
       - Detailed execution plans (those belong in design.md or tasks.md)
 
-      Quick test: if the implementation can change without changing externally visible behavior, it likely does not 
+      Quick test: if the implementation can change without changing externally visible behavior, it likely does not
       belong in the spec.
 
-      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the 
+      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the
       spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path:
-      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment 
-        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a 
+      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment
+        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a
         new domain level when the project uses a flat layout.
-      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the 
+      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the
         delta at `specs/<capability-path>/spec.md`. Do not move or rename the capability.
 
-      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes. 
+      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes.
       If the proposal lists no capabilities and `skip_specs` is not set, revisit the proposal first.
 
       Delta operations (use ## headers):
@@ -139,26 +139,26 @@ artifacts:
       - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
       - Every requirement MUST have at least one scenario.
 
-      New capabilities only: 
-      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict` 
-      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates; 
-      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by 
-      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's 
-      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit 
-      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the 
-      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the 
-      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a 
-      global default store - and to the current repository otherwise. Do not try to work out which case applies; the 
+      New capabilities only:
+      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict`
+      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates;
+      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by
+      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's
+      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit
+      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the
+      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the
+      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a
+      global default store - and to the current repository otherwise. Do not try to work out which case applies; the
       field already has.
 
       MODIFIED requirements workflow:
-      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md` 
+      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md`
          (the same store-aware root as above)
       2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
       3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
       4. Ensure header text matches exactly (whitespace-insensitive)
 
-      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without 
+      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without
       changing existing behavior, use ADDED instead.
 
       Example (a new capability, so it opens with `## Purpose`):
@@ -232,7 +232,7 @@ artifacts:
     generates: adr.md
     description: Per-change ADR review manifest and durable decision handoff
     template: adr.md
-    instruction: >
+    instruction: |
       Complete ADR review for this change by writing a concise manifest at
       openspec/changes/<change>/adr.md. This change-local file is the artifact
       completion marker for the adr step.
@@ -262,19 +262,19 @@ artifacts:
          axis: fix a hard-to-read ADR by rewriting it, never by deleting it.
 
          Write an ADR (good examples):
-         - **Stack forced by a constraint** — "Use an embedded datastore, not a networked database, because the app 
+         - **Stack forced by a constraint** — "Use an embedded datastore, not a networked database, because the app
            must run offline." Reversing it touches every storage call.
-         - **A canonical data model** — "Convert every input to one internal shape at its edge." Many consumers bind 
+         - **A canonical data model** — "Convert every input to one internal shape at its edge." Many consumers bind
            to that shape, so changing it later is costly.
-         - **A system boundary** — "Keep the core a pure library that emits one document, and make the integration a 
+         - **A system boundary** — "Keep the core a pure library that emits one document, and make the integration a
            swappable adapter." The core stays testable on its own.
 
          Do not write an ADR (bad examples):
-         - **Recoverable from code** — "Set the retry limit to 3." It lives in code, costs nothing to change, and you 
+         - **Recoverable from code** — "Set the retry limit to 3." It lives in code, costs nothing to change, and you
            learn it by reading it.
-         - **Roadmap sequencing** — "Build reporting after billing." That is a roadmap decision, not an architectural 
+         - **Roadmap sequencing** — "Build reporting after billing." That is a roadmap decision, not an architectural
            fork.
-         - **A requirement, not a decision** — "Reject uploads over 10 MB." The spec owns that behavior; there is no 
+         - **A requirement, not a decision** — "Reject uploads over 10 MB." The spec owns that behavior; there is no
            fork between approaches.
 
       3. For each qualifying decision, create a NEW repository-level file in
@@ -325,7 +325,7 @@ artifacts:
       - **Security & Trust Boundaries**: Authz gaps, cross-tenant leaks, trust boundaries crossed without validation.
       - **State & Migration Hazards**: Database schema changes, data loss, backward incompatibility, missing rollback strategy.
       - **Simpler Alternatives**: Simpler designs that deliver identical guarantees with less code/abstraction.
-      - **Plain language in every artifact**: Proposal, design, specs, adr. Flag sentences > 30 words, passive voice, or 
+      - **Plain language in every artifact**: Proposal, design, specs, adr. Flag sentences > 30 words, passive voice, or
         filler narrative that restates motivation.
       - **Scenario Testability**: Every delta spec scenario's THEN condition must be mechanically assertable.
       - **Highest Seam**: Verify tests are positioned at the highest viable architectural seam.
@@ -427,20 +427,20 @@ apply:
   instruction: |
     Execution discipline:
     - **Tick = Evidence**: A checkbox is ticked `- [x]` only with its verification evidence recorded inline:
-      `- [x] 1.1 Add audio chunk parser (✓ cargo test parser passed)`. A ticked box without evidence is invalid. 
+      `- [x] 1.1 Add audio chunk parser (✓ cargo test parser passed)`. A ticked box without evidence is invalid.
       Never tick ahead; commit as you go.
-    - **Atomic commits**: Commit per completed task with real Conventional Commit types (`feat:`, `fix:`, `test:`, 
+    - **Atomic commits**: Commit per completed task with real Conventional Commit types (`feat:`, `fix:`, `test:`,
       `refactor:`).
-    - **Parallel dispatch**: Orchestrating agent may launch concurrent subagents for independent workstreams whose 
+    - **Parallel dispatch**: Orchestrating agent may launch concurrent subagents for independent workstreams whose
       `[depends-on]` prerequisites are complete.
-    - **Deviations ledger**: Append any minor deviations into a `## Deviations Ledger` section in tasks.md. Stop and 
+    - **Deviations ledger**: Append any minor deviations into a `## Deviations Ledger` section in tasks.md. Stop and
       surface material ones (changed guarantees, authz, schema).
-    - **Stop triggers**: STOP immediately when hitting unexpected blockers, repeated test failures, or if an ADR-level 
+    - **Stop triggers**: STOP immediately when hitting unexpected blockers, repeated test failures, or if an ADR-level
       fork arises.
 
-    Commit each task on its own, with its real type: `feat:`, `fix:`, `refactor:` or `test:`. Include the task's 
+    Commit each task on its own, with its real type: `feat:`, `fix:`, `refactor:` or `test:`. Include the task's
     checkbox in the same commit.
 
-    When every task is done, run the `peer-code-review` skill on the branch. Then run the `openspec-verify-change` 
-    skill. If it reports a problem, stop and show it to the user. Otherwise archive the change as the Archive section 
+    When every task is done, run the `peer-code-review` skill on the branch. Then run the `openspec-verify-change`
+    skill. If it reports a problem, stop and show it to the user. Otherwise archive the change as the Archive section
     of the lets-build skill says.
