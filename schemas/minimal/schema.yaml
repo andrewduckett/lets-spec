@@ -40,94 +40,45 @@ artifacts:
     description: Detailed specifications for the change
     template: spec.md
     instruction: |
-      Create specification files that define WHAT the system should do.
+      Write one spec file per capability this change adds, or whose
+      requirements it changes. The ledger in brainstorm.md says which. The
+      `writing-specs` skill says what belongs in a requirement, how to write a
+      scenario a test can assert, and how to change an existing requirement.
+      This step says where the files go and what the parser needs.
 
-      A spec is a behavior contract, not an implementation plan.
+      Where each file goes. `<capability-path>` is the directory under
+      `specs/`, such as `user-auth` or `identity/user-auth`.
+      - A new capability: `specs/<capability-path>/spec.md`. New path segments
+        are kebab-case. Follow the project's layout; do not add a domain level
+        when the project's specs are flat.
+      - A modified capability: `specs/<capability-path>/spec.md`, at the exact
+        path of the existing spec. Do not move or rename the capability.
+      - The existing specs live under `<planningHome.root>/openspec/specs/`.
+        Take `planningHome.root` from the `openspec instructions ... --json`
+        output. It is the repository, or the store when the change lives in
+        one.
 
-      Good spec content:
-      - Observable behavior users or downstream systems rely on
-      - Inputs, outputs, and error conditions
-      - External constraints (security, privacy, reliability, compatibility)
-      - Scenarios that can be tested or explicitly validated
+      There must be at least one spec file, unless no behavior changes. Then
+      set `skip_specs: true` in the change's `.openspec.yaml`, or
+      `openspec validate` rejects the change. Never invent a requirement to
+      pass validation.
 
-      Avoid in specs:
-      - Internal class/function names
-      - Library or framework choices
-      - Step-by-step implementation details
-      - Detailed execution plans (those belong in design.md or tasks.md)
-
-      Quick test: if the implementation can change without changing externally visible behavior, it likely does not
-      belong in the spec.
-
-      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the
-      spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path:
-      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment
-        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a
-        new domain level when the project uses a flat layout.
-      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the
-        delta at `specs/<capability-path>/spec.md`. Do not move or rename the capability.
-
-      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes.
-      If the proposal lists no capabilities and `skip_specs` is not set, revisit the proposal first.
-
-      Delta operations (use ## headers):
-      - **ADDED Requirements**: New capabilities
-      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
-      - **REMOVED Requirements**: Deprecated features - MUST include **Reason** and **Migration**
-      - **RENAMED Requirements**: Name changes only - use FROM:/TO: format
-
-      Format requirements:
-      - Each requirement: `### Requirement: <name>` followed by description
-      - Use SHALL/MUST for normative requirements (avoid should/may)
-      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
-      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
-      - Every requirement MUST have at least one scenario.
-
-      New capabilities only:
-      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict`
-      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates;
-      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by
-      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's
-      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit
-      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the
-      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the
-      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a
-      global default store - and to the current repository otherwise. Do not try to work out which case applies; the
-      field already has.
-
-      MODIFIED requirements workflow:
-      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md`
-         (the same store-aware root as above)
-      2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
-      3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
-      4. Ensure header text matches exactly (whitespace-insensitive)
-
-      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without
-      changing existing behavior, use ADDED instead.
-
-      Example (a new capability, so it opens with `## Purpose`):
-      ```
-      ## Purpose
-
-      Lets users take their data out of the product in a portable format.
-
-      ## ADDED Requirements
-
-      ### Requirement: User can export data
-      The system SHALL allow users to export their data in CSV format.
-
-      #### Scenario: Successful export
-      - **WHEN** user clicks "Export" button
-      - **THEN** system downloads a CSV file with all user data
-
-      ## REMOVED Requirements
-
-      ### Requirement: Legacy export
-      **Reason**: Replaced by new export system
-      **Migration**: Use new export endpoint at /api/v2/export
-      ```
-
-      Specs should be testable - each scenario is a potential test case.
+      What the parser needs. Validation and archive read these exactly.
+      - Delta sections are `## ADDED Requirements`, `## MODIFIED Requirements`,
+        `## REMOVED Requirements` and `## RENAMED Requirements`.
+      - Each requirement is `### Requirement: <name>` followed by its text.
+      - Each scenario is `#### Scenario: <name>`, with four hashes, followed by
+        `- **WHEN** ...` and `- **THEN** ...` lines. Three hashes or a bullet
+        fail silently.
+      - Every requirement has at least one scenario.
+      - MODIFIED carries the whole requirement block, with its heading
+        identical to the existing one. REMOVED carries **Reason** and
+        **Migration**. RENAMED uses `FROM:` and `TO:` lines.
+      - A new capability starts with `## Purpose`: one or two sentences of at
+        least 50 characters, or `openspec validate --strict` reports it as too
+        brief. Archive copies it into the new main spec. A delta on an existing
+        capability has no `## Purpose`. To change an existing Purpose, edit the
+        main spec directly.
 
       Commit the spec files together, on their own, as `docs:`.
     requires:
