@@ -1,0 +1,446 @@
+name: standard
+version: 1
+description: Custom OpenSpec workflow - brainstorm → proposal → specs → design → [adr] → review → tasks
+artifacts:
+  - id: brainstorm
+    generates: brainstorm.md
+    description: Decision ledger from grilling the story with the user, before any plan is written
+    template: brainstorm.md
+    instruction: |
+      Be a thinking partner, not a form to fill in:
+      - Grounded: read the code, tests and specs before you ask. Run `openspec list --specs` for the project's 
+        capabilities, and read each one the story touches in full with `openspec show <spec-id> --type spec`. Never 
+        ask the user for a fact you can check.
+      - Patient: don't rush to conclusions, let the shape of the problem emerge
+      - Skeptical: question the story's assumptions, the user's and your own. Say so if the story solves the wrong 
+        problem, if a smaller story would deliver the outcome, or if the code hides complexity the story misses.
+      - Honest: if something is unclear, dig deeper; never fake understanding. Never invent the user's intent, 
+        priorities or constraints: ask.
+      - Visual: when a flow, a set of states or a choice is hard to hold in words, draw it. Use plain ASCII only 
+        (`+ - | --> v`), since other characters can misalign in a terminal.
+
+      At the start of exploring any new feature, open problem, or requirement, you MUST make an explicit decision: **Is a brainstorm necessary?**
+
+      Evaluate:
+      1. Is the requirement open-ended or ambiguous?
+      2. Are there multiple viable UX, product, or architectural paths?
+      3. Are new domain terms or entities emerging that are not in the glossary?
+      4. Does this significantly touch core journeys in `openspec/discovery.md`?
+
+      **If YES to any of the above:**
+
+      1. Grill the user until you share one understanding of the story:
+         - Ask one question at a time, with your recommended answer. Say why it matters: the decision it settles.
+         - Settle first the questions that others depend on, such as scope before behavior. If an answer changes an 
+           earlier one, go back to it.
+         - Skip questions whose answer would not change the plan.
+         - Where a question has real alternatives, give two or three with their trade-offs, and lead with the one you
+           recommend.
+         - Settle scope, behavior and acceptance: the what and the why. Leave the how to design.
+      
+      2. Write the ledger with the template: one row per resolved question. code or a document settled it, and 
+         `Assumption` when neither did. Silence is not agreement: a recommendation the user did not accept is an 
+         `Assumption`. Keep each row to one line; design explains the why and the how.
+
+
+      **If NO (e.g. straightforward bug fix, mechanical refactor, well-specified task):**
+      State concisely why brainstorming is unnecessary (e.g. "Scope is concrete and well-bounded: [reason]").
+
+      Commit brainstorm on its own as `docs:`. Then push the branch and open a draft pull request. 
+      If you have an issue <n> say `Closes #<n>`.
+    requires: []
+
+  - id: proposal
+    generates: proposal.md
+    description: Initial proposal document outlining the change
+    template: proposal.md
+    instruction: |
+      First, read brainstorm.md. If its last line is not `Confirmed by user: yes`, stop: the brainstorm is unfinished, 
+      so return to it. Build the proposal from the story and the ledger. Cite a ledger row by number, such as (D2), 
+      rather than repeating it.
+
+      Create the proposal document that establishes WHY this change is needed.
+
+      Sections:
+      - **Why**: 1-2 sentences on the problem or opportunity. What problem does this solve? Why now?
+      - **What Changes**: Bullet list of changes. Be specific about new capabilities, modifications, 
+        or removals. Mark breaking changes with **BREAKING**.
+      - **Capabilities**: Identify which specs will be created or modified:
+        - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`. 
+          Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the 
+          project's existing spec organization.
+        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level 
+          behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path 
+          under `openspec/specs/`. Leave empty if no requirement changes.
+      - **Impact**: Affected code, APIs, dependencies, or systems.
+
+      IMPORTANT: The Capabilities section is critical. It creates the contract between proposal and specs phases. Research 
+      existing specs before filling this in. Each capability listed here will need a corresponding spec file.
+
+      Every change must either declare at least one capability (new or modified) or explicitly opt out of specs: 
+      `openspec validate` rejects a change with zero deltas unless the change's `.openspec.yaml` sets 
+      `skip_specs: true`. Use `skip_specs: true` only when no spec-level behavior changes (pure refactor, tooling, 
+      docs) - specs describe behavior, so if behavior does not change, no spec should change either. Do not invent a 
+      requirement just to satisfy validation.
+
+      Keep it concise (1-2 pages). Focus on the "why" not the "how" - implementation details belong in design.md.
+
+      This is the foundation - specs, design, and tasks all build on this.
+
+      Commit the proposal on its own as `docs:`, then push the branch.
+    requires:
+      - brainstorm
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Detailed specifications for the change
+    template: spec.md
+    instruction: |
+      Create specification files that define WHAT the system should do.
+
+      A spec is a behavior contract, not an implementation plan.
+
+      Good spec content:
+      - Observable behavior users or downstream systems rely on
+      - Inputs, outputs, and error conditions
+      - External constraints (security, privacy, reliability, compatibility)
+      - Scenarios that can be tested or explicitly validated
+
+      Avoid in specs:
+      - Internal class/function names
+      - Library or framework choices
+      - Step-by-step implementation details
+      - Detailed execution plans (those belong in design.md or tasks.md)
+
+      Quick test: if the implementation can change without changing externally visible behavior, it likely does not 
+      belong in the spec.
+
+      Create one spec file per capability listed in the proposal's Capabilities section. `<capability-path>` is the 
+      spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path:
+      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment 
+        newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a 
+        new domain level when the project uses a flat layout.
+      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the 
+        delta at `specs/<capability-path>/spec.md`. Do not move or rename the capability.
+
+      There must be at least one spec file unless the change sets `skip_specs`, as the proposal instruction describes. 
+      If the proposal lists no capabilities and `skip_specs` is not set, revisit the proposal first.
+
+      Delta operations (use ## headers):
+      - **ADDED Requirements**: New capabilities
+      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
+      - **REMOVED Requirements**: Deprecated features - MUST include **Reason** and **Migration**
+      - **RENAMED Requirements**: Name changes only - use FROM:/TO: format
+
+      Format requirements:
+      - Each requirement: `### Requirement: <name>` followed by description
+      - Use SHALL/MUST for normative requirements (avoid should/may)
+      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
+      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
+      - Every requirement MUST have at least one scenario.
+
+      New capabilities only: 
+      start the delta spec with a `## Purpose` section - one or two sentences (50+ characters, or `openspec validate --strict` 
+      reports it as too brief) describing what the capability is for. Archive copies it into the main spec it creates; 
+      without it the new main spec is left with a `TBD ... Update Purpose after archive` placeholder to fill in by 
+      hand. Do NOT add `## Purpose` to a delta for an existing capability - that spec already has one and the delta's 
+      is ignored. To change an existing capability's Purpose - including a leftover TBD` placeholder - edit 
+      `<planningHome.root>/openspec/specs/<capability-path>/spec.md` directly. `planningHome.root` comes from the 
+      `openspec instructions ... --json` response. Always use it rather than a repo-relative path: it resolves to the 
+      store whenever the change lives in one - whether that came from `--store`, a project `store:` pointer, or a 
+      global default store - and to the current repository otherwise. Do not try to work out which case applies; the 
+      field already has.
+
+      MODIFIED requirements workflow:
+      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md` 
+         (the same store-aware root as above)
+      2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
+      3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
+      4. Ensure header text matches exactly (whitespace-insensitive)
+
+      Common pitfall: Using MODIFIED with partial content loses detail at archive time. If adding new concerns without 
+      changing existing behavior, use ADDED instead.
+
+      Example (a new capability, so it opens with `## Purpose`):
+      ```
+      ## Purpose
+
+      Lets users take their data out of the product in a portable format.
+
+      ## ADDED Requirements
+
+      ### Requirement: User can export data
+      The system SHALL allow users to export their data in CSV format.
+
+      #### Scenario: Successful export
+      - **WHEN** user clicks "Export" button
+      - **THEN** system downloads a CSV file with all user data
+
+      ## REMOVED Requirements
+
+      ### Requirement: Legacy export
+      **Reason**: Replaced by new export system
+      **Migration**: Use new export endpoint at /api/v2/export
+      ```
+
+      Specs should be testable - each scenario is a potential test case.
+
+      Commit the spec files together, on their own, as `docs:`.
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: Technical design document with implementation details
+    template: design.md
+    instruction: |
+      Create the design document that explains HOW to implement the change.
+
+      Guidelines:
+      - Focus on how the change will be implemented, not why it's needed
+        (that's in the proposal).
+      - Document decisions made and alternatives considered, with rationale.
+      - Highlight risks, trade-offs, and mitigation strategies.
+      - Identify the primary test seam at the highest viable architectural point
+        (the Highest Seam Principle).
+      - Classify the scrutiny tier based on blast radius.
+
+      Sections:
+      - **Context**: Only the current state and constraints needed to explain the approach.
+        Reference the proposal for motivation instead of restating it.
+      - **Goals / Non-Goals**: What this design achieves and explicitly excludes.
+        Don't restate the proposal's scope - add only design-level boundaries.
+      - **Test Seams (Highest Seam Principle)**: Sketch out the seams at which the feature
+        will be tested. Existing seams should be preferred to new ones. Propose test seams
+        at the highest possible architectural point (the fewer seams across the codebase,
+        the better — ideal is one).
+      - **Scrutiny Tier & Blast Radius**: Classify blast radius:
+        * `low`: Narrow fix or polish; single package; no new contracts, schema, or authz.
+        * `medium`: Standard single-subsystem slice on established patterns; contained blast radius.
+        * `high`: Multi-package; new contracts/events/migrations; authz or trust boundaries;
+          architecture-changing (new-ADR territory); novel external dependency.
+      - **Decisions**: Key technical choices with rationale (why X over Y?). Include alternatives
+        considered for each decision.
+      - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation.
+      - **Migration & Rollback**: Steps to deploy, database migrations, rollback strategy (if applicable).
+      - **Open Questions**: Unknowns that can safely be answered later without changing the specs,
+        the approach, or the task breakdown. Omit if none.
+    requires:
+      - proposal
+
+  - id: adr
+    generates: adr.md
+    description: Per-change ADR review manifest and durable decision handoff
+    template: adr.md
+    instruction: >
+      Complete ADR review for this change by writing a concise manifest at
+      openspec/changes/<change>/adr.md. This change-local file is the artifact
+      completion marker for the adr step.
+
+      ADRs live in docs/decisions/, and their template is
+      openspec/schemas/standard/templates/adr-template.md. Existing ADRs in docs/decisions/
+      are required context for the review, but they MUST NOT satisfy
+      completion for a new change.
+
+      Process:
+
+      1. Read every existing ADR in docs/decisions/. Build the supersession
+         graph from what each ADR says it supersedes or is superseded by.
+         Note the highest sequence number in use.
+
+      2. Re-read design.md and list the decisions it made. Write an ADR only
+         for a decision that is a real fork or an expensive-to-reverse call —
+         a choice among viable approaches where changing your mind later is
+         costly. Typical ADR categories: a stack, framework, or library
+         choice; a data model or schema; an auth strategy; an API
+         architecture; an infra, hosting, or provider choice; a privacy
+         posture.
+
+         A useful test: could an engineer reading only the code plausibly
+         reverse this decision without knowing why, and would that reversal be
+         costly? If yes, the why belongs in an ADR. Confusion is a separate
+         axis: fix a hard-to-read ADR by rewriting it, never by deleting it.
+
+         Write an ADR (good examples):
+         - **Stack forced by a constraint** — "Use an embedded datastore, not a networked database, because the app 
+           must run offline." Reversing it touches every storage call.
+         - **A canonical data model** — "Convert every input to one internal shape at its edge." Many consumers bind 
+           to that shape, so changing it later is costly.
+         - **A system boundary** — "Keep the core a pure library that emits one document, and make the integration a 
+           swappable adapter." The core stays testable on its own.
+
+         Do not write an ADR (bad examples):
+         - **Recoverable from code** — "Set the retry limit to 3." It lives in code, costs nothing to change, and you 
+           learn it by reading it.
+         - **Roadmap sequencing** — "Build reporting after billing." That is a roadmap decision, not an architectural 
+           fork.
+         - **A requirement, not a decision** — "Reject uploads over 10 MB." The spec owns that behavior; there is no 
+           fork between approaches.
+
+      3. For each qualifying decision, create a NEW repository-level file in
+         docs/decisions/, from the ADR template. Number and name it the
+         way the existing ADRs are named, such as ADR-NNN-slug.md. The
+         template holds the rules for what an ADR may contain and link to;
+         follow them.
+
+      4. Write openspec/changes/<change>/adr.md using the template. The
+         manifest MUST state that ADR review completed for this change, list the
+         in-force ADR context reviewed, and reference every repository-level ADR
+         file created for this change. It MUST NOT duplicate full Context,
+         Decision, or Consequences content from repository-level ADR files.
+
+      5. If nothing meets the bar, do not invent ADRs. The manifest MUST
+         explicitly state that no major durable architectural decisions were
+         introduced and no new repository-level ADR files were created.
+
+      Commit adr.md and any new ADR files together, on their own, as `docs:`.
+    requires:
+      - design
+
+  - id: review
+    generates: review.md
+    description: Adversarial review that gates moving a change to implementation tasks (agent-honored)
+    template: review.md
+    instruction: |
+      Conduct an independent, adversarial peer review of the proposal, specs, design, and adr.
+      The reviewer MUST run using an independent model family (e.g. GPT/Codex reviewing Claude,
+      or Claude reviewing Gemini) in read-only mode.
+
+      Run the `peer-plan-review` skill on the change's artifacts
+      (brainstorm.md, proposal.md, design.md, specs/, and adr.md). Record
+      in Review Metadata who reviewed and whether the review was
+      independent. Record the review either way: never skip it, and never
+      fabricate a verdict.
+
+      Read brainstorm.md first. Challenge each `Assumption` row before
+      anything else: an assumption the plan depends on and nothing supports
+      is a finding. Leave `User` rows alone unless they contradict each
+      other or the specs; the user made those choices on purpose.
+
+      The reviewer critiques; it does not rewrite or implement.
+
+      Hunt specifically for:
+      - **Repo Verification**: Check all assumptions against live code in the repo (verify, don't assume).
+      - **Missing Edge Cases & Failure Modes**: Concrete failure inputs, partial failures, timeouts, scale hazards, service outages.
+      - **Security & Trust Boundaries**: Authz gaps, cross-tenant leaks, trust boundaries crossed without validation.
+      - **State & Migration Hazards**: Database schema changes, data loss, backward incompatibility, missing rollback strategy.
+      - **Simpler Alternatives**: Simpler designs that deliver identical guarantees with less code/abstraction.
+      - **Plain language in every artifact**: Proposal, design, specs, adr. Flag sentences > 30 words, passive voice, or 
+        filler narrative that restates motivation.
+      - **Scenario Testability**: Every delta spec scenario's THEN condition must be mechanically assertable.
+      - **Highest Seam**: Verify tests are positioned at the highest viable architectural seam.
+      - **Scope vs. proposal**: Creep or gold-plating beyond proposal scope.
+      - **Design/spec contradictions**: Design choices conflicting with spec requirements.
+
+       The reviewer labels each finding Critical, Moderate, or Suggestion, as
+      the template does. Every finding that blocks acceptance is Critical;
+      Moderate and Suggestion findings do not block. Check each finding
+      against the repo before you record it.
+
+      VERDICT (mutually exclusive):
+      - APPROVE — downstream artifacts may proceed.
+      - APPROVE WITH CHANGES — list required edits; author applies them,
+        reviewer re-checks only listed items.
+      - REVISE — fundamental defect. Fix artifacts and re-run the FULL
+        review in a fresh context. `tasks` MUST NOT be generated
+        while the latest verdict is REVISE.
+
+      SEVERITY-VERDICT CONSISTENCY: the verdict must follow from the
+      findings. Any open 🔴 Critical finding forbids APPROVE — the verdict
+      must be REVISE (or APPROVE_WITH_CHANGES only if the fix is small,
+      unambiguous, and fully specified as a Required Change). A review
+      with Critical findings and VERDICT: APPROVE is itself invalid.
+
+      STALENESS: a verdict applies only to the exact artifact contents that
+      were reviewed. If proposal.md, design.md, or specs/ change after the
+      verdict is issued — for any reason other than applying listed Required
+      Changes — the verdict is VOID and a new review round is required
+      before tasks or apply may proceed. Never rely on an
+      approval issued for content that no longer exists.
+
+      ROUNDS: each full review replaces review.md and increments the
+      `Review round` counter in Review Metadata (round 1, 2, ...). Carry
+      forward a one-line summary of the prior round's verdict so the
+      history is auditable. After 2 consecutive REVISE verdicts, STOP and
+      escalate to the human — do not keep looping author and reviewer.
+
+      REBUTTAL ADJUDICATION: every finding must be either fixed or rebutted
+      in the Rebuttals section — none silently ignored. Rebuttals are not
+      self-certifying: a rebuttal of a Critical or Moderate finding counts
+      only after the REVIEWER re-checks and accepts it (mark it
+      "accepted by reviewer" with a one-line reason). Suggestions (📌) may
+      be declined by the author without reviewer sign-off.
+
+      You MUST emit the canonical machine-readable line in review.md exactly:
+        `VERDICT: APPROVE` | `VERDICT: APPROVE_WITH_CHANGES` | `VERDICT: REVISE`
+      This single line is the source of truth any enforcement tooling reads.
+
+      For APPROVE_WITH_CHANGES you MUST also emit a completion signal:
+        `CHANGES_APPLIED: yes` | `CHANGES_APPLIED: no` | `CHANGES_APPLIED: n/a`
+      Initialize it to `no` when the verdict is issued. The author flips it to
+      `yes` ONLY after every Required Change is applied AND the reviewer has
+      re-checked those specific items. Use `n/a` for APPROVE and REVISE.
+      Downstream artifacts MUST NOT proceed on APPROVE_WITH_CHANGES until
+      `CHANGES_APPLIED: yes`.
+    requires:
+      - proposal
+      - design
+      - adr
+      - specs
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist with trackable tasks
+    template: tasks.md
+    instruction: |
+      Create the task list that breaks down the implementation work.
+
+      Before writing tasks, check design.md for Open Questions. If any of them
+      would change what gets built, resolve them with the user first - do not
+      bake an unstated assumption into the task list.
+
+      **IMPORTANT: Follow the template below exactly.** The apply phase parses
+      checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
+
+      Sizing & Task Rhythm (from writing-plans):
+      - **5-12 tasks total**: If larger, recommend slicing into separate stories/changes.
+      - TDD Rhythm: Structure tasks into failing test → verify failure → minimal code → verify pass.
+      - **Complexity ratings**: Tag each task with `[easy]`, `[medium]`, or `[complex]` to guide
+        model/subagent assignment.
+      - **Hard Stop**: If an ADR-tier decision is required during task planning, STOP and return to design.
+
+      Parallel Execution & Dependency Guidelines:
+      - Structure phases:
+        * Phase 1: Shared contracts, types, migrations (Sequential prerequisite)
+        * Phase 2+: Independent workstreams labeled with `[depends-on: <phase>]`
+        * Final Phase: Integration and end-to-end verification `[depends-on: <all>]`
+      - Annotate parallelizable tasks with `[parallel]` within workstreams so orchestrators
+        can dispatch subagents concurrently.
+      - Each task MUST be a checkbox: `- [ ] X.Y [tags] Task description (verify: <command>)`.
+      - Each task MUST state how to verify completion (e.g. `cargo test`, `pnpm test`, `pnpm check`).
+    requires:
+      - review
+
+apply:
+  requires: [ tasks ]
+  tracks: tasks.md
+  instruction: |
+    Execution discipline:
+    - **Tick = Evidence**: A checkbox is ticked `- [x]` only with its verification evidence recorded inline:
+      `- [x] 1.1 Add audio chunk parser (✓ cargo test parser passed)`. A ticked box without evidence is invalid. 
+      Never tick ahead; commit as you go.
+    - **Atomic commits**: Commit per completed task with real Conventional Commit types (`feat:`, `fix:`, `test:`, 
+      `refactor:`).
+    - **Parallel dispatch**: Orchestrating agent may launch concurrent subagents for independent workstreams whose 
+      `[depends-on]` prerequisites are complete.
+    - **Deviations ledger**: Append any minor deviations into a `## Deviations Ledger` section in tasks.md. Stop and 
+      surface material ones (changed guarantees, authz, schema).
+    - **Stop triggers**: STOP immediately when hitting unexpected blockers, repeated test failures, or if an ADR-level 
+      fork arises.
+
+    Commit each task on its own, with its real type: `feat:`, `fix:`, `refactor:` or `test:`. Include the task's 
+    checkbox in the same commit.
+
+    When every task is done, run the `peer-code-review` skill on the branch. Then run the `openspec-verify-change` 
+    skill. If it reports a problem, stop and show it to the user. Otherwise archive the change as the Archive section 
+    of the lets-build skill says.

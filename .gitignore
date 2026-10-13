@@ -1,0 +1,16 @@
+# Nix build output links (nix build, nix-build)
+result
+result-*
+
+# direnv cache (use flake)
+.direnv/
+
+# Scratch and working files
+.workspace/
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
