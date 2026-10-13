@@ -68,6 +68,7 @@ named_skills() {
 @test "each skill a flow ships, other than an entry point, is named by its schema" {
   local flow skill
   for flow in standard minimal; do
+    [ -n "$(flow_skills "$flow")" ] || { echo "flows.nix lists no skills for $flow"; false; }
     for skill in $(flow_skills "$flow"); do
       case "$skill" in lets-build | lets-shape) continue ;; esac
       named_skills "$repo/schemas/$flow/schema.yaml" | grep -qx "$skill" ||
@@ -88,22 +89,31 @@ named_skills() {
 }
 
 @test "each marker a schema reads is one its templates write" {
-  local flow marker
+  local flow marker template
   for flow in standard minimal; do
     for marker in 'Confirmed by user:' 'VERDICT:' 'CHANGES_APPLIED:'; do
       grep -qF "$marker" "$repo/schemas/$flow/schema.yaml" || continue
-      grep -qF "$marker" "$repo/schemas/$flow/templates/"*.md ||
-        { echo "the $flow schema reads $marker, but no template writes it"; false; }
+      case "$marker" in
+        'Confirmed by user:') template=brainstorm.md ;;
+        *) template=review.md ;;
+      esac
+      grep -qF "$marker" "$repo/schemas/$flow/templates/$template" ||
+        { echo "the $flow schema reads $marker, but templates/$template does not write it"; false; }
     done
   done
 }
 
 @test "every instruction block is a literal block, so its line breaks survive" {
-  run grep -n 'instruction: *[^| ]' "$repo"/schemas/*/schema.yaml
-  [ "$status" -eq 1 ] || { echo "$output"; false; }
+  local schema
+  for schema in "$repo"/schemas/*/schema.yaml; do
+    [ "$(grep -c '^ *instruction:' "$schema")" -eq "$(grep -c '^ *instruction: |$' "$schema")" ] ||
+      { echo "$schema has an instruction that is not a literal block"; false; }
+    [ "$(grep -c '^ *instruction: |$' "$schema")" -ge 3 ] ||
+      { echo "$schema has fewer instruction blocks than any flow needs"; false; }
+  done
 }
 
 @test "the prose has no trailing whitespace" {
-  run grep -n ' $' $(prose)
+  run grep -n '[[:space:]]$' $(prose)
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
