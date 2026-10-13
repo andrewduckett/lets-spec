@@ -183,89 +183,42 @@ artifacts:
 
   - id: review
     generates: review.md
-    description: Adversarial review that gates moving a change to implementation tasks (agent-honored)
+    description: Independent review of the plan, recorded with a verdict the tasks step reads
     template: review.md
     instruction: |
-      Conduct an independent, adversarial peer review of the proposal, specs, design, and adr.
-      The reviewer MUST run using an independent model family (e.g. GPT/Codex reviewing Claude,
-      or Claude reviewing Gemini) in read-only mode.
+      Run the `peer-plan-review` skill on this change's plan: brainstorm.md,
+      proposal.md, design.md, specs/ and adr.md. The skill picks a reviewer
+      from another model family, runs it read-only, and says how to judge
+      severity, rebuttals and rounds. Use design.md's scrutiny tier as the
+      reviewer's effort.
 
-      Run the `peer-plan-review` skill on the change's artifacts
-      (brainstorm.md, proposal.md, design.md, specs/, and adr.md). Record
-      in Review Metadata who reviewed and whether the review was
-      independent. Record the review either way: never skip it, and never
-      fabricate a verdict.
+      Add these checks to the reviewer's prompt, beside the skill's own.
+      - Assumption rows. Read brainstorm.md first. An `Assumption` row the
+        plan depends on, with nothing to support it, is a finding. Respect
+        `User` rows as decisions, but report it when the code shows one is
+        infeasible or unsafe, or when two rows contradict each other or the
+        specs.
+      - Scenario testability. Every scenario's THEN is something a test can
+        assert.
+      - Test seams. The tests sit at the seam design.md names.
+      - Scope. Nothing beyond the proposal: no creep, no gold-plating.
+      - Contradictions. A design choice that conflicts with a spec
+        requirement.
 
-      Read brainstorm.md first. Challenge each `Assumption` row before
-      anything else: an assumption the plan depends on and nothing supports
-      is a finding. Leave `User` rows alone unless they contradict each
-      other or the specs; the user made those choices on purpose.
+      Record the review in review.md from the template: who reviewed, whether
+      it was independent, the round, every finding with its check, and the
+      rebuttals. Write the verdict line exactly as one of `VERDICT: APPROVE`,
+      `VERDICT: APPROVE_WITH_CHANGES` or `VERDICT: REVISE`. Under
+      APPROVE_WITH_CHANGES, list the required changes, apply them, and set
+      `CHANGES_APPLIED: yes`. Otherwise set `CHANGES_APPLIED: n/a`. The tasks
+      step reads these two lines.
 
-      The reviewer critiques; it does not rewrite or implement.
+      A verdict covers the exact files it reviewed. If brainstorm.md,
+      proposal.md, design.md, specs/ or adr.md change afterwards, other than
+      by a listed required change, the verdict is void: run a new round.
+      After two REVISE verdicts in a row, stop and ask the user.
 
-      Hunt specifically for:
-      - **Repo Verification**: Check all assumptions against live code in the repo (verify, don't assume).
-      - **Missing Edge Cases & Failure Modes**: Concrete failure inputs, partial failures, timeouts, scale hazards, service outages.
-      - **Security & Trust Boundaries**: Authz gaps, cross-tenant leaks, trust boundaries crossed without validation.
-      - **State & Migration Hazards**: Database schema changes, data loss, backward incompatibility, missing rollback strategy.
-      - **Simpler Alternatives**: Simpler designs that deliver identical guarantees with less code/abstraction.
-      - **Plain language in every artifact**: Proposal, design, specs, adr. Flag sentences > 30 words, passive voice, or
-        filler narrative that restates motivation.
-      - **Scenario Testability**: Every delta spec scenario's THEN condition must be mechanically assertable.
-      - **Highest Seam**: Verify tests are positioned at the highest viable architectural seam.
-      - **Scope vs. proposal**: Creep or gold-plating beyond proposal scope.
-      - **Design/spec contradictions**: Design choices conflicting with spec requirements.
-
-       The reviewer labels each finding Critical, Moderate, or Suggestion, as
-      the template does. Every finding that blocks acceptance is Critical;
-      Moderate and Suggestion findings do not block. Check each finding
-      against the repo before you record it.
-
-      VERDICT (mutually exclusive):
-      - APPROVE — downstream artifacts may proceed.
-      - APPROVE WITH CHANGES — list required edits; author applies them,
-        reviewer re-checks only listed items.
-      - REVISE — fundamental defect. Fix artifacts and re-run the FULL
-        review in a fresh context. `tasks` MUST NOT be generated
-        while the latest verdict is REVISE.
-
-      SEVERITY-VERDICT CONSISTENCY: the verdict must follow from the
-      findings. Any open 🔴 Critical finding forbids APPROVE — the verdict
-      must be REVISE (or APPROVE_WITH_CHANGES only if the fix is small,
-      unambiguous, and fully specified as a Required Change). A review
-      with Critical findings and VERDICT: APPROVE is itself invalid.
-
-      STALENESS: a verdict applies only to the exact artifact contents that
-      were reviewed. If proposal.md, design.md, or specs/ change after the
-      verdict is issued — for any reason other than applying listed Required
-      Changes — the verdict is VOID and a new review round is required
-      before tasks or apply may proceed. Never rely on an
-      approval issued for content that no longer exists.
-
-      ROUNDS: each full review replaces review.md and increments the
-      `Review round` counter in Review Metadata (round 1, 2, ...). Carry
-      forward a one-line summary of the prior round's verdict so the
-      history is auditable. After 2 consecutive REVISE verdicts, STOP and
-      escalate to the human — do not keep looping author and reviewer.
-
-      REBUTTAL ADJUDICATION: every finding must be either fixed or rebutted
-      in the Rebuttals section — none silently ignored. Rebuttals are not
-      self-certifying: a rebuttal of a Critical or Moderate finding counts
-      only after the REVIEWER re-checks and accepts it (mark it
-      "accepted by reviewer" with a one-line reason). Suggestions (📌) may
-      be declined by the author without reviewer sign-off.
-
-      You MUST emit the canonical machine-readable line in review.md exactly:
-        `VERDICT: APPROVE` | `VERDICT: APPROVE_WITH_CHANGES` | `VERDICT: REVISE`
-      This single line is the source of truth any enforcement tooling reads.
-
-      For APPROVE_WITH_CHANGES you MUST also emit a completion signal:
-        `CHANGES_APPLIED: yes` | `CHANGES_APPLIED: no` | `CHANGES_APPLIED: n/a`
-      Initialize it to `no` when the verdict is issued. The author flips it to
-      `yes` ONLY after every Required Change is applied AND the reviewer has
-      re-checked those specific items. Use `n/a` for APPROVE and REVISE.
-      Downstream artifacts MUST NOT proceed on APPROVE_WITH_CHANGES until
-      `CHANGES_APPLIED: yes`.
+      Commit review.md on its own as `docs:`.
     requires:
       - proposal
       - design
