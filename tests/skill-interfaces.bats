@@ -53,8 +53,9 @@ mentions() {
 }
 
 # flow_skills <flow>: the skills flows.nix ships with the flow, one per line.
+# The list may span several lines, so join the flow's block first.
 flow_skills() {
-  sed -n "/^  $1 = {/,/^  };/p" "$repo/flows.nix" |
+  sed -n "/^  $1 = {/,/^  };/p" "$repo/flows.nix" | tr '\n' ' ' |
     grep -o 'skills = \[[^]]*\]' | grep -o '"[^"]*"' | tr -d '"'
 }
 
