@@ -159,67 +159,25 @@ artifacts:
     description: Per-change ADR review manifest and durable decision handoff
     template: adr.md
     instruction: |
-      Complete ADR review for this change by writing a concise manifest at
-      openspec/changes/<change>/adr.md. This change-local file is the artifact
-      completion marker for the adr step.
+      Decide which of design.md's decisions need an architecture decision
+      record (ADR), write them, and write adr.md as this change's manifest.
+      The `writing-adrs` skill says what qualifies and how to write a record.
 
-      ADRs live in docs/decisions/, and their template is
-      openspec/schemas/standard/templates/adr-template.md. Existing ADRs in docs/decisions/
-      are required context for the review, but they MUST NOT satisfy
-      completion for a new change.
+      1. Read every record in `docs/decisions/`, if the folder exists. They
+         are context; they never count as this change's output.
+      2. Re-read design.md's Decisions, and apply the skill's test to each.
+      3. For each decision that qualifies, create
+         `docs/decisions/ADR-NNN-<slug>.md` from
+         `openspec/schemas/standard/templates/adr-template.md`. NNN is the next
+         number after the highest in use, or 001 for the first. Create the
+         folder with the first record.
+      4. Write adr.md from the template. List the in-force records you read,
+         and every record this change created. Link a record; do not repeat
+         its content.
+      5. If nothing qualifies, adr.md says so in its last section, and no
+         record or folder is created.
 
-      Process:
-
-      1. Read every existing ADR in docs/decisions/. Build the supersession
-         graph from what each ADR says it supersedes or is superseded by.
-         Note the highest sequence number in use.
-
-      2. Re-read design.md and list the decisions it made. Write an ADR only
-         for a decision that is a real fork or an expensive-to-reverse call —
-         a choice among viable approaches where changing your mind later is
-         costly. Typical ADR categories: a stack, framework, or library
-         choice; a data model or schema; an auth strategy; an API
-         architecture; an infra, hosting, or provider choice; a privacy
-         posture.
-
-         A useful test: could an engineer reading only the code plausibly
-         reverse this decision without knowing why, and would that reversal be
-         costly? If yes, the why belongs in an ADR. Confusion is a separate
-         axis: fix a hard-to-read ADR by rewriting it, never by deleting it.
-
-         Write an ADR (good examples):
-         - **Stack forced by a constraint** — "Use an embedded datastore, not a networked database, because the app
-           must run offline." Reversing it touches every storage call.
-         - **A canonical data model** — "Convert every input to one internal shape at its edge." Many consumers bind
-           to that shape, so changing it later is costly.
-         - **A system boundary** — "Keep the core a pure library that emits one document, and make the integration a
-           swappable adapter." The core stays testable on its own.
-
-         Do not write an ADR (bad examples):
-         - **Recoverable from code** — "Set the retry limit to 3." It lives in code, costs nothing to change, and you
-           learn it by reading it.
-         - **Roadmap sequencing** — "Build reporting after billing." That is a roadmap decision, not an architectural
-           fork.
-         - **A requirement, not a decision** — "Reject uploads over 10 MB." The spec owns that behavior; there is no
-           fork between approaches.
-
-      3. For each qualifying decision, create a NEW repository-level file in
-         docs/decisions/, from the ADR template. Number and name it the
-         way the existing ADRs are named, such as ADR-NNN-slug.md. The
-         template holds the rules for what an ADR may contain and link to;
-         follow them.
-
-      4. Write openspec/changes/<change>/adr.md using the template. The
-         manifest MUST state that ADR review completed for this change, list the
-         in-force ADR context reviewed, and reference every repository-level ADR
-         file created for this change. It MUST NOT duplicate full Context,
-         Decision, or Consequences content from repository-level ADR files.
-
-      5. If nothing meets the bar, do not invent ADRs. The manifest MUST
-         explicitly state that no major durable architectural decisions were
-         introduced and no new repository-level ADR files were created.
-
-      Commit adr.md and any new ADR files together, on their own, as `docs:`.
+      Commit adr.md and any new records together, on their own, as `docs:`.
     requires:
       - design
 
