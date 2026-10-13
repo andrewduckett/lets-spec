@@ -54,7 +54,7 @@ agy --mode plan --model "<a gemini model from agy models>" --print-timeout <time
   -p "$(cat .workspace/<name>-review-prompt.md)" > .workspace/<name>-review-raw.md
 ```
 
-Scale the effort to what the plan changes, not its length: `low` for a narrow fix, `medium` for one subsystem on known patterns, `high` for new contracts, migrations, or trust boundaries. Run `high` in the background with a long timeout. Use the reviewer's strongest model, and discover model ids at run time rather than trusting names written here.
+Scale the effort to what the plan changes, not its length: `low` for a narrow fix, `medium` for one subsystem on known patterns, `high` for new contracts, migrations, or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier as the effort. Run `high` in the background with a long timeout. Use the reviewer's strongest model, and discover model ids at run time rather than trusting names written here.
 
 This costs real tokens. Never loop it. Run again only when the plan or the question changed.
 
@@ -65,7 +65,7 @@ Tell the reviewer which files hold the plan, which files it should check the pla
 1. **Name the decision** in one line, with the options it rules out.
 2. **Find the specific failure.** Name the input, the scale, the partial failure, the missing tool. "This feels fragile" is not a finding.
 3. **Check the assumptions.** Settle the ones the repo can answer by reading it. Name the ones that bet on the future, and say what makes each bet lose.
-4. **Find where it stops working:** the volume, the second user, the migration, the day a service is down.
+4. **Find where it stops working:** the volume, the second user, the migration, the trust boundary crossed without a check, the day a service is down.
 
 Also have it check:
 
@@ -91,6 +91,33 @@ The reviewer has no product context, so some findings will miss. Check each one 
 - **OUT-OF-SCOPE** — real, but not this plan's. Say why.
 
 Drop a finding that a response actually resolves. Do not manufacture disagreement.
+
+## Severity and verdict
+
+The verdict follows from the findings, never the other way round.
+
+- **APPROVE**: no finding is open. The plan may proceed.
+- **APPROVE_WITH_CHANGES**: every open finding is fixed by a small, unambiguous edit that the review lists as a required change. The author applies the listed changes and records that; the reviewer does not run again.
+- **REVISE**: a Critical finding is open and no listed change fixes it. Fix the plan and run the full review again in a fresh context.
+
+An open Critical finding forbids APPROVE. A review that lists one and says APPROVE is itself invalid.
+
+## Rebuttals
+
+The author adjudicates each finding, with evidence, in the review's Rebuttals section. The reviewer is not run again for this; it has no product context, and a second run costs as much as the first.
+
+- Every finding ends up **fixed** (cite the edit) or **rebutted** (cite the evidence). None is dropped in silence.
+- A rebuttal of a **Critical** finding must cite the file and line that contradicts it. Without that, the finding stays open and the verdict is REVISE.
+- A **Moderate** finding is rebutted with a reason.
+- A **Suggestion** may be declined with a one-line reason.
+
+## Rounds
+
+Each full review replaces the previous one and increments the round counter. Carry forward a one-line summary of the prior round's verdict, so the history is auditable.
+
+- REVISE: fix the plan, then run a new round in a fresh context.
+- APPROVE_WITH_CHANGES: apply the listed changes, record them, and proceed. No new round.
+- After two REVISE verdicts in a row, stop and ask the user. Do not loop author and reviewer.
 
 ## Report
 
