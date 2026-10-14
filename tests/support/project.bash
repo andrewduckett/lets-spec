@@ -18,7 +18,7 @@ setup() {
   mkdir -p "$project/openspec"
   git -C "$project" init --quiet
   cd "$project"
-  printf 'schema: standard\n' >openspec/config.yaml
+  printf 'schema: lets-standard\n' >openspec/config.yaml
 }
 
 # store_release <hash> [extra skill...]: build another release in the test's

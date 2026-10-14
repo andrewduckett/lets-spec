@@ -28,7 +28,7 @@ load support/project
 }
 
 @test "sync never edits the project's own config" {
-  printf '# Our config\nschema: standard\ncontext: |\n  Our context.\n' >openspec/config.yaml
+  printf '# Our config\nschema: lets-standard\ncontext: |\n  Our context.\n' >openspec/config.yaml
   cp openspec/config.yaml before
   run sync_project
   [ "$status" -eq 0 ]
@@ -55,18 +55,18 @@ load support/project
   edit_config '.schema = "spec-driven"'
   run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"openspec/config.yaml sets schema to 'spec-driven'; it must be standard"* ]]
+  [[ "$output" == *"openspec/config.yaml sets schema to 'spec-driven'; it must be lets-standard"* ]]
 }
 
 @test "sync warns when the config sets no schema" {
   edit_config 'del(.schema)'
   run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"openspec/config.yaml sets no schema; it must be standard"* ]]
+  [[ "$output" == *"openspec/config.yaml sets no schema; it must be lets-standard"* ]]
 }
 
 @test "sync warns when the config is not valid YAML" {
-  printf 'schema: [standard\n' >openspec/config.yaml
+  printf 'schema: [lets-standard\n' >openspec/config.yaml
   run sync_project
   [ "$status" -eq 0 ]
   [[ "$output" == *"openspec/config.yaml is not valid YAML"* ]]
@@ -133,9 +133,9 @@ release_with_schemas() {
   mkdir -p "$BATS_TEST_TMPDIR/store"
   cp -R "$release" "$dir"
   chmod -R u+w "$dir"
-  rm -r "$dir/overlay/openspec/schemas/standard"
+  rm -r "$dir/overlay/openspec/schemas/lets-standard"
   for ((i = 0; i < $1; i++)); do
-    cp -R "$release/overlay/openspec/schemas/standard" "$dir/overlay/openspec/schemas/s$i"
+    cp -R "$release/overlay/openspec/schemas/lets-standard" "$dir/overlay/openspec/schemas/s$i"
   done
   echo "$dir"
 }

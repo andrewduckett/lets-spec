@@ -12,7 +12,7 @@ managed_links() {
   for skill in $(shipped_skills); do
     echo ".agents/skills/$skill"
   done
-  echo openspec/schemas/standard
+  echo openspec/schemas/lets-standard
 }
 
 @test "sync links each skill and the schema into the release" {
@@ -21,7 +21,7 @@ managed_links() {
   for skill in $(shipped_skills); do
     [ "$(readlink ".agents/skills/$skill")" = "$release/overlay/.agents/skills/$skill" ]
   done
-  [ "$(readlink openspec/schemas/standard)" = "$release/overlay/openspec/schemas/standard" ]
+  [ "$(readlink openspec/schemas/lets-standard)" = "$release/overlay/openspec/schemas/lets-standard" ]
 }
 
 @test "sync makes every file the release ships reachable at the same path" {
@@ -115,7 +115,7 @@ managed_links() {
   run sync_project
   [ "$status" -eq 0 ]
   [ "$(readlink .agents/skills/lets-build)" = "$release/overlay/.agents/skills/lets-build" ]
-  [ "$(readlink openspec/schemas/standard)" = "$release/overlay/openspec/schemas/standard" ]
+  [ "$(readlink openspec/schemas/lets-standard)" = "$release/overlay/openspec/schemas/lets-standard" ]
 }
 
 @test "sync removes a skill an earlier release shipped and this one does not" {
@@ -159,7 +159,7 @@ own() {
 
 @test "sync never replaces what the project owns at a path it would link, and says how to remove it" {
   local kind path
-  for path in .agents/skills/lets-build openspec/schemas/standard; do
+  for path in .agents/skills/lets-build openspec/schemas/lets-standard; do
     for kind in file folder link dangling-link; do
       rm -rf .agents openspec/schemas mine .git/info/exclude
       own "$kind" "$path"
@@ -186,12 +186,12 @@ own() {
 
 @test "sync links a minimal release's schema, and only its skills" {
   local minimal="$BATS_TEST_TMPDIR/store/min-lets-spec-release"
-  build "$minimal" minimal labels test-driven-development
-  edit_config '.schema = "minimal"'
+  build "$minimal" lets-minimal labels lets-test-first
+  edit_config '.schema = "lets-minimal"'
   WORKFLOW_RELEASE="$minimal" init_project
   WORKFLOW_RELEASE="$minimal" run sync_project
   [ "$status" -eq 0 ]
   [ -z "$output" ]
-  [ "$(readlink openspec/schemas/minimal)" = "$minimal/overlay/openspec/schemas/minimal" ]
+  [ "$(readlink openspec/schemas/lets-minimal)" = "$minimal/overlay/openspec/schemas/lets-minimal" ]
   [ ! -e .agents/skills/lets-build ]
 }

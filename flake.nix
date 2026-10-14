@@ -138,7 +138,7 @@
             lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
             [ -f .agents/skills/openspec-propose/SKILL.md ]
-            [ -f .claude/skills/test-driven-development/SKILL.md ]
+            [ -f .claude/skills/lets-test-first/SKILL.md ]
             # Agents read the rules from AGENTS.md, through CLAUDE.md for Claude.
             grep -q '^## Workflow$' CLAUDE.md
             lets-sync --check
@@ -165,10 +165,10 @@
             $minimal/bin/lets-sync >/dev/null 2>&1
             $minimal/bin/lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
-            [ "$(yq -r .schema openspec/config.yaml)" = minimal ]
-            [ -f openspec/schemas/minimal/schema.yaml ]
-            [ -f .agents/skills/test-driven-development/SKILL.md ]
-            [ ! -e .agents/skills/peer-plan-review ]
+            [ "$(yq -r .schema openspec/config.yaml)" = lets-minimal ]
+            [ -f openspec/schemas/lets-minimal/schema.yaml ]
+            [ -f .agents/skills/lets-test-first/SKILL.md ]
+            [ ! -e .agents/skills/lets-review-plan ]
             openspec new change small </dev/null >/dev/null 2>&1
             # Write to a file: the CLI spins if a reader such as grep -q
             # closes the pipe early.
@@ -177,7 +177,7 @@
             touch "$out"
           '';
 
-        # The spawn-session script's unit tests. They use fakes, so no harness
+        # The lets-spawn script's unit tests. They use fakes, so no harness
         # runs here.
         node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
           cp -R ${self} repo
@@ -185,7 +185,7 @@
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/spawn-session/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs"
           touch "$out"
         '';
 

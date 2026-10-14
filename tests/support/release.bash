@@ -2,7 +2,7 @@
 
 # The skills a test release ships. A fixture, not a copy of flows.nix: it
 # needs one entry point of each kind, and a skill that only some flows ship.
-fixture_skills=(lets-build lets-shape test-driven-development peer-code-review)
+fixture_skills=(lets-build lets-shape lets-test-first lets-review-code)
 
 # generated_skills <dir>: make a folder that stands in for the generated
 # openspec-* skills, and print its path.
@@ -27,7 +27,7 @@ build() {
 make_release() {
   local dir="$1" skill
   shift
-  build "$dir" standard labels "${fixture_skills[@]}" >&2
+  build "$dir" lets-standard labels "${fixture_skills[@]}" >&2
   for skill in "$@"; do
     mkdir -p "$dir/overlay/.agents/skills/$skill"
     echo "$skill" >"$dir/overlay/.agents/skills/$skill/SKILL.md"

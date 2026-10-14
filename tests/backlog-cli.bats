@@ -13,7 +13,7 @@ export issue7='{"number": 7, "labels": [], "assignees": []}'
 shape() {
   local mode="$1" out="$BATS_TEST_TMPDIR/release-$1"
   shift
-  [ -d "$out" ] || build "$out" standard "$mode" lets-shape >/dev/null
+  [ -d "$out" ] || build "$out" lets-standard "$mode" lets-shape >/dev/null
   bash "$out/overlay/.agents/skills/lets-shape/scripts/backlog.sh" "$@"
 }
 

@@ -7,28 +7,28 @@
 # one backlog. A skill listed in both places fails the build.
 {
   standard = {
-    schema = "standard";
+    schema = "lets-standard";
     skills = [
       "lets-build"
-      "brainstorming"
-      "writing-specs"
-      "writing-adrs"
-      "writing-tasks"
-      "test-driven-development"
-      "peer-plan-review"
-      "peer-code-review"
-      "spawn-session"
+      "lets-brainstorm"
+      "lets-write-specs"
+      "lets-write-adrs"
+      "lets-write-tasks"
+      "lets-test-first"
+      "lets-review-plan"
+      "lets-review-code"
+      "lets-spawn"
     ];
   };
   minimal = {
-    schema = "minimal";
+    schema = "lets-minimal";
     skills = [
       "lets-build"
-      "brainstorming"
-      "writing-specs"
-      "writing-tasks"
-      "test-driven-development"
-      "spawn-session"
+      "lets-brainstorm"
+      "lets-write-specs"
+      "lets-write-tasks"
+      "lets-test-first"
+      "lets-spawn"
     ];
   };
 }
