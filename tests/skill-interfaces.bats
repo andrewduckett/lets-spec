@@ -29,7 +29,7 @@ mentions() {
   while IFS= read -r mention; do
     found=1
     [ -f "$repo/skills/$mention" ] || { echo "no such script: $mention"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.(sh|jq)')
+  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.(sh|jq|mjs)')
   [ "$found" -eq 1 ]
 }
 
@@ -42,6 +42,18 @@ mentions() {
     [[ "$output" == *"$(basename "$script") $command"* ]] ||
       { echo "$script has no command $command"; false; }
   done < <(mentions '[a-z-]+/scripts/[a-z-]+\.sh [a-z][a-z-]+')
+  [ "$found" -eq 1 ]
+}
+
+@test "each command the prose gives a Node script is one its usage lists" {
+  local script command found=0
+  while read -r script command; do
+    found=1
+    run node "$repo/skills/$script" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"spawn-session <detect|critique|handoff>"* && "$output" == *"$command"* ]] ||
+      { echo "$script has no command $command"; false; }
+  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
   [ "$found" -eq 1 ]
 }
 
@@ -65,14 +77,21 @@ named_skills() {
   tr -s '[:space:]' ' ' <"$1" | grep -oE '`[a-z-]+` skill' | cut -d'`' -f2 | sort -u
 }
 
-@test "each skill a flow ships, other than an entry point, is named by its schema" {
-  local flow skill
+# A skill no schema step calls, such as spawn-session, is still reachable
+# when another skill the flow ships calls it.
+@test "each skill a flow ships, other than an entry point, is named by its schema or by a skill the flow ships" {
+  local flow skill shipped named
   for flow in standard minimal; do
-    [ -n "$(flow_skills "$flow")" ] || { echo "flows.nix lists no skills for $flow"; false; }
-    for skill in $(flow_skills "$flow"); do
+    shipped="$(flow_skills "$flow")"
+    [ -n "$shipped" ] || { echo "flows.nix lists no skills for $flow"; false; }
+    named="$(
+      named_skills "$repo/schemas/$flow/schema.yaml"
+      for skill in $shipped; do named_skills "$repo/skills/$skill/SKILL.md"; done
+    )"
+    for skill in $shipped; do
       case "$skill" in lets-build | lets-shape) continue ;; esac
-      named_skills "$repo/schemas/$flow/schema.yaml" | grep -qx "$skill" ||
-        { echo "$flow ships $skill, but its schema never names it"; false; }
+      grep -qx "$skill" <<<"$named" ||
+        { echo "$flow ships $skill, but neither its schema nor its skills name it"; false; }
     done
   done
 }
