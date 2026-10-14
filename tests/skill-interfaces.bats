@@ -33,25 +33,13 @@ mentions() {
   [ "$found" -eq 1 ]
 }
 
-@test "each command the prose gives a script is one the script's usage lists" {
-  local script command found=0
-  while read -r script command; do
-    found=1
-    run bash "$repo/skills/$script" --help
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"$(basename "$script") $command"* ]] ||
-      { echo "$script has no command $command"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.sh [a-z][a-z-]+')
-  [ "$found" -eq 1 ]
-}
-
 @test "each command the prose gives a Node script is one its usage lists" {
   local script command found=0
   while read -r script command; do
     found=1
     run node "$repo/skills/$script" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"lets-spawn <detect|critique|handoff>"* && "$output" == *"$command"* ]] ||
+    [[ "$output" == *"$(basename "$script") $command"* || "$output" == *"$(basename "$script" .mjs) $command"* ]] ||
       { echo "$script has no command $command"; false; }
   done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
   [ "$found" -eq 1 ]

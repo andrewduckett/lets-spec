@@ -16,9 +16,9 @@ Changes are created later, one at a time, by `lets-build`.
 
 **This is a stance with a light structure.** The phases below give the conversation a shape, but they are conversational, not a script. Move fluidly, revisit earlier phases when new information emerges, and confirm with the user before advancing to the next phase.
 
-This skill is designed for and tested with OpenSpec projects. It requires the openspec CLI, an initialized OpenSpec root, GitHub issues, `gh` 2.94.0 or later, and `jq`.
+This skill is designed for and tested with OpenSpec projects. It requires the openspec CLI, an initialized OpenSpec root, GitHub issues, and `gh` 2.94.0 or later.
 
-Set an issue's kind and priority with this skill's [scripts/backlog.sh](scripts/backlog.sh), run from the project root: `bash .agents/skills/lets-shape/scripts/backlog.sh set-kind <n> <Epic|Story>` and `bash .agents/skills/lets-shape/scripts/backlog.sh set-priority <n> <Must|Should|Could|Wont>`. It knows whether the repo stores kind and priority as labels or as issue fields, so never set them with `gh` directly.
+Set an issue's kind and priority with this skill's [scripts/backlog.mjs](scripts/backlog.mjs), run from the project root: `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> <Epic|Story>` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could|Wont>`. It knows whether the repo stores kind and priority as labels or as issue fields, so never set them with `gh` directly.
 
 ---
 
@@ -78,7 +78,7 @@ Take in the input — a file path, an issue (`gh issue view <n>`), pasted text, 
 - Surface goals and non-goals
 - List open questions as they emerge (they land in the parent issue)
 
-**Checkpoint:** the parent issue is public, so confirm, then create it from the parent template in [templates/issue-template.md](templates/issue-template.md): the status line, the input reference, the confirmed scope, and any open questions so far. Title it `Epic: <capability>`, create it with `gh issue create`, and mark it as an epic with `bash .agents/skills/lets-shape/scripts/backlog.sh set-kind <n> Epic`. This is for now; Phase 5 may turn it into a single story.
+**Checkpoint:** the parent issue is public, so confirm, then create it from the parent template in [templates/issue-template.md](templates/issue-template.md): the status line, the input reference, the confirmed scope, and any open questions so far. Title it `Epic: <capability>`, create it with `gh issue create`, and mark it as an epic with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Epic`. This is for now; Phase 5 may turn it into a single story.
 
 ### Phase 2: Personas
 
@@ -139,7 +139,7 @@ Each story gets a **story packet** — the story template in [templates/issue-te
 
 **One story or many:**
 
-- **The whole run fits one story** → the parent issue becomes that story: retitle it `<kebab-story-name> — <one-line outcome>`, mark it as a story with `bash .agents/skills/lets-shape/scripts/backlog.sh set-kind <n> Story`, set its priority (below), and replace its body with the story template, keeping the status line and input reference. Won't calls go in its Scope `out`.
+- **The whole run fits one story** → the parent issue becomes that story: retitle it `<kebab-story-name> — <one-line outcome>`, mark it as a story with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story`, set its priority (below), and replace its body with the story template, keeping the status line and input reference. Won't calls go in its Scope `out`.
 - **More than one story** → the stories are sub-issues of the parent.
 
 **Checkpoint:** preview the new and changed issues as a table (title, blocked by, MoSCoW) and confirm — issues are public. Put each blocker on the story it blocks, never only on the parent: `lets-build` cannot see a blocker on a parent issue when it picks the next story. When something blocks every story under the parent, give each story its own `--blocked-by` link. Then create them in dependency order, blockers first:
@@ -148,7 +148,7 @@ Each story gets a **story packet** — the story template in [templates/issue-te
 gh issue create --title "<title>" --body-file <file> --parent <parent#> [--blocked-by <n>,<n>]
 ```
 
-`--parent` and `--blocked-by` need `gh` 2.94.0 or later. The command prints the issue URL; the number is its last segment. Then mark it with `bash .agents/skills/lets-shape/scripts/backlog.sh set-kind <n> Story`, and set its priority to its `MoSCoW` value with `bash .agents/skills/lets-shape/scripts/backlog.sh set-priority <n> <Must|Should|Could>`. Stop at the first error, including a failed kind or priority update. Before retrying, search for the title (`gh issue list --state all --search "<title> in:title"`) so you never create a duplicate. If the issue was created but its kind or priority wasn't set, set it on that issue; don't create the issue again.
+`--parent` and `--blocked-by` need `gh` 2.94.0 or later. The command prints the issue URL; the number is its last segment. Then mark it with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story`, and set its priority to its `MoSCoW` value with `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>`. Stop at the first error, including a failed kind or priority update. Before retrying, search for the title (`gh issue list --state all --search "<title> in:title"`) so you never create a duplicate. If the issue was created but its kind or priority wasn't set, set it on that issue; don't create the issue again.
 
 ### Phase 6: Finalize
 
@@ -176,11 +176,11 @@ When `discovery.md` exists and no run is in progress:
 
 1. **Read it**, then reconcile the map against reality:
    - `gh issue list --state all --limit 500 --json number,title,state,stateReason,parent` → shipped and open stories
-   - Run [scripts/stale-links.sh](scripts/stale-links.sh) `<root.path>/openspec/discovery.md`. It prints each link to a closed issue. For each one, re-check that stage against the code: upgrade the stage and drop the link; replace the link with the open issue that now closes the gap; or, if nothing open does, drop the link and leave the stage an unplanned `gap`.
+   - Run [scripts/stale-links.mjs](scripts/stale-links.mjs) from the project root: `node .agents/skills/lets-shape/scripts/stale-links.mjs <root.path>/openspec/discovery.md`. It prints each link to a closed issue. For each one, re-check that stage against the code: upgrade the stage and drop the link; replace the link with the open issue that now closes the gap; or, if nothing open does, drop the link and leave the stage an unplanned `gap`.
    - Re-annotate every journey stage against the code; stages move to `supported` as their stories ship
    - Update the freshness line to today
 2. **Take in what the user brings** — a new PRD, new requirements, changed priorities, learnings from shipped stories. New work is a new run with its own parent issue: Ingest, then MoSCoW and Stories. Revisit Personas and the Journey Map only when the input changes who the product serves or how they use it.
-3. **Priorities of existing stories are revisable too:** update the story's MoSCoW line, with its reason, and run `bash .agents/skills/lets-shape/scripts/backlog.sh set-priority` in the same step.
+3. **Priorities of existing stories are revisable too:** update the story's MoSCoW line, with its reason, and run `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority` in the same step.
 4. **Never silently delete a story.** Close a superseded story as not planned with a one-line reason, so the plan's history stays legible: `gh issue close <n> --reason "not planned" --comment "Superseded by #<m>: <reason>"`.
 
 ---

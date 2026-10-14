@@ -74,7 +74,7 @@
           defaultText = lib.literalExpression ''[ inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}", with lets-sync wrapped to set LETS_SPEC_SKILLS ]'';
           description = ''
             The pinned OpenSpec CLI and lets-sync for the chosen flow and
-            backlog, with the gh and jq the skills' scripts call. lets-sync
+            backlog, with the gh the skills' scripts call. lets-sync
             uses the chosen skills mode. Add these to the project's
             development shell.
           '';

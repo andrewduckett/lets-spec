@@ -51,17 +51,17 @@
 
         # The openspec-* skills for the workflows in build/openspec.json.
         openspec-skills = pkgs.runCommand "openspec-skills-${pkgs.openspec.version}"
-          { nativeBuildInputs = [ pkgs.openspec ]; }
+          { nativeBuildInputs = [ pkgs.openspec pkgs.nodejs_24 ]; }
           ''
             export HOME="$TMPDIR"
-            bash ${./build/generate-skills.sh} ${./build/openspec.json} "$out"
+            node ${./build/generate-skills.mjs} ${./build/openspec.json} "$out"
           '';
 
         # What lets-sync copies and creates for one flow and backlog.
         # The build writes the backlog's mode into the skills' scripts.
         release = flow: backlog: let recipe = flows.${flow}; in
-          pkgs.runCommand "lets-spec-release" { } ''
-            bash ${./build/build-release.sh} ${releaseSource} ${openspec-skills} $out \
+          pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
+            node ${./build/build-release.mjs} ${releaseSource} ${openspec-skills} $out \
               ${recipe.schema} ${backlogs.${backlog}.mode} \
               ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
           '';
@@ -94,10 +94,11 @@
         '';
 
         # Everything a project's dev shell needs from this repo. The skills'
-        # scripts run in the shell, so it carries the gh and jq they call.
+        # scripts run in the shell on Node, so it carries Node and the gh
+        # they call.
         bundle = flow: backlog: pkgs.buildEnv {
           name = "lets-spec-${flow}-${backlog}";
-          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq pkgs.nodejs_24 ];
+          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.nodejs_24 ];
         };
       in
         { inherit openspec openspec-skills dist; default = bundle "standard" "github-labels"; }
@@ -112,14 +113,6 @@
         # recipe never reaches a project.
         flows = pkgs.linkFarmFromDrvs "every-flow"
           (map (p: (packagesFor pkgs)."${p.flow}-${p.backlog}") pairs);
-
-        shellcheck = pkgs.runCommand "shellcheck"
-          { nativeBuildInputs = [ pkgs.shellcheck ]; }
-          ''
-            cd ${./.}
-            shellcheck -x build/*.sh skills/*/scripts/*.sh
-            touch "$out"
-          '';
 
         # The bats tests run the scripts directly. The smoke test then sets up
         # a project with the packaged commands, to prove the wrappers find the
@@ -160,9 +153,9 @@
             fi
             # Each entry point runs its own backlog script, and lets-shape's
             # copy carries the backlog's mode.
-            bash .agents/skills/lets-build/scripts/backlog.sh --help >/dev/null
-            bash .agents/skills/lets-shape/scripts/backlog.sh --help >/dev/null
-            grep -q '^mode="labels"$' .agents/skills/lets-shape/scripts/backlog.sh
+            node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
+            node .agents/skills/lets-shape/scripts/backlog.mjs --help >/dev/null
+            grep -qxF "const MODE = 'labels';" .agents/skills/lets-shape/scripts/backlog.mjs
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -205,21 +198,21 @@
             node ${dist}/bin/lets-sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml
-            grep -q '^mode="fields"$' .agents/skills/lets-shape/scripts/backlog.sh
+            grep -qxF "const MODE = 'fields';" .agents/skills/lets-shape/scripts/backlog.mjs
             git add -A
             node ${dist}/bin/lets-sync --check
             touch "$out"
           '';
 
-        # The unit tests for the lets-spawn script and the lets-sync package.
-        # They use fakes, so no harness runs here.
+        # The unit tests for the lets-sync package and the skills' Node
+        # scripts. They use fakes, so no harness and no real gh run here.
         node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
           cp -R ${self} repo
           chmod -R u+w repo
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs" "tests/lets-shape/*.test.mjs"
           touch "$out"
         '';
 
@@ -253,9 +246,9 @@
           fi
           # The wrapped lets-sync names its release in WORKFLOW_RELEASE.
           release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$lets_sync" "$(dirname "$lets_sync")"/.lets-sync-wrapped | head -n 1)"
-          script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
-          if ! grep -q '^mode="fields"$' "$script"; then
-            echo "The github-fields backlog did not write mode=\"fields\" into $script." >&2
+          script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
+          if ! grep -qxF "const MODE = 'fields';" "$script"; then
+            echo "The github-fields backlog did not write MODE = 'fields' into $script." >&2
             exit 1
           fi
           # In CI the hook syncs nothing, so lets-sync --check sees the
@@ -277,7 +270,7 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.shellcheck pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
+          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
         };
       });
     };

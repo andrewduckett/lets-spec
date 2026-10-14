@@ -39,9 +39,9 @@ edit_copy() {
 
 @test "a script keeps its executable bit" {
   init_project
-  [ "$(stat -c %a .agents/skills/lets-build/scripts/backlog.sh)" = 755 ]
+  [ "$(stat -c %a .agents/skills/lets-build/scripts/backlog.mjs)" = 755 ]
   [ "$(stat -c %a .agents/skills/lets-build/SKILL.md)" = 644 ]
-  bash .agents/skills/lets-build/scripts/backlog.sh --help
+  node .agents/skills/lets-build/scripts/backlog.mjs --help
 }
 
 @test "a fresh clone of a committed project passes --check and syncs quietly" {

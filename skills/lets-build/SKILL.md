@@ -31,19 +31,19 @@ steps of your own.
 This is the start rule. Parallel sessions share the backlog, so claim the
 story before you create the change.
 
-This skill's `scripts/backlog.sh` picks and claims stories. Run it from
-the project root, as the steps below show. It needs `gh` and `jq`, which
+This skill's `scripts/backlog.mjs` picks and claims stories. Run it from
+the project root with Node, as the steps below show. It needs `gh`, which
 the dev shell provides.
 
 1. Use the issue the user named. Otherwise run
-   `bash .agents/skills/lets-build/scripts/backlog.sh next`, which prints
+   `node .agents/skills/lets-build/scripts/backlog.mjs next`, which prints
    the next story.
    - If `next` finds no story, say no story is ready, suggest the
      `lets-shape` skill to shape more, and stop.
    - If the user named a story that is blocked by an open issue, say so,
      and stop. It must stack on the blocker's branch, which is done by
      hand.
-2. Run `bash .agents/skills/lets-build/scripts/backlog.sh claim <n>`. If
+2. Run `node .agents/skills/lets-build/scripts/backlog.mjs claim <n>`. If
    it refuses because the issue already has an assignee, another session
    took it: run `next` again.
 3. Name the change after the issue title. A story's title is
