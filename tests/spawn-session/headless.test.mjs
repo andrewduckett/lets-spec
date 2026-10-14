@@ -7,7 +7,7 @@ import { fakeIo } from './fixtures/fake-io.mjs';
 
 const TRICKY = 'Say "hi".\nIt\'s fine.';
 const DIR = '/r/.workspace/spawn-session';
-const base = { model: null, effort: 'high', prompt: 'PROMPT', promptPath: `${DIR}/x.prompt.md`, lastMessagePath: `${DIR}/x.last-message.md`, codeReview: null, timeoutMinutes: 45 };
+const base = { model: null, effort: 'high', prompt: 'PROMPT', lastMessagePath: `${DIR}/x.last-message.md`, codeReview: null, timeoutMinutes: 45 };
 
 test('gpt critique with a prompt runs codex exec read-only, prompt on stdin, result from the last-message file', () => {
   assert.deepEqual(critiqueCommand({ ...base, family: 'gpt' }), {
@@ -45,13 +45,13 @@ test('gemini critique runs agy in plan mode with the prompt as an argument', () 
     { cmd: 'agy', args: ['--mode', 'plan', '--effort', 'medium', '--print-timeout', '15m', '-p', review], stdin: null, readResultFrom: 'stdout' });
 });
 test('handoff commands', () => {
-  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: null, attended: true, cwd: '/r', logPath: `${DIR}/fix-login.log` }),
+  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: null, attended: true, cwd: '/r' }),
     { cmd: 'gnome-terminal', args: ['--window', '--working-directory=/r', '--', 'claude', '--remote-control', 'fix-login', 'Run it'] });
-  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: 'claude-sonnet-5-5', attended: true, cwd: '/r', logPath: `${DIR}/fix-login.log` }).args,
+  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: 'claude-sonnet-5-5', attended: true, cwd: '/r' }).args,
     ['--window', '--working-directory=/r', '--', 'claude', '--remote-control', 'fix-login', '--model', 'claude-sonnet-5-5', 'Run it']);
-  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: null, attended: false, cwd: '/r', logPath: `${DIR}/fix-login.log` }),
+  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: null, attended: false, cwd: '/r' }),
     { cmd: 'claude', args: ['-p', 'Run it'] });
-  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: 'claude-sonnet-5-5', attended: false, cwd: '/r', logPath: `${DIR}/fix-login.log` }).args,
+  assert.deepEqual(handoffCommand({ name: 'fix-login', prompt: 'Run it', model: 'claude-sonnet-5-5', attended: false, cwd: '/r' }).args,
     ['-p', '--model', 'claude-sonnet-5-5', 'Run it']);
 });
 

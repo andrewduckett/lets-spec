@@ -11,7 +11,7 @@ const SCRATCH = '.workspace/spawn-session';
 const modelArgs = (flag, model) => (model ? [flag, model] : []);
 
 // The command for a critique, and where its final message comes from.
-export function critiqueCommand({ family, model, effort, prompt, promptPath, lastMessagePath, codeReview, timeoutMinutes }) {
+export function critiqueCommand({ family, model, effort, prompt, lastMessagePath, codeReview, timeoutMinutes }) {
   const cmd = HEADLESS_EXECUTOR[family];
   if (family === 'gpt' && codeReview) {
     return { cmd, args: ['-s', 'read-only', 'review', '--base', codeReview.base], stdin: null, readResultFrom: 'stdout' };
@@ -54,12 +54,10 @@ export function createAdapter(io) {
   async function spawnCritique(request) {
     const { name, prompt, cwd } = request;
     io.mkdirp(scratch(cwd));
+    // The prompt travels on stdin or argv. This copy is for reading after a
+    // failure; finish() removes it on success.
     io.writeFile(promptPath(cwd, name), prompt);
-    const { cmd, args, stdin, readResultFrom } = critiqueCommand({
-      ...request,
-      promptPath: promptPath(cwd, name),
-      lastMessagePath: lastMessagePath(cwd, name),
-    });
+    const { cmd, args, stdin, readResultFrom } = critiqueCommand({ ...request, lastMessagePath: lastMessagePath(cwd, name) });
     let child = null;
     const promise = io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input: stdin, started: (c) => { child = c; } });
     return { id: child ? String(child.pid) : null, kind: 'process', promise, kill: () => child?.kill(), readResultFrom, name, cwd };
@@ -67,8 +65,7 @@ export function createAdapter(io) {
 
   async function spawnHandoff(request) {
     const { name, cwd, attended } = request;
-    const logPath = `${scratch(cwd)}/${name}.log`;
-    const { cmd, args } = handoffCommand({ ...request, logPath });
+    const { cmd, args } = handoffCommand(request);
     const env = scrubbedEnv(io.env);
     if (attended) {
       if (!io.commandExists('gnome-terminal')) throw new SpawnError('gnome-terminal is not installed; set LETS_SPEC_HARNESS or install it');
@@ -77,7 +74,7 @@ export function createAdapter(io) {
       return { id: null, kind: 'window' };
     }
     io.mkdirp(scratch(cwd));
-    const { pid } = io.spawnDetached(cmd, args, { cwd, env, stdoutPath: logPath });
+    const { pid } = io.spawnDetached(cmd, args, { cwd, env, stdoutPath: `${scratch(cwd)}/${name}.log` });
     return { id: String(pid), kind: 'process' };
   }
 
