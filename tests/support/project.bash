@@ -5,7 +5,7 @@
 # openspec/config.yaml set to the standard schema.
 
 setup_file() {
-  export release="$BATS_FILE_TMPDIR/store/abc-lets-spec-release"
+  export release="$BATS_FILE_TMPDIR/release"
   make_release "$release"
 }
 
@@ -21,24 +21,24 @@ setup() {
   printf 'schema: lets-standard\n' >openspec/config.yaml
 }
 
-# store_release <hash> [extra skill...]: build another release in the test's
-# own store folder, and print its path.
+# store_release <name> [extra skill...]: build another release in the test's
+# own folder, and print its path.
 store_release() {
-  local dir="$BATS_TEST_TMPDIR/store/$1-lets-spec-release"
+  local dir="$BATS_TEST_TMPDIR/releases/$1"
   shift
   make_release "$dir" "$@"
   echo "$dir"
 }
 
-# Run lets-sync from bin/, with WORKFLOW_RELEASE pointing at $release,
-# as the Nix wrapper does. A test can name another release by setting
-# WORKFLOW_RELEASE for one call.
+# Run lets-sync from lets-sync/bin/, with WORKFLOW_RELEASE pointing at
+# $release, as the Nix wrapper does. A test can name another release by
+# setting WORKFLOW_RELEASE for one call.
 sync_project() {
-  WORKFLOW_RELEASE="${WORKFLOW_RELEASE:-$release}" bash "$repo/bin/lets-sync.sh" "$@"
+  WORKFLOW_RELEASE="${WORKFLOW_RELEASE:-$release}" node "$repo/lets-sync/bin/lets-sync" "$@"
 }
 
 # Run lets-sync once and check that it succeeded, so the project has its
-# files and links, and a test sees only the problem it sets up.
+# files, and a test sees only the problem it sets up.
 init_project() {
   run sync_project
   [ "$status" -eq 0 ]
@@ -69,7 +69,7 @@ fragment() {
 
 # Print every path in the project with its type, mode, and content hash or
 # link target, so two snapshots differ when anything in it changed. Covers
-# .git/info but not git's own objects.
+# .git/info/exclude but not git's own objects.
 snapshot() {
   find . -path ./.git -prune -o -print | sort | while IFS= read -r path; do
     if [ -L "$path" ]; then

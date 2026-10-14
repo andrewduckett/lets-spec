@@ -21,9 +21,8 @@ build() {
 }
 
 # make_release <dir> [extra skill...]: build a read-only release of the
-# standard flow in <dir>. Name <dir> like a store path, <hash>-lets-spec-release,
-# because that is how lets-sync knows its own links. Each extra skill is
-# added beside the fixture's, to stand for an earlier release.
+# standard flow in <dir>. Each extra skill is added beside the fixture's,
+# to stand for an earlier release.
 make_release() {
   local dir="$1" skill
   shift

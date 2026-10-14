@@ -87,7 +87,7 @@ load support/project
   run sync_project
   [ "$status" -eq 0 ]
   [ -f "$project/AGENTS.md" ]
-  [ -L "$project/.agents/skills/lets-build" ]
+  [ -f "$project/.agents/skills/lets-build/SKILL.md" ]
   [ ! -e AGENTS.md ]
 }
 
@@ -114,7 +114,7 @@ load support/project
 }
 
 @test "sync refuses to run without a release" {
-  run env -u WORKFLOW_RELEASE bash "$repo/bin/lets-sync.sh"
+  run env -u WORKFLOW_RELEASE node "$repo/lets-sync/bin/lets-sync"
   [ "$status" -eq 1 ]
   [[ "$output" == *"WORKFLOW_RELEASE is not set"* ]]
 }

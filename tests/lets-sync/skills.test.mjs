@@ -18,7 +18,9 @@ function release(extra = {}) {
     [`/rel/overlay/openspec/schemas/${SCHEMA}/schema.yaml`]: 'schema',
     ...extra,
   } });
-  io.modes.set(`${SRC}/scripts/backlog.sh`, 0o755);
+  // The Nix store is read-only.
+  io.modes.set(`${SRC}/SKILL.md`, 0o444);
+  io.modes.set(`${SRC}/scripts/backlog.sh`, 0o555);
   return io;
 }
 
@@ -28,10 +30,11 @@ function sync(io) {
   return { result, out: out.join('') };
 }
 
-test('a missing managed file is written with the source mode', () => {
+test('a missing managed file is written 0755 when the source is executable, else 0644', () => {
   const io = release();
   const { result, out } = sync(io);
   assert.equal(io.readFile('/p/.agents/skills/lets-build/SKILL.md'), 'skill');
+  assert.equal(io.modes.get('/p/.agents/skills/lets-build/SKILL.md'), 0o644);
   assert.equal(io.modes.get('/p/.agents/skills/lets-build/scripts/backlog.sh'), 0o755);
   assert.equal(io.readFile(`/p/openspec/schemas/${SCHEMA}/schema.yaml`), 'schema');
   assert.equal(result.written, 3);
@@ -48,13 +51,23 @@ test('a differing managed file is rewritten and counted', () => {
   assert.equal(out, 'lets-spec: wrote 1 files. Commit them.\n');
 });
 
-test('a file with the right bytes and the wrong mode is rewritten', () => {
+test('a file with the right bytes and no execute bit is rewritten', () => {
   const io = release();
   sync(io);
   io.modes.set('/p/.agents/skills/lets-build/scripts/backlog.sh', 0o644);
   const { result } = sync(io);
   assert.equal(result.written, 1);
   assert.equal(io.modes.get('/p/.agents/skills/lets-build/scripts/backlog.sh'), 0o755);
+});
+
+test('a mode that differs only in its write or group bits is left alone', () => {
+  const io = release();
+  sync(io);
+  io.modes.set('/p/.agents/skills/lets-build/SKILL.md', 0o664);
+  io.modes.set('/p/.agents/skills/lets-build/scripts/backlog.sh', 0o775);
+  assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), []);
+  const { result } = sync(io);
+  assert.equal(result.written, 0);
 });
 
 test('an identical tree writes nothing and prints nothing', () => {
@@ -124,7 +137,7 @@ test('checkSkills names each stale, missing or extra file', () => {
   ]);
 });
 
-test('on disk, a script keeps mode 755 and runs, and a read-only copy can be updated', () => {
+test('on disk, a read-only script is copied 755 and runs, a read-only file 644, and a copy can be updated', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
   try {
     const src = join(dir, 'rel/overlay/.agents/skills/lets-build');
@@ -134,15 +147,21 @@ test('on disk, a script keeps mode 755 and runs, and a read-only copy can be upd
     const script = join(src, 'scripts/backlog.sh');
     writeFileSync(script, '#!/usr/bin/env bash\necho one\n');
     chmodSync(script, 0o555);
+    const doc = join(src, 'SKILL.md');
+    writeFileSync(doc, 'skill\n');
+    chmodSync(doc, 0o444);
     const root = join(dir, 'proj');
     mkdirSync(root);
     const args = { release: join(dir, 'rel'), schemaName: SCHEMA, root, io: realIo(), stdout: () => {} };
     syncSkills(args);
     const copy = join(root, '.agents/skills/lets-build/scripts/backlog.sh');
-    assert.equal(statSync(copy).mode & 0o777, 0o555);
+    assert.equal(statSync(copy).mode & 0o777, 0o755);
+    assert.equal(statSync(join(root, '.agents/skills/lets-build/SKILL.md')).mode & 0o777, 0o644);
+    assert.deepEqual(checkSkills(args), []);
     assert.equal(execFileSync('bash', [copy]).toString(), 'one\n');
     chmodSync(script, 0o755);
     writeFileSync(script, '#!/usr/bin/env bash\necho two\n');
+    chmodSync(script, 0o555);
     syncSkills(args);
     assert.equal(statSync(copy).mode & 0o777, 0o755);
     assert.equal(readFileSync(copy, 'utf8'), '#!/usr/bin/env bash\necho two\n');

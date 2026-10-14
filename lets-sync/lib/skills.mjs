@@ -21,12 +21,25 @@ function blockedAncestor(dstDir, file, io) {
   return null;
 }
 
-// True when the project's copy differs from the release's file in bytes or mode.
+// True when a mode has any execute bit. Git tracks only this bit, so it is
+// the only part of a mode lets-sync compares.
+function executable(mode) {
+  return (mode & 0o111) !== 0;
+}
+
+// The mode of a copy: 0755 when the source is executable, else 0644. The
+// Nix store is read-only, and a copy must not be.
+function copyMode(src, io) {
+  return executable(io.stat(src).mode) ? 0o755 : 0o644;
+}
+
+// True when the project's copy differs from the release's file in bytes or
+// in its execute bit.
 function differs(src, dst, io) {
   if (io.isSymlink(dst)) return true;
   const have = io.readBytes(dst);
   if (have === null || !have.equals(io.readBytes(src))) return true;
-  return io.stat(dst).mode !== io.stat(src).mode;
+  return executable(io.stat(dst).mode) !== executable(io.stat(src).mode);
 }
 
 // Every file that is wrong under one managed path, as project-relative paths.
@@ -67,6 +80,7 @@ export function syncSkills({ release, schemaName: _schemaName, root, io, stdout 
       // An earlier copy may be read-only, as the Nix store is.
       if (io.exists(to)) io.chmod(to, io.stat(to).mode | 0o200);
       io.copyFile(join(src, file), to);
+      io.chmod(to, copyMode(join(src, file), io));
       written += 1;
     }
     for (const file of filesUnder(dstDir, io)) {
