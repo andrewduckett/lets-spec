@@ -382,16 +382,25 @@ nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 |---|---|
 | `skills/` | The authored skills |
 | `schemas/` | One OpenSpec schema per flow, with its templates |
-| `flows.nix` | Each flow's schema and skills |
+| `flows.json` | Each flow's schema and skills, and each backlog's mode and skills |
 | `overlays/` | The rules fragment and the files `lets-sync` creates in a project |
 | `lets-sync/` | The sync command, a Node package |
-| `nix/` | The release build, the flake module and the OpenSpec skill generator |
+| `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
+| `nix/` | The flake module |
 | `tests/` | The bats tests, and the Node tests in `tests/lets-spawn/` and `tests/lets-sync/` |
+
+A flow is a recipe: one schema from `schemas/`, and the skills from `skills/`
+that the schema calls. A flow is named after its schema. The build fails if a
+recipe names a schema or skill that does not exist.
+
+A backlog names the convention the skills' backlog scripts write (`mode`). It
+also adds skills to the flow's. `lets-shape` comes from there, because its
+script is built for one backlog. A skill listed in both places fails the build.
 
 ### Generated OpenSpec skills
 
 The flake builds the `openspec-*` skills from the OpenSpec CLI in its
-nixpkgs, for the workflows listed in `nix/openspec.json`. They are not
+nixpkgs, for the workflows listed in `build/openspec.json`. They are not
 committed. When `flake.lock` moves nixpkgs, the CLI version may change,
 and the skill text with it.
 

@@ -1,8 +1,8 @@
 load support/common
 load support/release
 
-# nix/build-release.sh lays out a release for one flow and one backlog. The
-# flake runs it for each recipe in flows.nix and each backlog; these tests
+# build/build-release.sh lays out a release for one flow and one backlog. The
+# flake runs it for each recipe in flows.json and each backlog; these tests
 # run it directly.
 
 setup() {
@@ -11,7 +11,7 @@ setup() {
 
 # build_from <generated> [args...]: run the build with this generated folder.
 build_from() {
-  bash "$repo/nix/build-release.sh" "$repo" "$1" "$out" "${@:2}"
+  bash "$repo/build/build-release.sh" "$repo" "$1" "$out" "${@:2}"
 }
 
 @test "the release links exactly the schema and the skills it is given" {
@@ -61,7 +61,7 @@ build_from() {
   mkdir -p "$source"
   cp -R "$repo/schemas" "$repo/skills" "$repo/overlays" "$source/"
   chmod -R a-w "$source"
-  run bash "$repo/nix/build-release.sh" "$source" "$(generated_skills "$BATS_TEST_TMPDIR/generated")" "$out" lets-standard fields lets-shape
+  run bash "$repo/build/build-release.sh" "$source" "$(generated_skills "$BATS_TEST_TMPDIR/generated")" "$out" lets-standard fields lets-shape
   [ "$status" -eq 0 ]
   grep -qx 'mode="fields"' "$out/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
 }
@@ -80,7 +80,7 @@ build_from() {
 }
 
 @test "the build fails with too few arguments, and prints its usage" {
-  run bash "$repo/nix/build-release.sh" "$repo" "$BATS_TEST_TMPDIR" "$out" lets-standard
+  run bash "$repo/build/build-release.sh" "$repo" "$BATS_TEST_TMPDIR" "$out" lets-standard
   [ "$status" -eq 1 ]
   [[ "$output" == *"usage: build-release.sh <source> <generated> <out> <schema> <mode> [skill...]"* ]]
 }

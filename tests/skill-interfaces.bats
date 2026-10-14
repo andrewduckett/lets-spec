@@ -64,11 +64,9 @@ mentions() {
   done < <(mentions 'openspec/schemas/[a-z-]+/templates/[a-z-]+\.md')
 }
 
-# flow_skills <flow>: the skills flows.nix ships with the flow, one per line.
-# The list may span several lines, so join the flow's block first.
+# flow_skills <flow>: the skills flows.json ships with the flow, one per line.
 flow_skills() {
-  sed -n "/^  $1 = {/,/^  };/p" "$repo/flows.nix" | tr '\n' ' ' |
-    grep -o 'skills = \[[^]]*\]' | grep -o '"[^"]*"' | tr -d '"'
+  jq -r --arg flow "$1" '.flows[$flow].skills[]' "$repo/flows.json"
 }
 
 # named_skills <file>: each name the file calls a skill, as `name` skill,
@@ -83,7 +81,7 @@ named_skills() {
   local flow skill shipped named
   for flow in standard minimal; do
     shipped="$(flow_skills "$flow")"
-    [ -n "$shipped" ] || { echo "flows.nix lists no skills for $flow"; false; }
+    [ -n "$shipped" ] || { echo "flows.json lists no skills for $flow"; false; }
     named="$(
       named_skills "$repo/schemas/lets-$flow/schema.yaml"
       for skill in $shipped; do named_skills "$repo/skills/$skill/SKILL.md"; done

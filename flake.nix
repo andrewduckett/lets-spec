@@ -18,15 +18,7 @@
       packagesFor = pkgs: self.packages.${pkgs.stdenv.hostPlatform.system};
 
       inherit (nixpkgs) lib;
-      flows = import ./flows.nix;
-
-      # The backlogs a project can choose. Each names the convention the
-      # skills' backlog scripts write, and the skills from skills/ it adds to
-      # the flow's.
-      backlogs = {
-        github-labels = { mode = "labels"; skills = [ "lets-shape" ]; };
-        github-fields = { mode = "fields"; skills = [ "lets-shape" ]; };
-      };
+      inherit (lib.importJSON ./flows.json) flows backlogs;
 
       # Every flow and backlog pair. The flake has one package for each, named
       # <flow>-<backlog>, such as standard-github-labels.
@@ -57,19 +49,19 @@
           postBuild = "wrapProgram $out/bin/openspec --set OPENSPEC_NO_UPDATE_CHECK 1";
         };
 
-        # The openspec-* skills for the workflows in nix/openspec.json.
+        # The openspec-* skills for the workflows in build/openspec.json.
         openspec-skills = pkgs.runCommand "openspec-skills-${pkgs.openspec.version}"
           { nativeBuildInputs = [ pkgs.openspec ]; }
           ''
             export HOME="$TMPDIR"
-            bash ${./nix/generate-skills.sh} ${./nix/openspec.json} "$out"
+            bash ${./build/generate-skills.sh} ${./build/openspec.json} "$out"
           '';
 
         # What lets-sync copies and creates for one flow and backlog.
         # The build writes the backlog's mode into the skills' scripts.
         release = flow: backlog: let recipe = flows.${flow}; in
           pkgs.runCommand "lets-spec-release" { } ''
-            bash ${./nix/build-release.sh} ${releaseSource} ${openspec-skills} $out \
+            bash ${./build/build-release.sh} ${releaseSource} ${openspec-skills} $out \
               ${recipe.schema} ${backlogs.${backlog}.mode} \
               ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
           '';
@@ -111,7 +103,7 @@
           { nativeBuildInputs = [ pkgs.shellcheck ]; }
           ''
             cd ${./.}
-            shellcheck -x nix/*.sh skills/*/scripts/*.sh
+            shellcheck -x build/*.sh skills/*/scripts/*.sh
             touch "$out"
           '';
 

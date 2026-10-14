@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the release for one flow and one backlog: the files lets-sync
 # links into a project and creates in it. The flake runs it once for each
-# pair of a recipe in flows.nix and a backlog, with the skills of both.
+# pair of a recipe in flows.json and a backlog, with the skills of both.
 #
 # Usage: build-release.sh <source> <generated> <out> <schema> <mode> [skill...]
 #   source     this repo, or a copy of its schemas/, skills/ and overlays/
