@@ -45,7 +45,7 @@ A story is the right size when it would take about five to twelve tasks to build
 
 1. Write the issue body from the story template at `.agents/skills/lets-shape/templates/issue-template.md`.
 2. Create it with `gh issue create`, with the same parent as this story.
-3. Set its kind and priority with `bash .agents/skills/lets-shape/scripts/backlog.sh set-kind <n> Story` and `bash .agents/skills/lets-shape/scripts/backlog.sh set-priority <n> <Must|Should|Could>`.
+3. Set its kind and priority with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>`.
 4. Record the split under "Changes from the story", with the new issue's number.
 
 ## Confirming

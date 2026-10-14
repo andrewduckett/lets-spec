@@ -43,8 +43,8 @@ build_from() {
   for mode in labels fields; do
     rm -rf "$out"
     build "$out" lets-standard "$mode" lets-shape
-    script="$out/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
-    grep -qx "mode=\"$mode\"" "$script"
+    script="$out/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
+    grep -qxF "const MODE = '$mode';" "$script"
     [ -x "$script" ]
     run grep -rqF @backlog-mode@ "$out/overlay"
     [ "$status" -eq 1 ]
@@ -53,7 +53,7 @@ build_from() {
 
 @test "the build leaves the source's scripts unchanged" {
   build "$out" lets-standard fields lets-shape
-  grep -qx 'mode="@backlog-mode@"' "$repo/skills/lets-shape/scripts/backlog.sh"
+  grep -qxF "const MODE = '@backlog-mode@';" "$repo/skills/lets-shape/scripts/backlog.mjs"
 }
 
 @test "the build works from a read-only source, as in the Nix store" {
@@ -63,7 +63,7 @@ build_from() {
   chmod -R a-w "$source"
   run bash "$repo/build/build-release.sh" "$source" "$(generated_skills "$BATS_TEST_TMPDIR/generated")" "$out" lets-standard fields lets-shape
   [ "$status" -eq 0 ]
-  grep -qx 'mode="fields"' "$out/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
+  grep -qxF "const MODE = 'fields';" "$out/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
 }
 
 @test "the build works when there are no generated skills" {

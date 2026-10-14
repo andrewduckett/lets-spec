@@ -161,8 +161,8 @@
             # Each entry point runs its own backlog script, and lets-shape's
             # copy carries the backlog's mode.
             node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
-            bash .agents/skills/lets-shape/scripts/backlog.sh --help >/dev/null
-            grep -q '^mode="labels"$' .agents/skills/lets-shape/scripts/backlog.sh
+            node .agents/skills/lets-shape/scripts/backlog.mjs --help >/dev/null
+            grep -qxF "const MODE = 'labels';" .agents/skills/lets-shape/scripts/backlog.mjs
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -205,7 +205,7 @@
             node ${dist}/bin/lets-sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml
-            grep -q '^mode="fields"$' .agents/skills/lets-shape/scripts/backlog.sh
+            grep -qxF "const MODE = 'fields';" .agents/skills/lets-shape/scripts/backlog.mjs
             git add -A
             node ${dist}/bin/lets-sync --check
             touch "$out"
@@ -253,9 +253,9 @@
           fi
           # The wrapped lets-sync names its release in WORKFLOW_RELEASE.
           release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$lets_sync" "$(dirname "$lets_sync")"/.lets-sync-wrapped | head -n 1)"
-          script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
-          if ! grep -q '^mode="fields"$' "$script"; then
-            echo "The github-fields backlog did not write mode=\"fields\" into $script." >&2
+          script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
+          if ! grep -qxF "const MODE = 'fields';" "$script"; then
+            echo "The github-fields backlog did not write MODE = 'fields' into $script." >&2
             exit 1
           fi
           # In CI the hook syncs nothing, so lets-sync --check sees the
