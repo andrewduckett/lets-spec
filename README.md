@@ -5,7 +5,8 @@
 Let's Spec (`lets-spec`) is a planning workflow for AI coding agents, built
 on [OpenSpec](https://github.com/Fission-AI/OpenSpec). It gives each of
 your projects the same agent skills, the same OpenSpec schema and the same
-working rules, delivered through a Nix flake.
+working rules. You install it with a Nix flake, or with
+[mise](https://mise.jdx.dev) from a release on GitHub.
 
 You talk to it through two skills:
 
@@ -20,7 +21,7 @@ It is a personal, unofficial project. It is not part of OpenSpec.
 
 Agents write better code when they plan first, but every project ends up
 with its own copy of the planning rules, and the copies drift apart. Let's
-Spec keeps one copy here, and links it into each project. It aims to:
+Spec keeps one copy here, and copies it into each project. It aims to:
 
 - **Plan before code.** Every change starts with a brainstorm with you,
   and ends with an archived spec. The agent never jumps straight to code.
@@ -31,8 +32,9 @@ Spec keeps one copy here, and links it into each project. It aims to:
   wrote them, so the reviewer does not share the author's blind spots.
 - **Let parallel sessions share one backlog.** A session claims a story
   before it starts, so two sessions never build the same thing.
-- **Update every project at once.** A project pins a commit of this repo.
-  Moving the pin updates its skills, schema and rules together.
+- **Update every project at once.** A project pins a commit or a release
+  of this repo. Moving the pin updates its skills, schema and rules
+  together.
 
 ## 🧩 What's inside
 
@@ -45,9 +47,13 @@ Spec keeps one copy here, and links it into each project. It aims to:
 | Working rules | The rules every project shares, kept in a marked block of the project's `AGENTS.md` |
 | `lets-sync` | The command that sets a project up and keeps it up to date |
 | Nix flake module | Puts the OpenSpec CLI, `lets-sync`, `gh` and `jq` in the project's dev shell, and runs `lets-sync` each time the shell starts |
+| Release tarball | `lets-sync` and the skills for every flow and backlog, published on GitHub for each release. mise installs it. |
 
-Only the working rules are committed to your project. The skills and the
-schema are links into the Nix store that git ignores.
+`lets-sync` copies the skills into `.agents/skills/` and the schema into
+`openspec/schemas/`. By default your project commits these copies, along
+with the working rules. So every clone has the skills, even without Nix or
+mise. You can choose to have git ignore the copies instead. See
+[Committed or ignored skills](#committed-or-ignored-skills).
 
 ## 📦 Set it up
 
@@ -55,27 +61,35 @@ schema are links into the Nix store that git ignores.
 
 | Tool | Version | Why |
 |---|---|---|
-| Nix | with flakes | The dev shell links the workflow in. |
+| Nix with flakes, or mise | | Installs the tools below, and runs `lets-sync`. |
 | GitHub repository | | The backlog lives in its issues. |
-| GitHub CLI (`gh`) | 2.94.0 or later | `lets-shape` creates sub-issues and "blocked by" links. The flake supplies it. |
-| OpenSpec CLI | 1.12.0 or later | The flake supplies it. |
-| Node | 22.13 or later | The flake supplies it. `lets-spawn` runs on it. |
+| GitHub CLI (`gh`) | 2.94.0 or later | `lets-shape` creates sub-issues and "blocked by" links. The flake supplies it. With mise, you pin it. |
+| `jq` | 1.8 or later | The backlog scripts call it. The flake supplies it. With mise, you pin it. |
+| OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. The flake supplies the matching version. With mise, you pin it. See [With mise](#with-mise). |
+| Node | 22.13 or later | `lets-sync` and `lets-spawn` run on it. The flake supplies it. With mise, you pin it. |
 | At least one of `codex`, `claude` or `agy` | any | The review skills run a reviewer through one of these. Install one from a model family other than the one that writes your code, or the reviews are not independent. The review runs in a fresh session that the `lets-spawn` skill starts, in your harness when it can. |
 
-### 1. Add the flake input
+### 1. Choose a flow, a backlog and a skills mode
+
+| Choice | Values | What it decides |
+|---|---|---|
+| `flow` | `standard` (default) or `minimal` | How each change is planned and built. See [The flows](#-the-flows). |
+| `backlog` | `github-labels` (default) or `github-fields` | How `lets-shape` records an issue's kind and priority. See [Labels or issue fields](#labels-or-issue-fields). |
+| `skills` | `committed` (default) or `ignored` | Whether git tracks the skills and the schema that `lets-sync` copies into the project. See [Committed or ignored skills](#committed-or-ignored-skills). |
+
+### 2. Add Let's Spec to your project
+
+Use Nix or mise. Both install the same `lets-sync` and the same skills.
+
+#### With Nix
+
+Add the flake input:
 
 ```nix
 inputs.lets-spec.url = "github:andrewduckett/lets-spec";
 ```
 
 Follow the `main` branch. Your `flake.lock` pins the exact commit.
-
-### 2. Choose a flow and a backlog
-
-| Choice | Values | What it decides |
-|---|---|---|
-| `flow` | `standard` (default) or `minimal` | How each change is planned and built. See [The flows](#-the-flows). |
-| `backlog` | `github-labels` (default) or `github-fields` | How `lets-shape` records an issue's kind and priority. See [Labels or issue fields](#labels-or-issue-fields). |
 
 In a flake built with [flake-parts](https://flake.parts), import the
 module and use its packages and shell hook:
@@ -86,6 +100,7 @@ perSystem = { config, pkgs, ... }: {
   letsSpec = {
     flow = "standard";
     backlog = "github-labels";
+    skills = "committed";   # or "ignored"
   };
   devShells.default = pkgs.mkShell {
     packages = config.letsSpec.packages;
@@ -94,25 +109,68 @@ perSystem = { config, pkgs, ... }: {
 };
 ```
 
+The module sets the skills mode for `lets-sync`, whether the shell hook
+runs it or you do.
+
 In a flake without flake-parts, use the package named `<flow>-<backlog>`:
 
 ```nix
 devShells.default = pkgs.mkShell {
   packages = [ lets-spec.packages.${system}.standard-github-labels ];
   shellHook = "lets-sync";
+  # LETS_SPEC_SKILLS = "ignored";
 };
 ```
 
-### 3. Enter the dev shell
+Without the module, `lets-sync` reads the skills mode from the
+`LETS_SPEC_SKILLS` environment variable. `mkShell` sets it when you
+uncomment the line above.
 
-`lets-sync` runs. The first time, it:
+#### With mise
+
+Add this to your project's `mise.toml`:
+
+```toml
+[tools]
+node = "24"
+gh = "2.94"
+jq = "1.8"
+"npm:@fission-ai/openspec" = "1.13.2"   # the version in the release notes
+"github:andrewduckett/lets-spec" = { version = "0.1.0", asset_pattern = "lets-spec-0.1.0.tar.gz" }
+
+[env]
+LETS_SPEC_FLOW = "standard"
+LETS_SPEC_BACKLOG = "github-labels"
+# LETS_SPEC_SKILLS = "ignored"
+
+[hooks]
+enter = "lets-sync"
+```
+
+The `lets-spec` version and the `asset_pattern` name the same release.
+Change them together.
+
+Pin the OpenSpec CLI to the version the release was generated from. Each
+release names it in its GitHub release notes, and in the `openspec` field
+of its `release.json`. The `openspec-*` skills are generated from that
+version. If the CLI on your `PATH` is another version, `lets-sync` warns
+you and names the version to pin.
+
+The `enter` hook runs `lets-sync` when you `cd` into the project. mise
+runs hooks only in a shell where `mise activate` is set up. Without it,
+run `mise exec -- lets-sync` yourself.
+
+### 3. Run `lets-sync`
+
+Enter the dev shell, or `cd` into the project with mise. `lets-sync`
+runs. The first time, it:
 
 - adds the working rules to `AGENTS.md`, between two markers, and creates
   `AGENTS.md` if it is missing
 - creates `openspec/config.yaml`, set to your flow's schema
 - links `CLAUDE.md` to `AGENTS.md`, and `.claude/skills` to
   `.agents/skills`, so Claude Code reads the same files as other agents
-- links the skills into `.agents/skills/` and the schema into
+- copies the skills into `.agents/skills/` and the schema into
   `openspec/schemas/`
 - lists anything you still need to fix
 
@@ -121,15 +179,26 @@ devShells.default = pkgs.mkShell {
 Add your own instructions to `AGENTS.md`, outside the markers: what the
 project is, its layout and how to run its checks. Agents run those checks
 before they push, and branch each change off the repository's default
-branch. Then commit `AGENTS.md`,
-`CLAUDE.md`, `.claude/skills` and `openspec/config.yaml`.
+branch.
 
-The next time the shell starts, `lets-sync` prints nothing if all is
-well.
+Then commit:
+
+- `AGENTS.md`, `CLAUDE.md` and `.claude/skills`
+- `openspec/config.yaml`
+- the skills in `.agents/skills/` and the schema in `openspec/schemas/`
+- `mise.toml`, if you use mise
+
+With the `ignored` skills mode, `lets-sync` adds a block to `.gitignore`
+instead, so git ignores the skills and the schema. Commit `.gitignore`,
+and do not commit the copies.
+
+The next time `lets-sync` runs, it prints nothing if all is well.
 
 > [!NOTE]
-> Agents need the dev shell to use the skills. A cloud session or a clone
-> without Nix still reads the committed rules, but gets no skills.
+> With the default `committed` mode, every clone has the skills. A cloud
+> session or a clone without Nix or mise still reads the rules and the
+> skills. The dev shell, from Nix or mise, supplies the tools the skills
+> call: the OpenSpec CLI, `gh` and `lets-sync`.
 
 ## 📋 The backlog
 
@@ -309,7 +378,7 @@ markers:
 <!-- END lets-spec rules -->
 ```
 
-Every agent reads them, with or without Nix. In short, they say:
+Every agent reads them, with or without Nix or mise. In short, they say:
 
 - Plan product changes with OpenSpec.
 - One change is one branch and one pull request. A change that depends on
@@ -329,8 +398,9 @@ Change it here instead.
 
 | Command | What it does |
 |---|---|
-| `lets-sync` | Sets the project up and keeps it set up. The dev shell runs it each time it starts. |
-| `lets-sync --check` | Changes nothing. Fails if the rules in `AGENTS.md` are missing or out of date. Run it in CI. |
+| `lets-sync` | Sets the project up and keeps it set up. The dev shell or the mise hook runs it. |
+| `lets-sync --check` | Changes nothing. Exits 1 if the project is out of date. Run it in CI. |
+| `lets-sync --help` | Prints what it does. |
 
 Each time it runs, it:
 
@@ -338,21 +408,103 @@ Each time it runs, it:
   the change
 - creates any missing file the project owns, and never edits one that
   exists
-- links each skill and the schema, and lists the links in
-  `.git/info/exclude` so git ignores them; your `.gitignore` is never
-  changed
-- moves its links to the new version after an update, and removes links
-  the new version no longer ships
+- copies each skill and the schema from the release, rewrites any file
+  that differs, and tells you to commit what it wrote
+- removes any skill or schema the release no longer ships
+- keeps the `.gitignore` block in the `ignored` mode, and removes it in
+  the `committed` mode
+- removes the section that older versions kept in git's local exclude
+  file, so git sees the copies
 - warns about anything to fix: the wrong `schema:`, a marker without its
-  pair, or a `CLAUDE.md` or `.claude/skills` that is not the expected link
+  pair, a `CLAUDE.md` or `.claude/skills` that is not the expected link,
+  or an OpenSpec CLI on `PATH` that differs from the one the release's
+  `openspec-*` skills were generated from
 
-It never replaces a file or folder the project owns. If your project
-already has its own copy of a skill or the schema, `lets-sync` leaves
-it in place, and prints the `git rm -r` command that removes it.
+A copy is mode 0755 when the release's file is executable, and 0644
+otherwise. So the skills' scripts stay executable.
 
-It always exits 0, so a problem never stops the shell from starting.
+After a run it exits 0, even when it warns, so a problem never stops the
+shell from starting. It exits 1 for an unknown option, or a release it
+cannot find.
+
+### What `lets-sync` owns
+
+`lets-sync` owns every path that matches one of these patterns:
+
+- `.agents/skills/lets-*`
+- `.agents/skills/openspec-*`
+- `openspec/schemas/lets-*`
+
+It writes, rewrites and removes those paths, so it undoes any edit you
+make there. Change Let's Spec instead. It never touches anything else in
+those folders, so your own skills under other names are safe.
+
+### Committed or ignored skills
+
+The skills mode decides whether git tracks the copied skills and schema.
+`lets-sync` writes the same files in both modes. The rules block,
+`openspec/config.yaml`, `CLAUDE.md` and `.claude/skills` are committed in
+both modes.
+
+| Mode | What `lets-sync` does | Who it suits |
+|---|---|---|
+| `committed` (default) | Writes the copies, and asks you to commit them. Removes its block from `.gitignore`, if one is there. | Every project. Every clone has the skills. |
+| `ignored` | Writes the same copies, and keeps a block in `.gitignore` that ignores them. | A project that wants no skill text in its history, and whose every user installs Let's Spec with Nix or mise. |
+
+You set the mode with `letsSpec.skills` in the Nix module, or with the
+`LETS_SPEC_SKILLS` environment variable.
+
+In the `ignored` mode, `lets-sync` keeps this block in `.gitignore`. You
+own the rest of the file.
+
+```gitignore
+# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.
+/.agents/skills/lets-*
+/.agents/skills/openspec-*
+/openspec/schemas/lets-*
+# END lets-spec skills
+```
+
+When you switch modes, the next run tells you what to do:
+
+| From | To | `lets-sync` says |
+|---|---|---|
+| `ignored` | `committed` | `lets-spec: removed the lets-spec skills block from .gitignore. Run: git add .agents/skills openspec/schemas, then commit.` |
+| `committed` | `ignored` | `lets-spec: added the lets-spec skills block to .gitignore. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit.` |
+
+Git ignores only files it does not track yet. So after a switch to
+`ignored`, run the `git rm -r --cached` command it gives.
+
+### What `--check` checks
+
+`lets-sync --check` changes nothing. It prints each problem it finds, and
+exits 1 if it finds any.
+
+| Mode | It fails when |
+|---|---|
+| Both | The rules block in `AGENTS.md` is missing, out of date, or has a marker without its pair. |
+| `committed` | A copied file differs from the release in its bytes or its execute bit, is missing, or is one the release does not ship. Or `.gitignore` still has the skills block. |
+| `ignored` | `.gitignore` has no skills block, or its block is out of date. A CI clone has no copies, so it does not check them. |
+
+Run it in your project's CI. With Nix, run `lets-sync --check` in the dev
+shell. With mise, run `mise exec -- lets-sync --check`.
+
+### Environment
+
+| Variable | Default | What it does |
+|---|---|---|
+| `LETS_SPEC_SKILLS` | `committed` | The skills mode: `committed` or `ignored`. The Nix module sets it. |
+| `LETS_SPEC_FLOW` | `standard` | The flow, with mise. |
+| `LETS_SPEC_BACKLOG` | `github-labels` | The backlog, with mise. |
+| `WORKFLOW_RELEASE` | | The release folder to use. The Nix package sets it, so the flow and backlog come from your flake, and these two variables have no effect. |
 
 ## 🔄 Updating
+
+Commit the update on `main` in the same pull request as the new pin. The
+pull request then holds the new pin, the new rules and the new skills
+together.
+
+### With Nix
 
 Dependabot's `nix` entry opens a pull request when `main` moves here. To
 update at once:
@@ -361,11 +513,12 @@ update at once:
 nix flake update lets-spec
 ```
 
-The next time the dev shell starts, `lets-sync` points the links at
-the new version. If the rules changed, it rewrites them in `AGENTS.md`,
-and you commit that change. A Dependabot pull request changes only
-`flake.lock`, so run `lets-sync --check` in your project's CI to
-catch rules that are out of date.
+Then enter the dev shell. `lets-sync` copies the new skills and schema, and
+rewrites the rules in `AGENTS.md` if they changed. Commit what it wrote.
+
+A Dependabot pull request changes only `flake.lock`. So `lets-sync --check`
+fails in CI until someone checks out its branch, enters the dev shell and
+commits the result.
 
 To try an unmerged change to Let's Spec in a project, override the input
 for one shell:
@@ -374,20 +527,50 @@ for one shell:
 nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 ```
 
+### With mise
+
+Dependabot does not read `mise.toml`. Update the pin by hand, or with
+[Renovate](https://docs.renovatebot.com), which does. Change these
+together:
+
+- the `lets-spec` version and its `asset_pattern`
+- the OpenSpec CLI, to the version named in the new release's notes
+
+Then run `mise install`, run `lets-sync`, and commit what it wrote.
+
+### From a version that linked the skills
+
+Older versions of `lets-sync` linked the skills into the project, and had
+git ignore the links. The first run of this version:
+
+- replaces each link with a copy of the files
+- removes the section the old version kept in git's local exclude file
+- asks you to commit
+
+That first commit is large. Later updates change only what changed.
+
+`openspec/config.yaml` must now say `schema: lets-standard` or
+`schema: lets-minimal`. If it does not, `lets-sync` warns with the value
+to set.
+
 ## 🛠️ Development
 
 ### Layout
 
 | Path | What it holds |
 |---|---|
-| `skills/` | The authored skills |
-| `schemas/` | One OpenSpec schema per flow, with its templates |
+| `flake.nix` | Reads `flows.json`, calls `build/`, and defines the packages and checks |
 | `flows.json` | Each flow's schema and skills, and each backlog's mode and skills |
-| `overlays/` | The rules fragment and the files `lets-sync` creates in a project |
-| `lets-sync/` | The sync command, a Node package |
+| `nix/flake-module.nix` | The flake module that projects import |
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
-| `nix/` | The flake module |
+| `lets-sync/` | The sync command, a Node package |
+| `skills/` | The authored skills, one `lets-*` folder each |
+| `schemas/` | One OpenSpec schema per flow, with its templates |
+| `overlays/` | The rules fragment and the files `lets-sync` creates in a project |
 | `tests/` | The bats tests, and the Node tests in `tests/lets-spawn/` and `tests/lets-sync/` |
+| `mise.toml` | This repo's own development tools, for working without Nix |
+| `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
+| `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
 
 A flow is a recipe: one schema from `schemas/`, and the skills from `skills/`
 that the schema calls. A flow is named after its schema. The build fails if a
@@ -401,8 +584,19 @@ script is built for one backlog. A skill listed in both places fails the build.
 
 The flake builds the `openspec-*` skills from the OpenSpec CLI in its
 nixpkgs, for the workflows listed in `build/openspec.json`. They are not
-committed. When `flake.lock` moves nixpkgs, the CLI version may change,
-and the skill text with it.
+committed to this repo. When `flake.lock` moves nixpkgs, the CLI version
+may change, and the skill text with it. Each release records the CLI
+version in its `release.json`.
+
+### Releases
+
+`nix build .#dist` builds the release folder: `lets-sync`, and a release
+for every flow and backlog pair. Its version is `0.0.0-dev`.
+
+Release tags are `v<major>.<minor>.<patch>`. When you push one, the
+release workflow builds the folder, sets its version from the tag, and
+publishes `lets-spec-<version>.tar.gz` as a GitHub release. The release
+notes name the OpenSpec CLI version.
 
 ### Testing
 
@@ -412,11 +606,12 @@ nix flake check
 
 This runs the bats tests, the Node tests and shellcheck, builds every
 flow and backlog pair, builds the `dist` folder (the release tarball's
-contents) and runs its `lets-sync` in a sample project, sets up a sample project with the packaged commands,
-and evaluates the flake-parts module. In the dev shell, `bats tests` runs
-only the bats tests, and
+contents) and runs its `lets-sync` in a sample project, sets up a sample
+project with the packaged commands, and evaluates the flake-parts module.
+
+In the dev shell, `bats tests` runs only the bats tests, and
 `node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"`
-runs only the Node tests.
+runs only the Node tests. With mise, `mise run test` runs both.
 
 ## 📄 License
 
