@@ -49,7 +49,15 @@ async function handoff({ name, prompt, unattended, model }, adapter, deps) {
 
 async function critique({ name, author, effort, promptFile, codeReview, timeoutMinutes }, adapter, deps) {
   const started = deps.now();
-  const fileText = promptFile === null ? null : deps.readFile(resolve(deps.cwd, promptFile));
+  let fileText = null;
+  if (promptFile !== null) {
+    try {
+      fileText = deps.readFile(resolve(deps.cwd, promptFile));
+    } catch (error) {
+      deps.stderr(`spawn-session: cannot read --prompt-file ${promptFile}: ${error.message}\n${USAGE}`);
+      return EXIT.usage;
+    }
+  }
 
   let reviewer;
   try {

@@ -174,3 +174,10 @@ test('the entry point detects none outside any harness', async () => {
   const { stdout, code } = await execFileP('node', [ENTRY, 'detect'], { env: { PATH: process.env.PATH, HOME: process.env.HOME, LETS_SPEC_HARNESS: 'none' } });
   assert.equal(code, 0); assert.equal(stdout, 'none\n');
 });
+
+test('a missing prompt file is a usage error that names the path', async () => {
+  const { deps, err, calls } = makeDeps({ readFile: (path) => { throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: 'ENOENT' }); } });
+  assert.equal(await run(critique(), deps), 2);
+  assert.match(err.join(''), /p\.md/);
+  assert.equal(callsOf(calls('none'), 'spawn').length, 0);
+});
