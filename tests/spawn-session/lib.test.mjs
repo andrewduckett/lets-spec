@@ -4,6 +4,7 @@ import { SESSION_MARKERS, scrubbedEnv } from '../../skills/spawn-session/scripts
 import { isTreeClean } from '../../skills/spawn-session/scripts/lib/git.mjs';
 import { pollUntil } from '../../skills/spawn-session/scripts/lib/wait.mjs';
 import { TimeoutError } from '../../skills/spawn-session/scripts/lib/errors.mjs';
+import { realIo } from '../../skills/spawn-session/scripts/lib/io.mjs';
 
 test('scrubbedEnv removes every session marker, keeps the rest, and leaves its input alone', () => {
   assert.equal(SESSION_MARKERS.length, 9);
@@ -47,4 +48,11 @@ test('pollUntil resolves with the first defined value and sleeps the interval be
 test('pollUntil throws TimeoutError once the deadline passes', async () => {
   const c = clock();
   await assert.rejects(pollUntil(() => undefined, { intervalMs: 5000, timeoutMs: 12000, now: c.now, sleep: c.sleep }), TimeoutError);
+});
+
+test('the real execFile survives a command that exits without reading its input', async () => {
+  const io = realIo();
+  assert.deepEqual(await io.execFile('true', [], { input: 'x'.repeat(1 << 20) }), { stdout: '', stderr: '', code: 0 });
+  for (let i = 0; i < 20; i++) assert.equal((await io.execFile('true', [])).code, 0);
+  assert.equal((await io.execFile('cat', [], { input: 'it\'s "q"\n' })).stdout, 'it\'s "q"\n');
 });
