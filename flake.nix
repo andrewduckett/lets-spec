@@ -94,10 +94,11 @@
         '';
 
         # Everything a project's dev shell needs from this repo. The skills'
-        # scripts run in the shell, so it carries the gh and jq they call.
+        # scripts run in the shell on Node, so it carries Node and the gh
+        # they call.
         bundle = flow: backlog: pkgs.buildEnv {
           name = "lets-spec-${flow}-${backlog}";
-          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq pkgs.nodejs_24 ];
+          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.nodejs_24 ];
         };
       in
         { inherit openspec openspec-skills dist; default = bundle "standard" "github-labels"; }
@@ -203,8 +204,8 @@
             touch "$out"
           '';
 
-        # The unit tests for the lets-spawn script and the lets-sync package.
-        # They use fakes, so no harness runs here.
+        # The unit tests for the lets-sync package and the skills' Node
+        # scripts. They use fakes, so no harness and no real gh run here.
         node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
           cp -R ${self} repo
           chmod -R u+w repo
