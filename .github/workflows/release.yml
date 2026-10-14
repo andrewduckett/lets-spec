@@ -1,0 +1,45 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Build the release folder
+        run: nix build .#dist
+
+      # The tag v0.1.0 makes the folder lets-spec-0.1.0 and the version 0.1.0.
+      - name: Make the tarball
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          name="lets-spec-${TAG#v}"
+          cp -rL result "$name"
+          chmod -R u+w "$name"
+          jq --arg v "${TAG#v}" '.version = $v' "$name/release.json" > release.json.new
+          mv release.json.new "$name/release.json"
+          tar czf "$name.tar.gz" "$name"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          name="lets-spec-${TAG#v}"
+          openspec="$(jq -r .openspec "$name/release.json")"
+          gh release create "$TAG" "$name.tar.gz" --generate-notes --notes "OpenSpec CLI: $openspec"

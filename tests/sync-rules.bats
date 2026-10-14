@@ -160,7 +160,7 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
 @test "check changes nothing in the project" {
   init_project
   printf '%s' "$stale_block" >AGENTS.md
-  rm .agents/skills/lets-build
+  rm -r .agents/skills/lets-build
   snapshot >"$BATS_TEST_TMPDIR/before"
   run sync_project --check
   [ "$status" -eq 1 ]

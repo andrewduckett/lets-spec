@@ -60,7 +60,7 @@ the dev shell provides.
    `AskUserQuestion` with the exact prompt `Run lets-build on branch <name>`
    and the session name `<name>`, and options to start it or to stop here.
    On yes, run
-   `node .agents/skills/spawn-session/scripts/spawn-session.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
+   `node .agents/skills/lets-spawn/scripts/lets-spawn.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
    from the repo root, show the user its output, and stop. On no, say the
    plan is ready and that running `lets-build` on this branch builds it.
    If propose stopped for any other reason, say why and stop.
@@ -83,7 +83,7 @@ The schema's apply instruction comes here when every task is done, and so
 does the `all_done` state above. The order matters: review before verify, so
 that verify checks the fixed code.
 
-1. If `.agents/skills/` holds the `peer-code-review` skill, the change
+1. If `.agents/skills/` holds the `lets-review-code` skill, the change
    needs a code review. If the pull request description has no
    **Code review** section, run the skill now. Otherwise check the section
    as the skill's *Before archive* section says, and run the skill again

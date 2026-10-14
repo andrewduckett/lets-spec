@@ -1,8 +1,8 @@
-# Build releases with nix/build-release.sh, as the flake does.
+# Build releases with build/build-release.sh, as the flake does.
 
-# The skills a test release ships. A fixture, not a copy of flows.nix: it
+# The skills a test release ships. A fixture, not a copy of flows.json: it
 # needs one entry point of each kind, and a skill that only some flows ship.
-fixture_skills=(lets-build lets-shape test-driven-development peer-code-review)
+fixture_skills=(lets-build lets-shape lets-test-first lets-review-code)
 
 # generated_skills <dir>: make a folder that stands in for the generated
 # openspec-* skills, and print its path.
@@ -16,18 +16,17 @@ generated_skills() {
 build() {
   local out="$1" schema="$2" mode="$3"
   shift 3
-  bash "$repo/nix/build-release.sh" "$repo" "$(generated_skills "$out.generated")" \
+  bash "$repo/build/build-release.sh" "$repo" "$(generated_skills "$out.generated")" \
     "$out" "$schema" "$mode" "$@"
 }
 
 # make_release <dir> [extra skill...]: build a read-only release of the
-# standard flow in <dir>. Name <dir> like a store path, <hash>-lets-spec-release,
-# because that is how lets-sync knows its own links. Each extra skill is
-# added beside the fixture's, to stand for an earlier release.
+# standard flow in <dir>. Each extra skill is added beside the fixture's,
+# to stand for an earlier release.
 make_release() {
   local dir="$1" skill
   shift
-  build "$dir" standard labels "${fixture_skills[@]}" >&2
+  build "$dir" lets-standard labels "${fixture_skills[@]}" >&2
   for skill in "$@"; do
     mkdir -p "$dir/overlay/.agents/skills/$skill"
     echo "$skill" >"$dir/overlay/.agents/skills/$skill/SKILL.md"

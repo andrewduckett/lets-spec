@@ -1,0 +1,33 @@
+{
+  "flows": {
+    "standard": {
+      "schema": "lets-standard",
+      "skills": [
+        "lets-build",
+        "lets-brainstorm",
+        "lets-write-specs",
+        "lets-write-adrs",
+        "lets-write-tasks",
+        "lets-test-first",
+        "lets-review-plan",
+        "lets-review-code",
+        "lets-spawn"
+      ]
+    },
+    "minimal": {
+      "schema": "lets-minimal",
+      "skills": [
+        "lets-build",
+        "lets-brainstorm",
+        "lets-write-specs",
+        "lets-write-tasks",
+        "lets-test-first",
+        "lets-spawn"
+      ]
+    }
+  },
+  "backlogs": {
+    "github-labels": { "mode": "labels", "skills": ["lets-shape"] },
+    "github-fields": { "mode": "fields", "skills": ["lets-shape"] }
+  }
+}

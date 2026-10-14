@@ -51,7 +51,7 @@ mentions() {
     found=1
     run node "$repo/skills/$script" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"spawn-session <detect|critique|handoff>"* && "$output" == *"$command"* ]] ||
+    [[ "$output" == *"lets-spawn <detect|critique|handoff>"* && "$output" == *"$command"* ]] ||
       { echo "$script has no command $command"; false; }
   done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
   [ "$found" -eq 1 ]
@@ -64,11 +64,9 @@ mentions() {
   done < <(mentions 'openspec/schemas/[a-z-]+/templates/[a-z-]+\.md')
 }
 
-# flow_skills <flow>: the skills flows.nix ships with the flow, one per line.
-# The list may span several lines, so join the flow's block first.
+# flow_skills <flow>: the skills flows.json ships with the flow, one per line.
 flow_skills() {
-  sed -n "/^  $1 = {/,/^  };/p" "$repo/flows.nix" | tr '\n' ' ' |
-    grep -o 'skills = \[[^]]*\]' | grep -o '"[^"]*"' | tr -d '"'
+  jq -r --arg flow "$1" '.flows[$flow].skills[]' "$repo/flows.json"
 }
 
 # named_skills <file>: each name the file calls a skill, as `name` skill,
@@ -77,15 +75,15 @@ named_skills() {
   tr -s '[:space:]' ' ' <"$1" | grep -oE '`[a-z-]+` skill' | cut -d'`' -f2 | sort -u
 }
 
-# A skill no schema step calls, such as spawn-session, is still reachable
+# A skill no schema step calls, such as lets-spawn, is still reachable
 # when another skill the flow ships calls it.
 @test "each skill a flow ships, other than an entry point, is named by its schema or by a skill the flow ships" {
   local flow skill shipped named
   for flow in standard minimal; do
     shipped="$(flow_skills "$flow")"
-    [ -n "$shipped" ] || { echo "flows.nix lists no skills for $flow"; false; }
+    [ -n "$shipped" ] || { echo "flows.json lists no skills for $flow"; false; }
     named="$(
-      named_skills "$repo/schemas/$flow/schema.yaml"
+      named_skills "$repo/schemas/lets-$flow/schema.yaml"
       for skill in $shipped; do named_skills "$repo/skills/$skill/SKILL.md"; done
     )"
     for skill in $shipped; do
@@ -99,7 +97,7 @@ named_skills() {
 @test "each skill a schema names is one its flow ships, or a generated OpenSpec skill" {
   local flow skill
   for flow in standard minimal; do
-    for skill in $(named_skills "$repo/schemas/$flow/schema.yaml"); do
+    for skill in $(named_skills "$repo/schemas/lets-$flow/schema.yaml"); do
       case "$skill" in openspec-*) continue ;; esac
       flow_skills "$flow" | grep -qx "$skill" ||
         { echo "the $flow schema names $skill, which the flow does not ship"; false; }
@@ -111,12 +109,12 @@ named_skills() {
   local flow marker template
   for flow in standard minimal; do
     for marker in 'Confirmed by user:' 'VERDICT:' 'CHANGES_APPLIED:'; do
-      grep -qF "$marker" "$repo/schemas/$flow/schema.yaml" || continue
+      grep -qF "$marker" "$repo/schemas/lets-$flow/schema.yaml" || continue
       case "$marker" in
         'Confirmed by user:') template=brainstorm.md ;;
         *) template=review.md ;;
       esac
-      grep -qF "$marker" "$repo/schemas/$flow/templates/$template" ||
+      grep -qF "$marker" "$repo/schemas/lets-$flow/templates/$template" ||
         { echo "the $flow schema reads $marker, but templates/$template does not write it"; false; }
     done
   done

@@ -11,7 +11,7 @@
 # A repo records kind and priority with labels (kind/epic, priority/must)
 # or with issue fields (the Epic type, the Priority field). A write uses
 # the one this copy's mode names, labels or fields, and clears the other
-# on that issue. nix/build-release.sh writes the mode from the project's
+# on that issue. build/build-release.sh writes the mode from the project's
 # backlog choice in its flake.
 #
 # The rules live in backlog-plan.jq beside this script. This script only

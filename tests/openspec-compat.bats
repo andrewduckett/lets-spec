@@ -4,7 +4,7 @@ load support/common
 # lets-build trusts what the CLI reports about a change, so these tests pin
 # that for every schema. Each test runs once for each schema.
 
-schemas=(standard minimal)
+schemas=(lets-standard lets-minimal)
 
 export OPENSPEC_TELEMETRY=0 OPENSPEC_NO_UPDATE_CHECK=1
 
