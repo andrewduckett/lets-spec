@@ -60,8 +60,8 @@
         # What lets-sync copies and creates for one flow and backlog.
         # The build writes the backlog's mode into the skills' scripts.
         release = flow: backlog: let recipe = flows.${flow}; in
-          pkgs.runCommand "lets-spec-release" { } ''
-            bash ${./build/build-release.sh} ${releaseSource} ${openspec-skills} $out \
+          pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
+            node ${./build/build-release.mjs} ${releaseSource} ${openspec-skills} $out \
               ${recipe.schema} ${backlogs.${backlog}.mode} \
               ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
           '';

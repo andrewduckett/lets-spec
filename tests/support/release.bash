@@ -1,4 +1,4 @@
-# Build releases with build/build-release.sh, as the flake does.
+# Build releases with build/build-release.mjs, as the flake does.
 
 # The skills a test release ships. A fixture, not a copy of flows.json: it
 # needs one entry point of each kind, and a skill that only some flows ship.
@@ -16,7 +16,7 @@ generated_skills() {
 build() {
   local out="$1" schema="$2" mode="$3"
   shift 3
-  bash "$repo/build/build-release.sh" "$repo" "$(generated_skills "$out.generated")" \
+  node "$repo/build/build-release.mjs" "$repo" "$(generated_skills "$out.generated")" \
     "$out" "$schema" "$mode" "$@"
 }
 
