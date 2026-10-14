@@ -97,7 +97,7 @@ test('a reviewer failure exits 5 and leaves the thread', async () => {
   const { deps, err, calls } = makeDeps({ adapters: { none } });
   assert.equal(await run(critique(), deps), 5);
   assert.match(err.join(''), /asked a question/);
-  assert.match(err.join(''), /thread-1/);
+  assert.match(err.join(''), /\(fake thread-1\)/);
   assert.deepEqual(callsOf(calls('none'), 'finish').map(([, , ok]) => ok), [false]);
 });
 

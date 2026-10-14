@@ -17,8 +17,10 @@ export function fakeIo({ results = [], files = {}, commands = [], ...overrides }
     removed: [],
     commands: new Set(commands),
 
+    killed: [],
     async execFile(cmd, args, opts = {}) {
       io.calls.push([cmd, args, opts]);
+      opts.started?.({ pid: 4242, kill: () => io.killed.push(4242) });
       const next = results.shift() ?? { stdout: '', stderr: '', code: 0 };
       return typeof next === 'function' ? next(cmd, args, opts) : next;
     },

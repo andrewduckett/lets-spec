@@ -60,8 +60,9 @@ export function createAdapter(io) {
       promptPath: promptPath(cwd, name),
       lastMessagePath: lastMessagePath(cwd, name),
     });
-    const promise = io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input: stdin });
-    return { id: null, kind: 'process', promise, readResultFrom, name, cwd };
+    let child = null;
+    const promise = io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input: stdin, started: (c) => { child = c; } });
+    return { id: child ? String(child.pid) : null, kind: 'process', promise, kill: () => child?.kill(), readResultFrom, name, cwd };
   }
 
   async function spawnHandoff(request) {
@@ -89,7 +90,11 @@ export function createAdapter(io) {
     async waitForResult(handle, { timeoutMs }) {
       const timedOut = Symbol('timed out');
       const result = await Promise.race([handle.promise, io.sleep(timeoutMs).then(() => timedOut)]);
-      if (result === timedOut) throw new TimeoutError(`no result after ${timeoutMs} ms`);
+      if (result === timedOut) {
+        // Do not leave the reviewer running, and spending tokens, after we stop waiting.
+        handle.kill();
+        throw new TimeoutError(`no result after ${timeoutMs} ms`);
+      }
       if (result.code !== 0) throw new ReviewerFailed(`exit ${result.code}: ${result.stderr.slice(-500)}`);
       return { text: handle.readResultFrom === 'stdout' ? result.stdout : io.readFile(handle.readResultFrom) };
     },

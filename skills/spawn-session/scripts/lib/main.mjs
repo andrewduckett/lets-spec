@@ -88,12 +88,12 @@ async function critique({ name, author, effort, promptFile, codeReview, timeoutM
   } catch (error) {
     if (error instanceof ReviewerFailed) {
       await adapter.finish(handle, false);
-      deps.stderr(`spawn-session: reviewer failed: ${error.message} (thread ${handle.id})\n`);
+      deps.stderr(`spawn-session: reviewer failed: ${error.message} (${handle.kind} ${handle.id})\n`);
       return EXIT.reviewer;
     }
     if (error instanceof TimeoutError) {
       await adapter.finish(handle, false);
-      deps.stderr(`spawn-session: timed out after ${timeoutMinutes} minutes waiting on thread ${handle.id}\n`);
+      deps.stderr(`spawn-session: timed out after ${timeoutMinutes} minutes waiting on ${handle.kind} ${handle.id}\n`);
       return EXIT.timeout;
     }
     throw error;
@@ -105,12 +105,12 @@ async function critique({ name, author, effort, promptFile, codeReview, timeoutM
   } catch (error) {
     if (!(error instanceof SpawnError)) throw error;
     await adapter.finish(handle, false);
-    deps.stderr(`spawn-session: could not check the tree after the review: ${error.message} (thread ${handle.id})\n`);
+    deps.stderr(`spawn-session: could not check the tree after the review: ${error.message} (${handle.kind} ${handle.id})\n`);
     return EXIT.dirty;
   }
   if (!clean) {
     await adapter.finish(handle, false);
-    deps.stderr(`spawn-session: the reviewer changed files outside .workspace/ (thread ${handle.id})\n`);
+    deps.stderr(`spawn-session: the reviewer changed files outside .workspace/ (${handle.kind} ${handle.id})\n`);
     return EXIT.dirty;
   }
 

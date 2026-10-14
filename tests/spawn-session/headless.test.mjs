@@ -67,7 +67,8 @@ test('a gpt critique scrubs the env, runs in cwd, and reads the last-message fil
   const io = fakeIo({ results: [(cmd, args) => { io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS'); return { stdout: 'noise', stderr: '', code: 0 }; }] });
   const adapter = createAdapter(io);
   const handle = await adapter.spawn(critiqueRequest());
-  assert.equal(handle.id, null);
+  assert.equal(handle.id, '4242');
+  assert.equal(handle.kind, 'process');
   assert.equal(io.files.get(`${DIR}/x.prompt.md`), 'PROMPT');
   const [[cmd, , opts]] = io.calls;
   assert.equal(cmd, 'codex');
@@ -94,11 +95,12 @@ test('a non-zero exit is a reviewer failure carrying the stderr tail', async () 
   await assert.rejects(adapter.waitForResult(handle, { timeoutMs: 1000 }), (error) =>
     error instanceof ReviewerFailed && /^exit 1: /.test(error.message) && error.message.endsWith('model refused'));
 });
-test('a process that outlives the timeout is a TimeoutError', async () => {
+test('a process that outlives the timeout is killed and is a TimeoutError', async () => {
   const io = fakeIo({ results: [new Promise(() => {})] });
   const adapter = createAdapter(io);
   const handle = await adapter.spawn(critiqueRequest({ family: 'claude' }));
   await assert.rejects(adapter.waitForResult(handle, { timeoutMs: 1000 }), TimeoutError);
+  assert.deepEqual(io.killed, [4242]);
 });
 test('an attended handoff needs gnome-terminal and opens a window in cwd', async () => {
   const request = { kind: 'handoff', name: 'fix-login', prompt: TRICKY, cwd: '/r', family: 'claude', model: null, effort: null, attended: true, readOnly: false };

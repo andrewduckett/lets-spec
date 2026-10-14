@@ -9,12 +9,14 @@ import { DatabaseSync } from 'node:sqlite';
 export function realIo() {
   return {
     // Resolves on any exit code. Rejects only when the command cannot start.
-    execFile(cmd, args, { cwd, env, input } = {}) {
+    // started, when given, receives the child, so a caller can kill it.
+    execFile(cmd, args, { cwd, env, input, started } = {}) {
       return new Promise((resolve, reject) => {
         const child = nodeExecFile(cmd, args, { cwd, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
           if (error && typeof error.code === 'string') return reject(new Error(`cannot run ${cmd}: ${error.message}`));
           resolve({ stdout, stderr, code: error ? (error.code ?? 1) : 0 });
         });
+        started?.(child);
         // A command may exit without reading its input. Its exit code says
         // what happened, so a broken pipe here is not an error.
         child.stdin.on('error', (error) => {

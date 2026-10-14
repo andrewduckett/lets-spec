@@ -67,3 +67,12 @@ test('the real execFile survives a command that exits without reading its input'
   for (let i = 0; i < 20; i++) assert.equal((await io.execFile('true', [])).code, 0);
   assert.equal((await io.execFile('cat', [], { input: 'it\'s "q"\n' })).stdout, 'it\'s "q"\n');
 });
+
+test('the real execFile reports the child so a caller can kill it', async () => {
+  const io = realIo();
+  let child;
+  const result = io.execFile('sleep', ['30'], { started: (c) => { child = c; } });
+  assert.equal(typeof child.pid, 'number');
+  child.kill();
+  assert.notEqual((await result).code, 0);
+});
