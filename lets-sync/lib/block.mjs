@@ -97,6 +97,14 @@ export function applyBlock(markers, text, block) {
   }
 }
 
+// The lines between a pair of markers, or null when there is no pair.
+export function blockLines(markers, text) {
+  if (text === null) return null;
+  const lines = linesOf(text);
+  const at = locate(markers, lines);
+  return at.kind === 'pair' ? lines.slice(at.from + 1, at.to) : null;
+}
+
 // The text without the block, and without the one blank line before it that
 // applyBlock adds. text is null when nothing else was there.
 export function removeBlock(markers, text) {

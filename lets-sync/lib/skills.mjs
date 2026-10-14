@@ -34,9 +34,9 @@ function copyMode(src, io) {
 }
 
 // True when the project's copy differs from the release's file in bytes or
-// in its execute bit.
+// in its execute bit, or is a link or a folder.
 function differs(src, dst, io) {
-  if (io.isSymlink(dst)) return true;
+  if (io.isSymlink(dst) || io.isDir(dst)) return true;
   const have = io.readBytes(dst);
   if (have === null || !have.equals(io.readBytes(src))) return true;
   return executable(io.stat(dst).mode) !== executable(io.stat(src).mode);
@@ -75,7 +75,9 @@ export function syncSkills({ release, schemaName: _schemaName, root, io, stdout 
       if (blocked !== null) io.remove(blocked);
       const to = join(dstDir, file);
       if (!differs(join(src, file), to, io)) continue;
-      if (io.isSymlink(to)) io.remove(to);
+      // A link or a folder in the file's place is replaced. remove never
+      // follows a link.
+      if (io.isSymlink(to) || io.isDir(to)) io.remove(to);
       io.mkdirp(dirname(to));
       // An earlier copy may be read-only, as the Nix store is.
       if (io.exists(to)) io.chmod(to, io.stat(to).mode | 0o200);

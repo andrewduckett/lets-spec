@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkConfig, schemaOf } from '../../lets-sync/lib/config.mjs';
+import { realIo } from '../../lets-sync/lib/io.mjs';
 import { fakeIo } from './fixtures/fake-io.mjs';
 
 test('reads a bare value', () => {
@@ -57,4 +61,17 @@ test('checkConfig warns on a wrong schema', () => {
 test('checkConfig is quiet for the right schema, quoted or commented', () => {
   const io = fakeIo({ files: { [CONFIG]: 'schema: "lets-standard" # ok\n' } });
   assert.deepEqual(checkConfig({ io, configPath: CONFIG, schemaName: 'lets-standard' }), []);
+});
+
+test('checkConfig treats a folder at the config path as missing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-config-'));
+  try {
+    const configPath = join(dir, 'openspec/config.yaml');
+    mkdirSync(configPath, { recursive: true });
+    assert.deepEqual(checkConfig({ io: realIo(), configPath, schemaName: 'lets-standard' }), [
+      `${configPath} is missing, and could not be created.`,
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

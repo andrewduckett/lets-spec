@@ -141,6 +141,49 @@ edit_copy() {
   [[ "$output" == *"lets-spec: wrote $(release_files | wc -l) files. Commit them."* ]]
 }
 
+@test "links the linked layout made under pre-rename names are removed" {
+  # Older releases linked skills and the schema under names lets-sync no
+  # longer owns. The exclude section lists them, so they are removed by it.
+  local old="$BATS_TEST_TMPDIR/store/abc-lets-spec-release" path
+  local -a renamed=(.agents/skills/brainstorming .agents/skills/writing-specs openspec/schemas/standard)
+  mkdir -p .agents/skills openspec/schemas "$BATS_TEST_TMPDIR/mine"
+  printf '/local-notes\n# BEGIN lets-spec links. lets-sync rewrites this section.\n' >.git/info/exclude
+  for path in "${renamed[@]}"; do
+    ln -s "$old/overlay/$path" "$path"
+    echo "/$path" >>.git/info/exclude
+  done
+  # A link the project made, listed in the section by hand.
+  ln -s "$BATS_TEST_TMPDIR/mine" .agents/skills/my-skill
+  echo "/.agents/skills/my-skill" >>.git/info/exclude
+  echo "# END lets-spec links" >>.git/info/exclude
+
+  run sync_project
+  [ "$status" -eq 0 ]
+  for path in "${renamed[@]}"; do
+    [ ! -L "$path" ] || { echo "still a link: $path"; false; }
+    [[ "$output" == *"lets-spec: removed $path."* ]] || { echo "not reported: $path"; false; }
+  done
+  [ "$(readlink .agents/skills/my-skill)" = "$BATS_TEST_TMPDIR/mine" ]
+  [ "$(cat .git/info/exclude)" = /local-notes ]
+  # git sees no link into a release.
+  while IFS= read -r path; do
+    [[ "$(readlink "$path")" != *-lets-spec-release* ]] || { echo "untracked link: $path"; false; }
+  done < <(git ls-files --others --exclude-standard)
+}
+
+@test "an unpaired links marker in the exclude file is a warning, and the file is left alone" {
+  local old="$BATS_TEST_TMPDIR/store/abc-lets-spec-release"
+  mkdir -p .agents/skills
+  ln -s "$old/overlay/.agents/skills/brainstorming" .agents/skills/brainstorming
+  printf '# BEGIN lets-spec links. lets-sync rewrites this section.\n/.agents/skills/brainstorming\n' >.git/info/exclude
+  cp .git/info/exclude "$BATS_TEST_TMPDIR/exclude"
+  run sync_project
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"- .git/info/exclude has a lets-spec links marker without its pair, so its old links were not removed. Delete the marker, and the lines between the markers, then run lets-sync again."* ]]
+  cmp "$BATS_TEST_TMPDIR/exclude" .git/info/exclude
+  [ -L .agents/skills/brainstorming ]
+}
+
 @test "ignored mode writes the gitignore block and git ignores every managed path" {
   LETS_SPEC_SKILLS=ignored run sync_project
   [ "$status" -eq 0 ]

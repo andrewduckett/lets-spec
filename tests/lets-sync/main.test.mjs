@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { run } from '../../lets-sync/lib/main.mjs';
+import { run, skillsMode } from '../../lets-sync/lib/main.mjs';
 import { fakeIo } from './fixtures/fake-io.mjs';
 
 const RELEASE = '/store/abc-lets-spec-release';
@@ -88,4 +88,8 @@ test('a CLI version that differs from release.json is a warning in the footer', 
   assert.equal(await run([], t.deps), 0);
   assert.ok(t.stderr().includes('problem(s) to fix:'));
   assert.ok(t.stderr().includes('- the OpenSpec CLI on PATH is 1.4.0, but this release'));
+});
+
+test('an empty LETS_SPEC_SKILLS means the default, committed', () => {
+  assert.equal(skillsMode({ LETS_SPEC_SKILLS: '' }), 'committed');
 });

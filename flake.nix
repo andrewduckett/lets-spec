@@ -241,21 +241,36 @@
             };
           };
           shell = consumer.devShells.${system}.default;
-        in pkgs.runCommand "flake-module-check" { } ''
-          hook=${shell.shellHook}
+          hook = pkgs.writeText "shell-hook" shell.shellHook;
+        in pkgs.runCommand "flake-module-check" { nativeBuildInputs = [ pkgs.git ]; } ''
+          export HOME="$TMPDIR"
+          lets_sync="$(grep -o '/nix/store/[^ "'"'"';]*/bin/lets-sync' ${hook} | head -n 1)"
           # The module wraps lets-sync to pass on the skills mode.
-          if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$hook"; then
+          if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$lets_sync"; then
             echo "The shell hook's lets-sync does not set LETS_SPEC_SKILLS=ignored." >&2
-            cat "$hook" >&2
+            cat ${hook} "$lets_sync" >&2
             exit 1
           fi
           # The wrapped lets-sync names its release in WORKFLOW_RELEASE.
-          release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$hook" "$(dirname "$hook")"/.lets-sync-wrapped | head -n 1)"
+          release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$lets_sync" "$(dirname "$lets_sync")"/.lets-sync-wrapped | head -n 1)"
           script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
           if ! grep -q '^mode="fields"$' "$script"; then
             echo "The github-fields backlog did not write mode=\"fields\" into $script." >&2
             exit 1
           fi
+          # In CI the hook syncs nothing, so lets-sync --check sees the
+          # committed tree. Elsewhere it syncs.
+          mkdir project
+          cd project
+          git init --quiet
+          CI=true bash ${hook}
+          if [ -n "$(ls -A | grep -Fvx .git)" ]; then
+            echo "With CI set, the shell hook wrote files:" >&2
+            ls -A >&2
+            exit 1
+          fi
+          CI= bash ${hook} >/dev/null 2>&1
+          [ -f AGENTS.md ] || { echo "Without CI, the shell hook did not sync." >&2; exit 1; }
           touch "$out"
         '';
       });

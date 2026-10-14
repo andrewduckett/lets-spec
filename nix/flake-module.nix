@@ -14,8 +14,9 @@
 #     };
 #   };
 #
-# `self` is this repo's flake, so the commands, the skills and the OpenSpec CLI
-# always come from the commit the project pins, not from the project's nixpkgs.
+# `self` is this repo's flake. So lets-sync, the skills and the OpenSpec CLI
+# come from the commit the project pins, not from the project's nixpkgs. The
+# wrapper that sets the skills mode is built with the project's own pkgs.
 # `flows` and `backlogs` are the choices the flake builds a package for.
 { self, flows, backlogs }:
 { flake-parts-lib, lib, ... }:
@@ -81,12 +82,20 @@
         shellHook = lib.mkOption {
           type = lib.types.str;
           readOnly = true;
-          default = "${wrapped}/bin/lets-sync";
-          defaultText = lib.literalExpression ''"''${inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}"}/bin/lets-sync", wrapped to set LETS_SPEC_SKILLS'';
+          # In CI, `lets-sync --check` must see the tree the project
+          # committed. So the hook does not sync when CI is set.
+          default = ''
+            if [ -z "''${CI:-}" ]; then
+              ${wrapped}/bin/lets-sync
+            fi
+          '';
+          defaultText = lib.literalMD "Runs lets-sync, wrapped to set LETS_SPEC_SKILLS, unless the CI environment variable is set.";
           description = ''
             Creates the project's missing files, keeps the workflow rules in
             AGENTS.md, copies the skills and the schema into the project, and
-            warns about anything to fix. Use it as the shell's shellHook.
+            warns about anything to fix. When the CI environment variable is
+            set, it does nothing, so `lets-sync --check` checks the committed
+            tree. Use it as the shell's shellHook.
           '';
         };
       };

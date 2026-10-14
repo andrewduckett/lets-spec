@@ -117,7 +117,10 @@ In a flake without flake-parts, use the package named `<flow>-<backlog>`:
 ```nix
 devShells.default = pkgs.mkShell {
   packages = [ lets-spec.packages.${system}.standard-github-labels ];
-  shellHook = "lets-sync";
+  # Skip the sync in CI, so lets-sync --check sees the committed tree.
+  shellHook = ''
+    if [ -z "''${CI:-}" ]; then lets-sync; fi
+  '';
   # LETS_SPEC_SKILLS = "ignored";
 };
 ```
@@ -413,8 +416,9 @@ Each time it runs, it:
 - removes any skill or schema the release no longer ships
 - keeps the `.gitignore` block in the `ignored` mode, and removes it in
   the `committed` mode
-- removes the section that older versions kept in git's local exclude
-  file, so git sees the copies
+- removes the links that older versions made, even under the skills' old
+  names, and the section that listed them in git's local exclude file. So
+  git sees the copies, and no old skill is left beside a new one
 - warns about anything to fix: the wrong `schema:`, a marker without its
   pair, a `CLAUDE.md` or `.claude/skills` that is not the expected link,
   or an OpenSpec CLI on `PATH` that differs from the one the release's
@@ -424,8 +428,12 @@ A copy is mode 0755 when the release's file is executable, and 0644
 otherwise. So the skills' scripts stay executable.
 
 After a run it exits 0, even when it warns, so a problem never stops the
-shell from starting. It exits 1 for an unknown option, or a release it
-cannot find.
+shell from starting. It exits 1, and changes nothing, when:
+
+- you give it an unknown option
+- it cannot find the release, or the folder it finds is not a valid release
+- no release ships for the `LETS_SPEC_FLOW` and `LETS_SPEC_BACKLOG` you set
+- `LETS_SPEC_SKILLS` is set to a value other than `committed`, `ignored` or empty
 
 ### What `lets-sync` owns
 
@@ -486,14 +494,19 @@ exits 1 if it finds any.
 | `committed` | A copied file differs from the release in its bytes or its execute bit, is missing, or is one the release does not ship. Or `.gitignore` still has the skills block. |
 | `ignored` | `.gitignore` has no skills block, or its block is out of date. A CI clone has no copies, so it does not check them. |
 
-Run it in your project's CI. With Nix, run `lets-sync --check` in the dev
-shell. With mise, run `mise exec -- lets-sync --check`.
+Run it in your project's CI. With Nix, run `nix develop -c lets-sync --check`.
+With mise, run `mise exec -- lets-sync --check`.
+
+The module's shell hook does not run `lets-sync` when the `CI` environment
+variable is set. CI services such as GitHub Actions set it. So in CI,
+`lets-sync --check` checks the tree you committed, not one the hook has
+just synced.
 
 ### Environment
 
 | Variable | Default | What it does |
 |---|---|---|
-| `LETS_SPEC_SKILLS` | `committed` | The skills mode: `committed` or `ignored`. The Nix module sets it. |
+| `LETS_SPEC_SKILLS` | `committed` | The skills mode: `committed` or `ignored`. Unset or empty means `committed`. Any other value is an error. The Nix module sets it. |
 | `LETS_SPEC_FLOW` | `standard` | The flow, with mise. |
 | `LETS_SPEC_BACKLOG` | `github-labels` | The backlog, with mise. |
 | `WORKFLOW_RELEASE` | | The release folder to use. The Nix package sets it, so the flow and backlog come from your flake, and these two variables have no effect. |

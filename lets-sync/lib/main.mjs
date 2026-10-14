@@ -1,9 +1,10 @@
 // The whole run: parse, find the release, then the steps in order. No process
 // access here; everything comes through deps, so tests run it with fakes.
-import { isAbsolute, join } from 'node:path';
-import { applyBlock, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.mjs';
+import { isAbsolute, join, relative } from 'node:path';
+import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.mjs';
 import { checkConfig } from './config.mjs';
 import { checkClaude, createInitFiles, linkClaude } from './init.mjs';
+import { isManaged } from './managed.mjs';
 import { AGENTS, findRelease, openspecVersionWarning, releaseSchema, requireRelease } from './release.mjs';
 import { checkSkills, syncSkills } from './skills.mjs';
 
@@ -66,9 +67,10 @@ export async function run(argv, deps) {
   }
 }
 
-// Whether git tracks the copied skills: LETS_SPEC_SKILLS, committed by default.
+// Whether git tracks the copied skills: LETS_SPEC_SKILLS, committed when
+// unset or empty, as for LETS_SPEC_FLOW and LETS_SPEC_BACKLOG.
 export function skillsMode(env) {
-  const mode = env.LETS_SPEC_SKILLS ?? 'committed';
+  const mode = env.LETS_SPEC_SKILLS || 'committed';
   if (mode !== 'committed' && mode !== 'ignored') {
     throw new UsageError(`LETS_SPEC_SKILLS must be committed or ignored, got '${mode}'.`);
   }
@@ -133,13 +135,8 @@ async function steps(argv, deps) {
   createInitFiles({ release, root, io, stdout: say });
   linkClaude({ root, io, stdout: say });
 
-  // Older releases linked the skills and listed the links in a section of
-  // .git/info/exclude. Remove the section, so git sees the copies.
   const exclude = await excludePath(root, io);
-  if (exclude !== null) {
-    const legacy = removeBlock(LEGACY_LINKS, io.readFile(exclude));
-    if (legacy.removed) io.writeFile(exclude, legacy.text ?? '');
-  }
+  if (exclude !== null) warnings.push(...removeLegacyLinks({ root, exclude, io, stdout: say }));
 
   syncSkills({ release, schemaName, root, io, stdout: say });
 
@@ -190,6 +187,37 @@ function checkRules(state) {
     default:
       return [];
   }
+}
+
+// The bash lets-sync's test for a link it made: the target holds the name
+// of a release's store path.
+const LEGACY_RELEASE = '-lets-spec-release/';
+
+// Older releases linked the skills and the schema, some under names from
+// before the rename, and listed each link in a section of .git/info/exclude.
+// Remove each listed link into a release, never following it, then the
+// section, so git sees the copies. syncSkills replaces the links at managed
+// paths. Returns the warnings.
+function removeLegacyLinks({ root, exclude, io, stdout }) {
+  const text = io.readFile(exclude);
+  if (blockState(LEGACY_LINKS, text, '') === 'unpaired') {
+    const shown = relative(root, exclude).startsWith('..') ? exclude : relative(root, exclude);
+    return [`${shown} has a lets-spec links marker without its pair, so its old links were not removed. Delete the marker, and the lines between the markers, then run lets-sync again.`];
+  }
+  const listed = blockLines(LEGACY_LINKS, text);
+  if (listed === null) return [];
+  for (const line of listed) {
+    if (!line.startsWith('/')) continue;
+    const path = line.slice(1);
+    if (isManaged(path)) continue;
+    const full = join(root, path);
+    if (io.isSymlink(full) && (io.readlink(full) ?? '').includes(LEGACY_RELEASE)) {
+      io.remove(full);
+      stdout(`lets-spec: removed ${path}.\n`);
+    }
+  }
+  io.writeFile(exclude, removeBlock(LEGACY_LINKS, text).text ?? '');
+  return [];
 }
 
 // Where git keeps the project's exclude file, or null when git cannot say.

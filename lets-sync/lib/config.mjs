@@ -25,7 +25,8 @@ function unquote(raw) {
 
 // The warnings about the project's config. Returns lines; prints nothing.
 export function checkConfig({ io, configPath, schemaName }) {
-  const text = io.readFile(configPath);
+  // A folder at the path counts as missing.
+  const text = io.isDir(configPath) ? null : io.readFile(configPath);
   if (text === null) return [`${configPath} is missing, and could not be created.`];
   const schema = schemaOf(text);
   if (schema === null) return [`${configPath} sets no schema; it must be ${schemaName}.`];

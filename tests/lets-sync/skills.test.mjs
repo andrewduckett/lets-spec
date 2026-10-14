@@ -217,3 +217,20 @@ test('on disk, a dangling folder link inside a managed path is replaced', () => 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('on disk, a folder where the release has a file is out of date, then replaced by the file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  try {
+    const { root, args } = onDisk(dir);
+    mkdirSync(join(root, '.agents/skills/lets-build/scripts/backlog.sh'), { recursive: true });
+    writeFileSync(join(root, '.agents/skills/lets-build/scripts/backlog.sh/inside'), 'x\n');
+    assert.match(checkSkills(args).join('\n'), /lets-build\/scripts\/backlog\.sh is out of date/);
+    syncSkills(args);
+    const copy = join(root, '.agents/skills/lets-build/scripts/backlog.sh');
+    assert.equal(readFileSync(copy, 'utf8'), 'new\n');
+    assert.equal(statSync(copy).mode & 0o777, 0o755);
+    assert.deepEqual(checkSkills(args), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
