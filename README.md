@@ -411,7 +411,8 @@ nix flake check
 ```
 
 This runs the bats tests, the Node tests and shellcheck, builds every
-flow and backlog pair, sets up a sample project with the packaged commands,
+flow and backlog pair, builds the `dist` folder (the release tarball's
+contents) and runs its `lets-sync` in a sample project, sets up a sample project with the packaged commands,
 and evaluates the flake-parts module. In the dev shell, `bats tests` runs
 only the bats tests, and
 `node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"`

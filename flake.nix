@@ -79,6 +79,20 @@
                 --prefix PATH : ${lib.makeBinPath [ pkgs.git ]}
             '';
 
+        # The folder the release tarball is made from: lets-sync, and one
+        # release for every flow and backlog pair. CI sets the real version.
+        dist = pkgs.runCommand "lets-spec-dist" { } ''
+          mkdir -p $out/releases
+          cp -R ${./lets-sync}/. $out
+          chmod -R u+w $out
+          ${lib.concatMapStringsSep "\n" (p: "cp -R ${release p.flow p.backlog} $out/releases/${p.flow}-${p.backlog}") pairs}
+          cp ${pkgs.writeText "release.json" (builtins.toJSON {
+            version = "0.0.0-dev";
+            openspec = pkgs.openspec.version;
+            commit = self.rev or "dirty";
+          })} $out/release.json
+        '';
+
         # Everything a project's dev shell needs from this repo. The skills'
         # scripts run in the shell, so it carries the gh and jq they call.
         bundle = flow: backlog: pkgs.buildEnv {
@@ -86,7 +100,7 @@
           paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq pkgs.nodejs_24 ];
         };
       in
-        { inherit openspec openspec-skills; default = bundle "standard" "github-labels"; }
+        { inherit openspec openspec-skills dist; default = bundle "standard" "github-labels"; }
         // lib.listToAttrs (map (p: lib.nameValuePair "${p.flow}-${p.backlog}" (bundle p.flow p.backlog)) pairs));
 
       apps = forAllSystems (pkgs: {
@@ -168,6 +182,32 @@
             # closes the pipe early.
             openspec instructions brainstorm --change small </dev/null >instructions 2>&1
             grep -qF '**Why:**' instructions
+            touch "$out"
+          '';
+
+        # The folder the release tarball is made from. Run its lets-sync as a
+        # project would after installing the tarball.
+        dist = let
+          dist = (packagesFor pkgs).dist;
+          names = lib.concatStringsSep "\n" (lib.sort (a: b: a < b) (map (p: "${p.flow}-${p.backlog}") pairs));
+        in pkgs.runCommand "dist-check"
+          { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git pkgs.jq (packagesFor pkgs).openspec ]; }
+          ''
+            export HOME="$TMPDIR"
+            [ -x ${dist}/bin/lets-sync ]
+            [ "$(ls ${dist}/releases)" = "${names}" ]
+            [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
+            mkdir project
+            cd project
+            git init --quiet
+            export LETS_SPEC_FLOW=minimal LETS_SPEC_BACKLOG=github-fields
+            # The build sandbox has no /usr/bin/env, so node runs the script.
+            node ${dist}/bin/lets-sync >/dev/null 2>stderr
+            if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
+            grep -q 'schema: lets-minimal' openspec/config.yaml
+            grep -q '^mode="fields"$' .agents/skills/lets-shape/scripts/backlog.sh
+            git add -A
+            node ${dist}/bin/lets-sync --check
             touch "$out"
           '';
 
