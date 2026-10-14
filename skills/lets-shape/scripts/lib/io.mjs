@@ -1,6 +1,12 @@
-// The real child processes, as main.mjs sees them. Tests pass a fake with
-// the same contract.
+// The real files and child processes, as main.mjs and stale.mjs see them.
+// Tests pass fakes with the same contract.
 import { execFile as nodeExecFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+// The file's text. Throws when the file cannot be read.
+export function readFile(path) {
+  return readFileSync(path, 'utf8');
+}
 
 // Resolves on any exit code. code is null when the command cannot start,
 // and stderr then holds the reason.

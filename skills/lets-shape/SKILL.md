@@ -176,7 +176,7 @@ When `discovery.md` exists and no run is in progress:
 
 1. **Read it**, then reconcile the map against reality:
    - `gh issue list --state all --limit 500 --json number,title,state,stateReason,parent` → shipped and open stories
-   - Run [scripts/stale-links.sh](scripts/stale-links.sh) `<root.path>/openspec/discovery.md`. It prints each link to a closed issue. For each one, re-check that stage against the code: upgrade the stage and drop the link; replace the link with the open issue that now closes the gap; or, if nothing open does, drop the link and leave the stage an unplanned `gap`.
+   - Run [scripts/stale-links.mjs](scripts/stale-links.mjs) from the project root: `node .agents/skills/lets-shape/scripts/stale-links.mjs <root.path>/openspec/discovery.md`. It prints each link to a closed issue. For each one, re-check that stage against the code: upgrade the stage and drop the link; replace the link with the open issue that now closes the gap; or, if nothing open does, drop the link and leave the stage an unplanned `gap`.
    - Re-annotate every journey stage against the code; stages move to `supported` as their stories ship
    - Update the freshness line to today
 2. **Take in what the user brings** — a new PRD, new requirements, changed priorities, learnings from shipped stories. New work is a new run with its own parent issue: Ingest, then MoSCoW and Stories. Revisit Personas and the Journey Map only when the input changes who the product serves or how they use it.
