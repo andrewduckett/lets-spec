@@ -5,7 +5,9 @@
 //   dirs:     paths that are folders even when empty
 //   toplevel: what `git rev-parse --show-toplevel` answers; without it git
 //             fails with code 128.
-export function fakeIo({ files = {}, dirs = [], toplevel = null } = {}) {
+//   openspec: what `openspec --version` prints; without it the command
+//             cannot start (code null).
+export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null } = {}) {
   const io = {
     files: new Map(Object.entries(files)),
     dirs: new Set(dirs),
@@ -72,6 +74,10 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null } = {}) {
       if (cmd === 'git' && io.toplevel !== null) {
         if (key === 'git rev-parse --show-toplevel') return { stdout: `${io.toplevel}\n`, stderr: '', code: 0 };
         if (key === 'git rev-parse --git-path info/exclude') return { stdout: '.git/info/exclude\n', stderr: '', code: 0 };
+      }
+      if (cmd === 'openspec') {
+        if (openspec === null) return { stdout: '', stderr: '', code: null };
+        if (key === 'openspec --version') return { stdout: openspec, stderr: '', code: 0 };
       }
       return { stdout: '', stderr: 'fatal: not a git repository', code: 128 };
     },

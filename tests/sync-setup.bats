@@ -116,7 +116,7 @@ load support/project
 @test "sync refuses to run without a release" {
   run env -u WORKFLOW_RELEASE node "$repo/lets-sync/bin/lets-sync"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"WORKFLOW_RELEASE is not set"* ]]
+  [[ "$output" == *"there is no release for flow"* ]]
 }
 
 @test "sync refuses a folder that is not a release" {

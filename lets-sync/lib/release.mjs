@@ -6,11 +6,38 @@ export const SKILLS_DST = '.agents/skills';
 export const SCHEMAS_DST = 'openspec/schemas';
 export const AGENTS = 'AGENTS.md';
 
-// Where the release is. For now only WORKFLOW_RELEASE names it.
-export function findRelease(env, _packageRoot) {
-  const release = env.WORKFLOW_RELEASE ?? '';
-  if (release === '') throw new UsageError('WORKFLOW_RELEASE is not set. Run lets-sync from the lets-spec flake.');
+// Where the release is: WORKFLOW_RELEASE when set, else the release this
+// package ships for the flow and backlog.
+export function findRelease(env, packageRoot, io) {
+  if ((env.WORKFLOW_RELEASE ?? '') !== '') return env.WORKFLOW_RELEASE;
+  const flow = env.LETS_SPEC_FLOW || 'standard';
+  const backlog = env.LETS_SPEC_BACKLOG || 'github-labels';
+  const release = join(packageRoot, 'releases', `${flow}-${backlog}`);
+  if (!io.isDir(release)) {
+    throw new UsageError(`there is no release for flow '${flow}' and backlog '${backlog}' at ${release}. Set LETS_SPEC_FLOW and LETS_SPEC_BACKLOG to a pair this release ships, or WORKFLOW_RELEASE to a release folder.`);
+  }
   return release;
+}
+
+const VERSION = /\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/;
+
+// A warning when the OpenSpec CLI on PATH differs from the one that generated
+// the release's openspec-* skills. Null when either version is unknown.
+export async function openspecVersionWarning({ release, io }) {
+  const text = io.readFile(join(release, '..', '..', 'release.json'));
+  if (text === null) return null;
+  let pinned;
+  try {
+    pinned = String(JSON.parse(text)?.openspec ?? '').match(VERSION)?.[0];
+  } catch {
+    return null;
+  }
+  if (pinned === undefined) return null;
+  const result = await io.execFile('openspec', ['--version'], { cwd: release });
+  if (result.code !== 0) return null;
+  const found = result.stdout.match(VERSION)?.[0];
+  if (found === undefined || found === pinned) return null;
+  return `the OpenSpec CLI on PATH is ${found}, but this release's openspec-* skills were generated from ${pinned}. Pin the CLI to ${pinned}.`;
 }
 
 // Fail unless the folder holds a release of lets-spec.

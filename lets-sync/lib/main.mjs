@@ -4,7 +4,7 @@ import { isAbsolute, join } from 'node:path';
 import { applyBlock, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.mjs';
 import { checkConfig } from './config.mjs';
 import { checkClaude, createInitFiles, linkClaude } from './init.mjs';
-import { AGENTS, findRelease, releaseSchema, requireRelease } from './release.mjs';
+import { AGENTS, findRelease, openspecVersionWarning, releaseSchema, requireRelease } from './release.mjs';
 import { checkSkills, syncSkills } from './skills.mjs';
 
 const CONFIG = 'openspec/config.yaml';
@@ -49,7 +49,10 @@ also exits 1 if a copied skill differs from the release, or .gitignore
 still has the skills block. With LETS_SPEC_SKILLS=ignored, it exits 1 if
 .gitignore lacks a current skills block. Run it in CI.
 
-WORKFLOW_RELEASE names the release. The Nix wrapper sets it.
+WORKFLOW_RELEASE names the release folder. Without it, LETS_SPEC_FLOW
+(default standard) and LETS_SPEC_BACKLOG (default github-labels) pick one
+of the releases that ship with lets-sync. The Nix wrapper sets
+WORKFLOW_RELEASE.
 `;
 
 // deps: { env, cwd, packageRoot, io, stdout(text), stderr(text) }
@@ -79,7 +82,7 @@ async function steps(argv, deps) {
     deps.stdout(USAGE);
     return 0;
   }
-  const release = findRelease(deps.env, deps.packageRoot);
+  const release = findRelease(deps.env, deps.packageRoot, io);
   requireRelease(release, io);
   const schemaName = releaseSchema(release, io);
 
@@ -165,6 +168,8 @@ async function steps(argv, deps) {
 
   warnings.push(...checkClaude({ root, io }));
   warnings.push(...checkConfig({ io, configPath: join(root, CONFIG), schemaName }).map((line) => line.replace(join(root, CONFIG), CONFIG)));
+  const versionWarning = await openspecVersionWarning({ release, io });
+  if (versionWarning !== null) warnings.push(versionWarning);
 
   if (warnings.length > 0) {
     deps.stderr(`lets-spec: ${warnings.length} problem(s) to fix:\n${warnings.map((line) => `- ${line}\n`).join('')}`);
