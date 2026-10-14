@@ -184,7 +184,8 @@
           chmod -R u+w repo
           cd repo
           export HOME="$TMPDIR"
-          node --test tests/spawn-session/
+          # Node's runner expands the glob itself. It does not take a folder.
+          node --test "tests/spawn-session/*.test.mjs"
           touch "$out"
         '';
 
