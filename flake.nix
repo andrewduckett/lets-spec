@@ -219,7 +219,7 @@
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs" "tests/lets-shape/*.test.mjs"
           touch "$out"
         '';
 
