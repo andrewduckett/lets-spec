@@ -12,28 +12,15 @@ if (major < 22 || (major === 22 && minor < 13)) {
 
 const { realIo } = await import('./lib/io.mjs');
 const { run } = await import('./lib/main.mjs');
-const { SpawnError } = await import('./lib/errors.mjs');
 const headless = await import('./adapters/headless.mjs');
 const t3 = await import('./adapters/t3.mjs');
-
-// Stand-ins until each adapter exists: they never detect and refuse to spawn.
-function stubAdapter(name) {
-  const refuse = async () => { throw new SpawnError('not implemented'); };
-  return {
-    name,
-    detect: () => false,
-    availableFamilies: () => { throw new SpawnError('not implemented'); },
-    spawn: refuse,
-    waitForResult: refuse,
-    finish: async () => {},
-  };
-}
+const herdr = await import('./adapters/herdr.mjs');
 
 const io = realIo();
 const deps = {
   env: process.env,
   cwd: process.cwd(),
-  adapters: { t3: t3.createAdapter(io), herdr: stubAdapter('herdr'), none: headless.createAdapter(io) },
+  adapters: { t3: t3.createAdapter(io), herdr: herdr.createAdapter(io), none: headless.createAdapter(io) },
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
   readFile: io.readFile,
