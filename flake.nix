@@ -51,10 +51,10 @@
 
         # The openspec-* skills for the workflows in build/openspec.json.
         openspec-skills = pkgs.runCommand "openspec-skills-${pkgs.openspec.version}"
-          { nativeBuildInputs = [ pkgs.openspec ]; }
+          { nativeBuildInputs = [ pkgs.openspec pkgs.nodejs_24 ]; }
           ''
             export HOME="$TMPDIR"
-            bash ${./build/generate-skills.sh} ${./build/openspec.json} "$out"
+            node ${./build/generate-skills.mjs} ${./build/openspec.json} "$out"
           '';
 
         # What lets-sync copies and creates for one flow and backlog.
@@ -112,14 +112,6 @@
         # recipe never reaches a project.
         flows = pkgs.linkFarmFromDrvs "every-flow"
           (map (p: (packagesFor pkgs)."${p.flow}-${p.backlog}") pairs);
-
-        shellcheck = pkgs.runCommand "shellcheck"
-          { nativeBuildInputs = [ pkgs.shellcheck ]; }
-          ''
-            cd ${./.}
-            shellcheck -x build/*.sh skills/*/scripts/*.sh
-            touch "$out"
-          '';
 
         # The bats tests run the scripts directly. The smoke test then sets up
         # a project with the packaged commands, to prove the wrappers find the
@@ -277,7 +269,7 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.shellcheck pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
+          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
         };
       });
     };
