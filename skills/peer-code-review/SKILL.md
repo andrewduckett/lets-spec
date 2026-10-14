@@ -5,7 +5,7 @@ description: Use when an implementation branch is finished and needs a code revi
 
 # Peer Code Review
 
-Have a different model family review the branch's code. A reviewer from the author's family shares the author's blind spots. Each family's own built-in reviewer runs the review where one exists, so this skill only picks the family, runs it read-only, and acts on what it finds.
+Have a different model family review the branch's code. A reviewer from the author's family shares the author's blind spots. Each family's own built-in reviewer runs the review where one exists, so this skill only finds the author, runs the review read-only, and acts on what it finds.
 
 ## When to apply
 
@@ -33,41 +33,29 @@ Find who wrote the code. First answer wins:
 
 Pick the reviewer from a family that wrote none of the commits.
 
-## Pick the reviewer
-
-| Author | Reviewer | Command |
-|---|---|---|
-| `claude` | `gpt` | `codex -s read-only review` |
-| `gpt` | `claude` | `claude -p "/code-review ..." --permission-mode plan` |
-| `gemini` | `gpt` | `codex -s read-only review` |
-
-When the reviewer's tool is missing (`command -v`) or fails, try the next family that wrote none of the commits: `gpt`, then `claude`, then `gemini` through `agy`. Report any substitution.
-
-When no other family is installed, run the author's own family's command below as a new process, so the review starts from a fresh context. Say plainly that the review was not independent. Never review in the author's own session.
-
 ## Run the review
 
-Commit or stash first. The commands review commits, not the working tree. Run from the repo root.
+Commit or stash first. The review covers commits, not the working tree.
 
-Every command is read-only, and none takes extra rules. A project may keep its own review rules in `REVIEW.md`. The workflow rules in every project's `AGENTS.md` tell each reviewer to apply them. If `REVIEW.md` does not exist, the reviewer runs without project rules. Say so in the report. Name the output after the branch, so parallel sessions do not collide.
+1. Run, from the repo root:
 
-```bash
-# gpt: Codex's built-in reviewer, in a read-only sandbox.
-codex -s read-only review --base <base> > .workspace/<branch>-code-review-raw.md 2>&1
+   ```bash
+   node .agents/skills/spawn-session/scripts/spawn-session.mjs critique \
+     --name <branch>-code-review --author <family> --effort high \
+     --code-review --base <base> \
+     > .workspace/<branch>-code-review-raw.md 2> .workspace/<branch>-code-review-meta.txt
+   ```
 
-# claude: Claude Code's built-in reviewer, in plan mode.
-claude -p "/code-review high <base>...HEAD" --permission-mode plan \
-  < /dev/null > .workspace/<branch>-code-review-raw.md 2>&1
+2. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Use those four in the report.
+3. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
-# gemini: no built-in reviewer, so run a prompt in plan mode.
-agy --mode plan --model "<a gemini model from agy models>" --print-timeout <timeout> \
-  -p "Review the changes in git diff <base>...HEAD for correctness bugs. Apply the review rules in REVIEW.md, if it exists. For each finding, give the file, the line, the defect, and the scenario where it bites." \
-  > .workspace/<branch>-code-review-raw.md 2>&1
-```
+The `spawn-session` skill picks the reviewer's family and model and starts it read-only in a fresh session. It sends each reviewer the right message: Claude's built-in `/code-review` where it exists, Codex's built-in reviewer outside a harness, and a review prompt otherwise. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+
+A project may keep its own review rules in `REVIEW.md`. If `REVIEW.md` does not exist, the reviewer runs without project rules. Say so in the report.
 
 Note the commit you reviewed: `git rev-parse --short HEAD`.
 
-A review can take many minutes, so run it in the background with a long timeout. When `/code-review` finds nothing, its whole output is `(none)`. That is a clean result, not a failure.
+When the reviewer finds nothing, its whole output is `(none)`. That is a clean result, not a failure.
 
 This costs real tokens. Run it once per change, never to chase a clean result.
 

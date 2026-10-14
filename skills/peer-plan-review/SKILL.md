@@ -5,7 +5,7 @@ description: Use when someone asks for an independent review of a plan, design, 
 
 # Peer Plan Review
 
-Have a different model family attack a plan before anyone builds on it. A reviewer from the author's family shares the author's blind spots. This skill picks the family, runs it read-only with a fixed method, and checks what comes back.
+Have a different model family attack a plan before anyone builds on it. A reviewer from the author's family shares the author's blind spots. This skill writes the prompt, runs a reviewer from another family read-only with a fixed method, and checks what comes back.
 
 ## When to apply
 
@@ -24,37 +24,24 @@ Find who wrote the plan. First answer wins:
 
 This skill does not use commit trailers to find the author. Only some tools add a `Co-Authored-By` trailer that names a model, so a plan's commits may name no author at all.
 
-## Pick the reviewer
+## Run the critique
 
-| Author | Reviewer | Command |
-|---|---|---|
-| `claude` | `gpt` | `codex exec -s read-only` |
-| `gpt` | `claude` | `claude -p --permission-mode plan` |
-| `gemini` | `gpt` | `codex exec -s read-only` |
+1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
+2. Run, from the repo root:
 
-When the reviewer's tool is missing (`command -v`) or fails, try the next family that is not the author's: `gpt`, then `claude`, then `gemini` through `agy --mode plan`. Report any substitution.
+   ```bash
+   node .agents/skills/spawn-session/scripts/spawn-session.mjs critique \
+     --name <change>-plan-review --author <family> --effort <tier> \
+     --prompt-file .workspace/<change>-review-prompt.md \
+     > .workspace/<change>-review-raw.md 2> .workspace/<change>-review-meta.txt
+   ```
 
-When no other family is installed, run the author's own family's command below as a new process, so the review starts from a fresh context. Say plainly that the review was not independent. Never review in the author's own session.
+3. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Copy those four into `review.md`.
+4. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
-## Run it read-only
+The `spawn-session` skill picks the reviewer's family and model, starts it read-only in a fresh session, and returns its final message. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
 
-Write the prompt to a scratch file in `.workspace/`. Name the files after the work, so parallel sessions do not collide. Run from the repo root.
-
-```bash
-# gpt — read-only sandbox; reasoning is its own dial
-codex exec -s read-only -c model_reasoning_effort="<low|medium|high>" \
-  -o .workspace/<name>-review-raw.md - < .workspace/<name>-review-prompt.md
-
-# claude — plan mode is read-only
-claude -p --permission-mode plan \
-  < .workspace/<name>-review-prompt.md > .workspace/<name>-review-raw.md
-
-# gemini — plan mode is read-only; the prompt is the value of -p and comes last
-agy --mode plan --model "<a gemini model from agy models>" --print-timeout <timeout> \
-  -p "$(cat .workspace/<name>-review-prompt.md)" > .workspace/<name>-review-raw.md
-```
-
-Scale the effort to what the plan changes, not its length: `low` for a narrow fix, `medium` for one subsystem on known patterns, `high` for new contracts, migrations, or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier as the effort. Run `high` in the background with a long timeout. Use the reviewer's strongest model, and discover model ids at run time rather than trusting names written here.
+Scale the effort to what the plan changes, not its length: `low` for a narrow fix, `medium` for one subsystem on known patterns, `high` for new contracts, migrations, or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier as the effort.
 
 This costs real tokens. Never loop it. Run again only when the plan or the question changed.
 
