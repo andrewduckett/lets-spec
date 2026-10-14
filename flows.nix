@@ -17,6 +17,7 @@
       "test-driven-development"
       "peer-plan-review"
       "peer-code-review"
+      "spawn-session"
     ];
   };
   minimal = {
@@ -27,6 +28,7 @@
       "writing-specs"
       "writing-tasks"
       "test-driven-development"
+      "spawn-session"
     ];
   };
 }

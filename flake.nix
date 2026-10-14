@@ -93,7 +93,7 @@
         # scripts run in the shell, so it carries the gh and jq they call.
         bundle = flow: backlog: pkgs.buildEnv {
           name = "lets-spec-${flow}-${backlog}";
-          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq ];
+          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.jq pkgs.nodejs_24 ];
         };
       in
         { inherit openspec openspec-skills; default = bundle "standard" "github-labels"; }
@@ -121,7 +121,7 @@
         # a project with the packaged commands, to prove the wrappers find the
         # release, and that the pinned OpenSpec CLI works with the result.
         commands = pkgs.runCommand "commands-check"
-          { nativeBuildInputs = [ pkgs.bats pkgs.git pkgs.yq-go pkgs.jq (packagesFor pkgs).default ]; }
+          { nativeBuildInputs = [ pkgs.bats pkgs.git pkgs.yq-go pkgs.jq pkgs.nodejs_24 (packagesFor pkgs).default ]; }
           ''
             export HOME="$TMPDIR" OPENSPEC_TELEMETRY=0
             cp -R ${self} repo
@@ -177,6 +177,18 @@
             touch "$out"
           '';
 
+        # The spawn-session script's unit tests. They use fakes, so no harness
+        # runs here.
+        node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
+          cp -R ${self} repo
+          chmod -R u+w repo
+          cd repo
+          export HOME="$TMPDIR"
+          # Node's runner expands the glob itself. It does not take a folder.
+          node --test "tests/spawn-session/*.test.mjs"
+          touch "$out"
+        '';
+
         # A flake-parts project can import the module, choose its flow and
         # backlog, and read the packages and shell hook those give.
         flake-module = let
@@ -207,7 +219,7 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.shellcheck pkgs.yq-go pkgs.jq ];
+          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.shellcheck pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
         };
       });
     };

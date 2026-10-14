@@ -56,8 +56,14 @@ the dev shell provides.
 5. Invoke the `openspec-propose` skill. Tell it to continue the change
    `<name>`, which you just created for issue #<n>. It runs the
    brainstorm with the user, writes the plan, and stops.
-6. Stop when propose stops. Tell the user the plan is ready, and that
-   running `lets-build` again on this branch builds it.
+6. When propose stops with `tasks.md` committed, offer the handoff. Use
+   `AskUserQuestion` with the exact prompt `Run lets-build on branch <name>`
+   and the session name `<name>`, and options to start it or to stop here.
+   On yes, run
+   `node .agents/skills/spawn-session/scripts/spawn-session.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
+   from the repo root, show the user its output, and stop. On no, say the
+   plan is ready and that running `lets-build` on this branch builds it.
+   If propose stopped for any other reason, say why and stop.
 
 ## Move the change on
 
@@ -66,7 +72,7 @@ Run `openspec instructions apply --change <branch> --json`, and read
 
 | `state` | Meaning | Do |
 |---|---|---|
-| `blocked` | The plan is not finished. | Invoke `openspec-propose` to continue the change `<branch>`. Stop when it stops. |
+| `blocked` | The plan is not finished. | Invoke `openspec-propose` to continue the change `<branch>`. Stop when it stops. If it stopped with `tasks.md` committed, offer the handoff as in step 6 of Start a change. |
 | `ready` | Tasks are left. | Invoke `openspec-apply-change` for `<branch>`. The schema's apply instruction carries on through verify and archive. |
 | `all_done` | Every task is ticked. | Follow [Archive](#archive). It reviews, verifies and archives, in that order. |
 | any other `state` | OpenSpec has a state this skill does not know. | Show the user the `instruction` from the CLI's output, and stop. |
@@ -94,6 +100,8 @@ that verify checks the fixed code.
 - Never write an artifact or code yourself, outside the skills you
   invoke.
 - One story per run.
+- The handoff is the only new session this skill starts, and only after
+  the user says yes.
 - Change requests on a pull request are not yours to handle. If the
   user is fixing them, as the workflow rules in `AGENTS.md` describe,
   run only after every fix is committed.
