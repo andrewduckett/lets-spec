@@ -52,6 +52,8 @@ export function realIo() {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort(),
+    // Every entry name: files, folders and links, even a link that dangles.
+    listNames: (path) => (orNull(() => readdirSync(path)) ?? []).sort(),
     listFiles: (path) => walk(path).sort(),
 
     // Resolves on any exit code. code is null when the command cannot start.

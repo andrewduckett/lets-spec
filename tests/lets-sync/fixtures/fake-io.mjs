@@ -54,6 +54,14 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null } = {}) {
       }
       return [...names].sort();
     },
+    listNames(path) {
+      const prefix = `${path}/`;
+      const names = new Set();
+      for (const p of [...io.files.keys(), ...io.dirs, ...io.links.keys()]) {
+        if (p.startsWith(prefix)) names.add(p.slice(prefix.length).split('/')[0]);
+      }
+      return [...names].sort();
+    },
     listFiles(path) {
       const prefix = `${path}/`;
       return [...io.files.keys()].filter((p) => p.startsWith(prefix)).map((p) => p.slice(prefix.length)).sort();
