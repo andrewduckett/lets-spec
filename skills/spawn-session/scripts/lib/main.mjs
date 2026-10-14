@@ -7,7 +7,7 @@ import { EXIT, NoReviewerError, ReviewerFailed, SpawnError, TimeoutError, UsageE
 import { chooseAdapter } from './harness.mjs';
 import { codeReviewMessage } from './messages.mjs';
 import { pickReviewer } from './reviewer.mjs';
-import { isTreeClean } from './git.mjs';
+import { isTreeClean, treeStatus } from './git.mjs';
 
 // deps: { env, cwd, adapters: { t3, herdr, none }, stdout(text), stderr(text),
 //         readFile(path), execFile, now, sleep }
@@ -62,8 +62,10 @@ async function critique({ name, author, effort, promptFile, codeReview, timeoutM
   const { family, model, independent } = reviewer;
   const prompt = fileText ?? codeReviewMessage({ family, base: codeReview.base, effort, harness: adapter.name });
 
-  let handle;
+  // What is already uncommitted is the user's, not the reviewer's.
+  let before, handle;
   try {
+    before = await treeStatus(deps.cwd, { execFile: deps.execFile });
     handle = await adapter.spawn({ kind: 'critique', name, prompt, cwd: deps.cwd, family, model, effort, attended: false, readOnly: true, codeReview, timeoutMinutes });
   } catch (error) {
     if (!(error instanceof SpawnError)) throw error;
@@ -89,7 +91,16 @@ async function critique({ name, author, effort, promptFile, codeReview, timeoutM
     throw error;
   }
 
-  if (!(await isTreeClean(deps.cwd, { execFile: deps.execFile }))) {
+  let clean;
+  try {
+    clean = await isTreeClean(deps.cwd, { execFile: deps.execFile, before });
+  } catch (error) {
+    if (!(error instanceof SpawnError)) throw error;
+    await adapter.finish(handle, false);
+    deps.stderr(`spawn-session: could not check the tree after the review: ${error.message} (thread ${handle.id})\n`);
+    return EXIT.dirty;
+  }
+  if (!clean) {
     await adapter.finish(handle, false);
     deps.stderr(`spawn-session: the reviewer changed files outside .workspace/ (thread ${handle.id})\n`);
     return EXIT.dirty;

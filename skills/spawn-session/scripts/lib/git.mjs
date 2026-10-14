@@ -1,8 +1,25 @@
-// The tripwire after a read-only review: did anything change outside
-// .workspace/, where scratch files belong?
+// The tripwire after a read-only review: did the reviewer change anything
+// outside .workspace/, where scratch files belong? Compare the tree before
+// and after, so the user's own uncommitted work does not count.
+import { SpawnError } from './errors.mjs';
 
-export async function isTreeClean(cwd, { execFile }) {
-  const { stdout } = await execFile('git', ['status', '--porcelain', '--untracked-files=all'], { cwd });
-  // Each line is two status letters, a space, then the path.
-  return stdout.split('\n').filter((line) => line !== '').every((line) => line.slice(3).startsWith('.workspace/'));
+// Each entry of `git status`: two status letters, a space, then the path.
+// -z keeps a path with spaces whole; a rename adds its source as a second
+// entry, which is skipped.
+export async function treeStatus(cwd, { execFile }) {
+  const { stdout, stderr, code } = await execFile('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd });
+  if (code !== 0) throw new SpawnError(`git status failed in ${cwd}: ${stderr.trim()}`);
+  const tokens = stdout.split('\0').filter((token) => token !== '');
+  const entries = [];
+  for (let i = 0; i < tokens.length; i++) {
+    entries.push(tokens[i]);
+    if (tokens[i][0] === 'R' || tokens[i][0] === 'C') i++;
+  }
+  return entries;
+}
+
+// True when every entry was already there before, or is under .workspace/.
+export async function isTreeClean(cwd, { execFile, before = [] }) {
+  const after = await treeStatus(cwd, { execFile });
+  return after.every((entry) => before.includes(entry) || entry.slice(3).startsWith('.workspace/'));
 }

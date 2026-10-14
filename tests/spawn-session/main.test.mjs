@@ -19,7 +19,9 @@ const ALL = { gpt: [null], claude: [null], gemini: [null] };
 
 // A none adapter that detects, a clean tree, and captured output.
 // adapters: overrides for t3, herdr and none; the rest: overrides for deps.
-function makeDeps({ adapters = {}, gitStatus = '', ...overrides } = {}) {
+// gitStatus: what `git status -z` prints after the review; gitBefore: before it.
+function makeDeps({ adapters = {}, gitStatus = '', gitBefore = gitStatus, ...overrides } = {}) {
+  let statusCalls = 0;
   const out = [];
   const err = [];
   const deps = {
@@ -34,7 +36,7 @@ function makeDeps({ adapters = {}, gitStatus = '', ...overrides } = {}) {
     stdout: (text) => out.push(text),
     stderr: (text) => err.push(text),
     readFile: (path) => { assert.equal(path, '/repo/p.md'); return 'PROMPT TEXT'; },
-    execFile: async () => ({ stdout: gitStatus, stderr: '', code: 0 }),
+    execFile: async () => ({ stdout: statusCalls++ === 0 ? gitBefore : gitStatus, stderr: '', code: 0 }),
     now: () => 0,
     sleep: async () => {},
     ...overrides,
@@ -109,10 +111,16 @@ test('a timeout exits 6 after waiting the effort\'s default', async () => {
 });
 
 test('a dirty tree exits 7 and prints no findings', async () => {
-  const { deps, out, calls } = makeDeps({ gitStatus: ' M src/a.js\n' });
+  const { deps, out, calls } = makeDeps({ gitStatus: ' M src/a.js\0', gitBefore: '' });
   assert.equal(await run(critique(), deps), 7);
   assert.deepEqual(out, []);
   assert.deepEqual(callsOf(calls('none'), 'finish').map(([, , ok]) => ok), [false]);
+});
+
+test('files the user had already changed do not count as the reviewer\'s', async () => {
+  const { deps, out } = makeDeps({ gitStatus: ' M src/a.js\0?? .envrc\0' });
+  assert.equal(await run(critique(), deps), 0);
+  assert.equal(out.join(''), 'FINDINGS\n');
 });
 
 test('an empty final message is a reviewer failure', async () => {
