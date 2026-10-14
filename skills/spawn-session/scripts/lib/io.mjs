@@ -1,7 +1,7 @@
 // The real world, as the adapters see it. Tests pass fakes with the same
 // fields instead.
 import { execFile as nodeExecFile, spawn } from 'node:child_process';
-import { accessSync, chmodSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import { accessSync, chmodSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -46,6 +46,7 @@ export function realIo() {
       // mode applies only when the file is created, so set it again.
       if (mode !== undefined) chmodSync(path, mode);
     },
+    removeFile: (path) => rmSync(path),
     mkdirp(path, { mode } = {}) {
       mkdirSync(path, { recursive: true });
       if (mode !== undefined) chmodSync(path, mode);

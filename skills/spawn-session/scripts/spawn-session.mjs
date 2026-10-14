@@ -13,6 +13,7 @@ if (major < 22 || (major === 22 && minor < 13)) {
 const { realIo } = await import('./lib/io.mjs');
 const { run } = await import('./lib/main.mjs');
 const { SpawnError } = await import('./lib/errors.mjs');
+const headless = await import('./adapters/headless.mjs');
 
 // Stand-ins until each adapter exists: they never detect and refuse to spawn.
 function stubAdapter(name) {
@@ -31,7 +32,7 @@ const io = realIo();
 const deps = {
   env: process.env,
   cwd: process.cwd(),
-  adapters: { t3: stubAdapter('t3'), herdr: stubAdapter('herdr'), none: stubAdapter('none') },
+  adapters: { t3: stubAdapter('t3'), herdr: stubAdapter('herdr'), none: headless.createAdapter(io) },
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
   readFile: io.readFile,
