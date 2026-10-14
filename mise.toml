@@ -8,4 +8,4 @@ yq = "4.54.1"
 "npm:@fission-ai/openspec" = "1.13.2"
 
 [tasks]
-test = "bats tests && node --test 'tests/lets-sync/*.test.mjs' 'tests/lets-spawn/*.test.mjs'"
+test = "bats tests && node --test 'tests/lets-sync/*.test.mjs' 'tests/lets-spawn/*.test.mjs' 'tests/lets-build/*.test.mjs'"
