@@ -1,8 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { run } from '../../skills/spawn-session/scripts/lib/main.mjs';
 import { ReviewerFailed, SpawnError, TimeoutError } from '../../skills/spawn-session/scripts/lib/errors.mjs';
 import { fakeAdapter } from './fixtures/fake-adapter.mjs';
+
+const ENTRY = fileURLToPath(new URL('../../skills/spawn-session/scripts/spawn-session.mjs', import.meta.url));
+
+// Runs a command and resolves with its output and exit code, even on failure.
+function execFileP(cmd, args, options = {}) {
+  return new Promise((done) => {
+    execFile(cmd, args, options, (error, stdout, stderr) => done({ stdout, stderr, code: error ? error.code : 0 }));
+  });
+}
 
 const ALL = { gpt: [null], claude: [null], gemini: [null] };
 
@@ -143,4 +154,15 @@ test('--help prints usage; a bad flag exits 2 and names it', async () => {
   const b = makeDeps();
   assert.equal(await run(['detect', '--bogus'], b.deps), 2);
   assert.match(b.err.join(''), /--bogus/);
+});
+
+test('the entry point prints usage on --help and on a bad flag', async () => {
+  const help = await execFileP('node', [ENTRY, '--help']);
+  assert.equal(help.code, 0); assert.match(help.stdout, /^usage: spawn-session/);
+  const bad = await execFileP('node', [ENTRY, 'detect', '--bogus']);
+  assert.equal(bad.code, 2); assert.match(bad.stderr, /--bogus/);
+});
+test('the entry point detects none outside any harness', async () => {
+  const { stdout, code } = await execFileP('node', [ENTRY, 'detect'], { env: { PATH: process.env.PATH, HOME: process.env.HOME, LETS_SPEC_HARNESS: 'none' } });
+  assert.equal(code, 0); assert.equal(stdout, 'none\n');
 });
