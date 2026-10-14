@@ -51,7 +51,7 @@ mentions() {
     found=1
     run node "$repo/skills/$script" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"lets-spawn <detect|critique|handoff>"* && "$output" == *"$command"* ]] ||
+    [[ "$output" == *"$(basename "$script") $command"* || "$output" == *"$(basename "$script" .mjs) $command"* ]] ||
       { echo "$script has no command $command"; false; }
   done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
   [ "$found" -eq 1 ]

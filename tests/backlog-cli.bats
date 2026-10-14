@@ -2,9 +2,8 @@ load support/common
 load support/release
 load support/fake-gh
 
-# Each entry point ships its own backlog.sh: lets-build's picks and claims a
-# story, and lets-shape's sets kind and priority. These tests run each
-# script against a fake gh, and check the calls it makes, in order.
+# lets-shape ships its own backlog.sh, which sets kind and priority. These
+# tests run it against a fake gh, and check the calls it makes, in order.
 
 export issue7='{"number": 7, "labels": [], "assignees": []}'
 
@@ -15,10 +14,6 @@ shape() {
   shift
   [ -d "$out" ] || build "$out" lets-standard "$mode" lets-shape >/dev/null
   bash "$out/overlay/.agents/skills/lets-shape/scripts/backlog.sh" "$@"
-}
-
-lets_build() {
-  bash "$repo/skills/lets-build/scripts/backlog.sh" "$@"
 }
 
 # The answers of a repo that records kind and priority with labels, and has
@@ -172,109 +167,4 @@ issue edit 7 --type Epic" ]
   run bash "$repo/skills/lets-shape/scripts/backlog.sh" set-priority 7 Must
   [ "$status" -eq 1 ]
   [[ "$output" == *"this copy has no backlog mode"* ]]
-}
-
-# search_pages <page JSON>...: the pages the story search finds. search_answer
-# then answers with them, as gh does: every page with --paginate --slurp,
-# and only the first without.
-search_pages() {
-  printf '%s\n' "$@" >"$BATS_TEST_TMPDIR/pages"
-}
-search_answer() {
-  case "$*" in
-    "api repos/{owner}/{repo} --jq .full_name") echo o/r ;;
-    *search/issues*)
-      if [[ "$*" == *"--paginate"*"--slurp"* ]]; then
-        jq -s . "$BATS_TEST_TMPDIR/pages"
-      else
-        head -n 1 "$BATS_TEST_TMPDIR/pages"
-      fi
-      ;;
-  esac
-}
-export -f search_answer
-
-# page <n> <priority>: a search page that holds one story.
-page() {
-  printf '{"items": [{"number": %d, "title": "story-%d", "html_url": "u%d", "labels": [{"name": "priority/%s"}]}]}' "$1" "$1" "$1" "$2"
-}
-
-@test "next prints the story to work on, then its URL" {
-  search_pages "$(page 4 should)"
-  gh_answer() { search_answer "$@"; }
-  use_fake_gh
-  run lets_build next
-  [ "$status" -eq 0 ]
-  [ "$output" = $'#4 [should] story-4\nu4' ]
-  [[ "$(gh_calls)" == *"q=repo:o/r is:issue is:open no:assignee -is:blocked -label:kind/epic -type:Epic"* ]]
-}
-
-@test "next ranks the stories on every page of the search" {
-  search_pages "$(page 1 could)" "$(page 200 must)"
-  gh_answer() { search_answer "$@"; }
-  use_fake_gh
-  run lets_build next
-  [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "#200 [must] story-200" ]
-}
-
-@test "next fails when no story is ready" {
-  search_pages '{"items": []}'
-  gh_answer() { search_answer "$@"; }
-  use_fake_gh
-  run lets_build next
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"no story is ready"* ]]
-}
-
-@test "next fails when the search fails" {
-  gh_answer() {
-    case "$*" in
-      *search/issues*) echo "gh: Server Error (HTTP 502)" >&2; return 1 ;;
-      *) search_answer "$@" ;;
-    esac
-  }
-  use_fake_gh
-  run lets_build next
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"HTTP 502"* ]]
-}
-
-@test "claim assigns the story to the current user" {
-  gh_answer() { [ "$*" != "api repos/{owner}/{repo}/issues/7" ] || echo "$issue7"; }
-  use_fake_gh
-  run lets_build claim 7
-  [ "$status" -eq 0 ]
-  [ "$(gh_calls | tail -n 1)" = "issue edit 7 --add-assignee @me" ]
-}
-
-@test "claim refuses a story someone else has, and changes nothing" {
-  gh_answer() { echo '{"number": 7, "labels": [], "assignees": [{"login": "octocat"}]}'; }
-  use_fake_gh
-  run lets_build claim 7
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"#7 is already assigned to octocat"* ]]
-  [ "$(gh_calls)" = "api repos/{owner}/{repo}/issues/7" ]
-}
-
-@test "lets-build's backlog.sh prints its usage" {
-  run lets_build --help
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"backlog.sh next"* ]]
-  [[ "$output" == *"backlog.sh claim <n>"* ]]
-}
-
-@test "lets-build's backlog.sh only picks and claims" {
-  run lets_build set-kind 7 Epic
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"unknown command 'set-kind'. Use next or claim."* ]]
-}
-
-@test "lets-build's backlog.sh needs an issue number to claim" {
-  run lets_build claim seven
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"expected an issue number, got 'seven'"* ]]
-  run lets_build claim
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"expected an issue number, got ''"* ]]
 }

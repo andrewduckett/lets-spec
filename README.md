@@ -270,12 +270,12 @@ with `gh` directly.
 
 | Script | Command | What it does |
 |---|---|---|
-| `lets-build/scripts/backlog.sh` | `next` | Prints the next story and its URL |
+| `lets-build/scripts/backlog.mjs` | `next` | Prints the next story and its URL |
 | | `claim <n>` | Assigns issue `<n>` to you. Refuses if someone already has it. |
 | `lets-shape/scripts/backlog.sh` | `set-kind <n> <Epic\|Story>` | Marks the issue as an epic or a story |
 | | `set-priority <n> <Must\|Should\|Could\|Wont>` | Sets the issue's MoSCoW priority |
 
-For example: `bash .agents/skills/lets-build/scripts/backlog.sh next`.
+For example: `node .agents/skills/lets-build/scripts/backlog.mjs next`.
 
 ### Labels or issue fields
 

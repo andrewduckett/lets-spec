@@ -160,7 +160,7 @@
             fi
             # Each entry point runs its own backlog script, and lets-shape's
             # copy carries the backlog's mode.
-            bash .agents/skills/lets-build/scripts/backlog.sh --help >/dev/null
+            node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
             bash .agents/skills/lets-shape/scripts/backlog.sh --help >/dev/null
             grep -q '^mode="labels"$' .agents/skills/lets-shape/scripts/backlog.sh
 
