@@ -68,7 +68,7 @@ The first yes wins.
 | Harness | How it knows | A critique | A handoff |
 |---|---|---|---|
 | `t3` | The T3 Code server is one of this process's parents. | A new thread in plan mode. It is archived when the review succeeds. | A new thread in the sidebar on the current branch. |
-| `herdr` | `HERDR_ENV` is `1` and `herdr` is on `PATH`. | A new unfocused tab running the reviewer. It is closed when the review succeeds. | A new tab running `claude --remote-control`. |
+| `herdr` | `HERDR_ENV` is `1` and `herdr` is on `PATH`. | A new unfocused tab running the reviewer. The result is the tab's recent terminal output, so it carries some screen chrome. The tab is closed when the review succeeds. | A new tab running `claude --remote-control`. |
 | `none` | Neither of the above. | A headless process: `codex`, `claude -p` or `agy`, read-only. | A new `gnome-terminal` window running `claude --remote-control`. With `--unattended`, `claude -p` in the background, logged to `.workspace/spawn-session/<name>.log`. |
 
 Set `LETS_SPEC_HARNESS` to `t3`, `herdr` or `none` to skip detection. Use it
