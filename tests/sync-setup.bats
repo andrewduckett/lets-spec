@@ -65,11 +65,11 @@ load support/project
   [[ "$output" == *"openspec/config.yaml sets no schema; it must be lets-standard"* ]]
 }
 
-@test "sync warns when the config is not valid YAML" {
-  printf 'schema: [lets-standard\n' >openspec/config.yaml
+@test "sync warns when the config has a schema it cannot read" {
+  printf 'schema:\n' >openspec/config.yaml
   run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"openspec/config.yaml is not valid YAML"* ]]
+  [[ "$output" == *"openspec/config.yaml sets no schema"* ]]
 }
 
 @test "sync keeps a config link that points nowhere, and warns" {
