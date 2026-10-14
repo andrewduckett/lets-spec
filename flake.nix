@@ -65,9 +65,7 @@
             bash ${./nix/generate-skills.sh} ${./nix/openspec.json} "$out"
           '';
 
-        # What lets-sync links and creates for one flow and backlog.
-        # lets-sync knows its own links by this store path's name, so keep
-        # the name.
+        # What lets-sync copies and creates for one flow and backlog.
         # The build writes the backlog's mode into the skills' scripts.
         release = flow: backlog: let recipe = flows.${flow}; in
           pkgs.runCommand "lets-spec-release" { } ''
@@ -82,11 +80,11 @@
             { nativeBuildInputs = [ pkgs.makeWrapper ]; }
             ''
               mkdir -p $out/bin $out/libexec
-              cp ${./bin/lets-sync.sh} $out/libexec/lets-sync.sh
-              makeWrapper ${pkgs.bash}/bin/bash $out/bin/lets-sync \
-                --add-flags $out/libexec/lets-sync.sh \
+              cp -R ${./lets-sync} $out/libexec/lets-sync
+              makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/lets-sync \
+                --add-flags $out/libexec/lets-sync/bin/lets-sync \
                 --set WORKFLOW_RELEASE ${release flow backlog} \
-                --prefix PATH : ${lib.makeBinPath [ pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.git pkgs.yq-go ]}
+                --prefix PATH : ${lib.makeBinPath [ pkgs.git ]}
             '';
 
         # Everything a project's dev shell needs from this repo. The skills'
@@ -100,7 +98,7 @@
         // lib.listToAttrs (map (p: lib.nameValuePair "${p.flow}-${p.backlog}" (bundle p.flow p.backlog)) pairs));
 
       apps = forAllSystems (pkgs: {
-        lets-sync = app pkgs "lets-sync" "Set up this project for lets-spec, link it in, and warn about anything to fix";
+        lets-sync = app pkgs "lets-sync" "Set up this project for lets-spec, copy in the skills, and warn about anything to fix";
       });
 
       checks = forAllSystems (pkgs: {
@@ -113,7 +111,7 @@
           { nativeBuildInputs = [ pkgs.shellcheck ]; }
           ''
             cd ${./.}
-            shellcheck -x bin/*.sh nix/*.sh skills/*/scripts/*.sh
+            shellcheck -x nix/*.sh skills/*/scripts/*.sh
             touch "$out"
           '';
 
@@ -137,10 +135,14 @@
             yq -i '.context = "CONTEXT-MARKER"' openspec/config.yaml
             lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
+            # lets-sync copies the skills in. It does not link them.
+            [ ! -L .agents/skills/openspec-propose ]
             [ -f .agents/skills/openspec-propose/SKILL.md ]
             [ -f .claude/skills/lets-test-first/SKILL.md ]
             # Agents read the rules from AGENTS.md, through CLAUDE.md for Claude.
             grep -q '^## Workflow$' CLAUDE.md
+            # Once the project commits the copies, the check passes.
+            git add -A
             lets-sync --check
 
             openspec new change gate </dev/null >/dev/null 2>&1
@@ -177,20 +179,21 @@
             touch "$out"
           '';
 
-        # The lets-spawn script's unit tests. They use fakes, so no harness
-        # runs here.
+        # The unit tests for the lets-spawn script and the lets-sync package.
+        # They use fakes, so no harness runs here.
         node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
           cp -R ${self} repo
           chmod -R u+w repo
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"
           touch "$out"
         '';
 
-        # A flake-parts project can import the module, choose its flow and
-        # backlog, and read the packages and shell hook those give.
+        # A flake-parts project can import the module, choose its flow,
+        # backlog and skills mode, and read the packages and shell hook those
+        # give.
         flake-module = let
           system = pkgs.stdenv.hostPlatform.system;
           consumerInputs = { inherit nixpkgs; self = { inputs = consumerInputs; outPath = ./.; }; };
@@ -198,7 +201,7 @@
             systems = [ system ];
             imports = [ self.flakeModules.default ];
             perSystem = { config, pkgs, ... }: {
-              letsSpec = { flow = "standard"; backlog = "github-fields"; };
+              letsSpec = { flow = "standard"; backlog = "github-fields"; skills = "ignored"; };
               devShells.default = pkgs.mkShell {
                 packages = config.letsSpec.packages;
                 shellHook = config.letsSpec.shellHook;
@@ -207,7 +210,15 @@
           };
           shell = consumer.devShells.${system}.default;
         in pkgs.runCommand "flake-module-check" { } ''
-          release="$(grep -o '/nix/store/[^ "]*-lets-spec-release' ${shell.shellHook} | head -n 1)"
+          hook=${shell.shellHook}
+          # The module wraps lets-sync to pass on the skills mode.
+          if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$hook"; then
+            echo "The shell hook's lets-sync does not set LETS_SPEC_SKILLS=ignored." >&2
+            cat "$hook" >&2
+            exit 1
+          fi
+          # The wrapped lets-sync names its release in WORKFLOW_RELEASE.
+          release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$hook" "$(dirname "$hook")"/.lets-sync-wrapped | head -n 1)"
           script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.sh"
           if ! grep -q '^mode="fields"$' "$script"; then
             echo "The github-fields backlog did not write mode=\"fields\" into $script." >&2

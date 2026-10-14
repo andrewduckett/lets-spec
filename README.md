@@ -384,9 +384,9 @@ nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 | `schemas/` | One OpenSpec schema per flow, with its templates |
 | `flows.nix` | Each flow's schema and skills |
 | `overlays/` | The rules fragment and the files `lets-sync` creates in a project |
-| `bin/lets-sync.sh` | The sync command |
+| `lets-sync/` | The sync command, a Node package |
 | `nix/` | The release build, the flake module and the OpenSpec skill generator |
-| `tests/` | The bats tests, and the Node tests in `tests/lets-spawn/` |
+| `tests/` | The bats tests, and the Node tests in `tests/lets-spawn/` and `tests/lets-sync/` |
 
 ### Generated OpenSpec skills
 
@@ -404,7 +404,8 @@ nix flake check
 This runs the bats tests, the Node tests and shellcheck, builds every
 flow and backlog pair, sets up a sample project with the packaged commands,
 and evaluates the flake-parts module. In the dev shell, `bats tests` runs
-only the bats tests, and `node --test "tests/lets-spawn/*.test.mjs"`
+only the bats tests, and
+`node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"`
 runs only the Node tests.
 
 ## 📄 License
