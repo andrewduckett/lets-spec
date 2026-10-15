@@ -5,9 +5,11 @@ description: Move one story forward in an OpenSpec project. On the default branc
 
 # Let's build
 
-Move one story forward. The current branch says which story: on the
-default branch, start the next one; on a change's branch, move that change
-on. Run every command below from the repo root.
+Move one story forward. A story goes claim, propose, apply, archive. Each
+run picks it up wherever it is and carries it as far as it can: a new
+story through claim and propose, a planned one through apply and archive.
+The current branch and the change's state say where it is. Run every
+command below from the repo root.
 
 You own picking and claiming the story. OpenSpec owns everything after
 that. Invoke its skills, follow the schema's instructions, and add no
@@ -18,19 +20,24 @@ steps of your own.
 1. Find the default branch:
    `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name`.
 2. Run `git branch --show-current`.
-3. Take the first row that matches:
+3. If the branch has a folder `openspec/changes/<branch>/`, run
+   `openspec instructions apply --change <branch> --json` and read `state`.
+4. Take the first row that matches:
 
-| The current branch | Do |
-|---|---|
-| is the default branch | [Start a change](#start-a-change) |
-| has a folder `openspec/changes/<branch>/` | [Move the change on](#move-the-change-on) |
-| has an archived folder whose whole name is `<date>-<branch>` in `openspec/changes/archive/` | Say the change is archived and its pull request is ready for review. Stop. |
-| anything else | Say that `lets-build` works on the default branch, or on a change's branch, which has the change's name. Stop. |
+| The current branch | `state` | Do |
+|---|---|---|
+| is the default branch | — | [Claim a story](#claim-a-story), then [Propose](#propose) |
+| has a change folder | `blocked` | [Propose](#propose): the plan is not finished |
+| has a change folder | `ready` | [Apply](#apply): tasks are left |
+| has a change folder | `all_done` | [Archive](#archive): every task is ticked |
+| has a change folder | anything else | OpenSpec has a state this skill does not know. Show the user the `instruction` from the CLI's output, and stop. |
+| has an archived folder whose whole name is `<date>-<branch>` in `openspec/changes/archive/` | — | Say the change is archived and its pull request is ready for review. Stop. |
+| anything else | — | Say that `lets-build` works on the default branch, or on a change's branch, which has the change's name. Stop. |
 
-## Start a change
+## Claim a story
 
-This is the start rule. Parallel sessions share the backlog, so claim the
-story before you create the change.
+Parallel sessions share the backlog, so claim the story before you create
+anything.
 
 1. Use the issue the user named. Otherwise run
    `node .agents/skills/lets-build/scripts/backlog.mjs next`, which prints
@@ -47,32 +54,36 @@ story before you create the change.
 4. Run `node .agents/skills/lets-build/scripts/backlog.mjs claim <n>`. If
    it refuses because the issue already has an assignee, another session
    took it: run `next` again.
-5. Create a branch with the change's name off the default branch, and
-   create the change on it with `openspec new change <name>`. If this
-   step fails, release the claim with `gh issue edit <n> --remove-assignee @me`
-   before you stop, so another session can pick the story up.
-6. Invoke the `openspec-propose` skill. Tell it to continue the change
-   `<name>`, which you just created for issue #<n>. It runs the
-   brainstorm with the user, writes the plan, and stops.
-7. When propose stops with `tasks.md` committed, offer the handoff: ask
-   the user whether to start a fresh session named `<name>` with the
-   prompt `Run lets-build on branch <name>`, or to stop here. On yes, run
-   `node .agents/skills/lets-spawn/scripts/lets-spawn.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
-   and show the user its output, then stop. On no, say the plan is ready
-   and that running `lets-build` on this branch builds it.
-   If propose stopped for any other reason, say why and stop.
+5. Create a branch with the change's name off the default branch. If
+   this fails, release the claim with
+   `gh issue edit <n> --remove-assignee @me` and stop, so another session
+   can pick the story up.
 
-## Move the change on
+## Propose
 
-Run `openspec instructions apply --change <branch> --json`, and read
-`state`:
+Invoke the `openspec-propose` skill for the change `<name>`. For a story
+you just claimed, say it is for issue #<n>. On a `blocked` branch, say to
+continue the change. Propose creates the change if it is missing, runs the
+brainstorm with the user, and writes the plan.
 
-| `state` | Meaning | Do |
-|---|---|---|
-| `blocked` | The plan is not finished. | Invoke `openspec-propose` to continue the change `<branch>`. Stop when it stops. If it stopped with `tasks.md` committed, offer the handoff as in step 7 of Start a change. |
-| `ready` | Tasks are left. | Invoke `openspec-apply-change` for `<branch>`. The schema's apply instruction carries on through verify and archive. |
-| `all_done` | Every task is ticked. | Follow [Archive](#archive). It reviews, verifies and archives, in that order. |
-| any other `state` | OpenSpec has a state this skill does not know. | Show the user the `instruction` from the CLI's output, and stop. |
+Propose stops when it is done, and waits for a new request before anyone
+builds. When it stops, read `state` once more with
+`openspec instructions apply --change <name> --json`:
+
+- `ready` means the plan is finished. Offer the handoff: ask the user
+  whether to build it in a fresh session named `<name>` with the prompt
+  `Run lets-build on branch <name>`, or to stop here. On yes, run
+  `node .agents/skills/lets-spawn/scripts/lets-spawn.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
+  and show the user its output, then stop. On no, say that running
+  `lets-build` on this branch builds the plan.
+- Anything else means propose stopped early, for example to ask the user
+  a question. Say so, and stop.
+
+## Apply
+
+Invoke the `openspec-apply-change` skill for the change `<branch>`. The
+schema's apply instruction works the tasks, then comes to
+[Archive](#archive) when every task is done.
 
 ## Archive
 
@@ -92,8 +103,8 @@ that verify checks the fixed code.
 
 ## Rules
 
-- Never pick a new story on a change's branch, and never move a change
-  on from the default branch.
+- Never claim a story on a change's branch, and never propose, apply or
+  archive from the default branch.
 - Never write an artifact or code yourself, outside the skills you
   invoke.
 - One story per run.
