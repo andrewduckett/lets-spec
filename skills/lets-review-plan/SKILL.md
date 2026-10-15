@@ -25,21 +25,13 @@ Find who wrote the plan. First answer wins:
 ## Run the review
 
 1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
-2. Run, from the repo root:
-
-   ```bash
-   node .agents/skills/lets-spawn/scripts/lets-spawn.mjs critique \
-     --name <change>-plan-review --author <family> --effort <tier> \
-     --prompt-file .workspace/<change>-review-prompt.md \
-     > .workspace/<change>-review-raw.md 2> .workspace/<change>-review-meta.txt
-   ```
-
+2. Run the `lets-spawn` skill's `critique` command from the repo root. Give it the name `<change>-plan-review`, the author's family, effort `<tier>`, and the prompt file. Save its stdout to `.workspace/<change>-review-raw.md` and its stderr to `.workspace/<change>-review-meta.txt`.
 3. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Copy those four into `review.md`.
 4. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
 Note the commit you reviewed: `git rev-parse --short HEAD`. Record it in `review.md`, so a later session can tell whether the plan changed after the verdict.
 
-The `lets-spawn` skill picks the reviewer's family and model, and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+The `lets-spawn` skill says how to run the command and what each exit code means. It picks the reviewer's family and model, and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
 
 Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 

@@ -37,19 +37,11 @@ Pick the reviewer from a family that wrote none of the commits.
 
 Commit or stash first. The review covers commits, not the working tree.
 
-1. Run, from the repo root:
-
-   ```bash
-   node .agents/skills/lets-spawn/scripts/lets-spawn.mjs critique \
-     --name <branch>-code-review --author <family> --effort high \
-     --code-review --base <base> \
-     > .workspace/<branch>-code-review-raw.md 2> .workspace/<branch>-code-review-meta.txt
-   ```
-
+1. Run the `lets-spawn` skill's `critique` command from the repo root. Give it the name `<branch>-code-review`, the author's family, effort `high`, and a code review against `<base>`. Save its stdout to `.workspace/<branch>-code-review-raw.md` and its stderr to `.workspace/<branch>-code-review-meta.txt`.
 2. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Use those four in the report.
 3. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
-The `lets-spawn` skill picks the reviewer's family and model and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+The `lets-spawn` skill says how to run the command and what each exit code means. It picks the reviewer's family and model and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
 
 If the project has no `REVIEW.md`, the reviewer runs without project rules. Say so in the report.
 
