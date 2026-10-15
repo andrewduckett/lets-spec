@@ -9,7 +9,7 @@ Shape a large idea into a backlog. This is discovery: personas, a journey map, M
 
 **Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes two things, and nothing else: no roadmap, release plan or changelog.
 
-- `openspec/discovery.md` — the living map: personas and journey map ([templates/discovery-template.md](templates/discovery-template.md)). It outlives every run; see [The Map](#the-map).
+- `openspec/discovery.md` — the living map: personas and journey map ([templates/discovery-template.md](templates/discovery-template.md)). It outlives every run; see [The map](#the-map).
 - GitHub issues — one **parent issue** per discovery run, and the stories ([templates/issue-template.md](templates/issue-template.md)).
 
 Changes are created later, one at a time, by `lets-build`.
@@ -85,7 +85,7 @@ Start from the personas already in `discovery.md`. For the people this input ser
 - **Pain today** their real-world problem without a good tool
 - **Success looks like** the lasting, observable signal they got value
 
-Push back if personas are roles without needs ("admin") rather than people with goals, or if an entry would stop being true once this run ships (see [The Map](#the-map)).
+Push back if personas are roles without needs ("admin") rather than people with goals, or if an entry would stop being true once this run ships (see [The map](#the-map)).
 
 **Checkpoint:** write the Personas section of `discovery.md` (create the file from [templates/discovery-template.md](templates/discovery-template.md) if it is missing).
 
