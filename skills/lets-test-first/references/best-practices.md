@@ -2,7 +2,7 @@
 
 ## Good tests
 
-Test observable behaviour through a public interface. The test should state
+Test observable behavior through a public interface. The test should state
 what a caller can do, not how the implementation achieves it.
 
 ```typescript
@@ -25,9 +25,9 @@ test("calculates the line-item total", () => {
 });
 ```
 
-Use a named parameterized case when cases have the same single behaviour and
+Use a named parameterized case when cases have the same single behavior and
 only their data differs. Shared setup, teardown, and helpers are useful when
-they make that behaviour clearer; do not use them to hide several behaviours
+they make that behavior clearer; do not use them to hide several behaviors
 in a single test.
 
 ## Bad tests
@@ -36,7 +36,7 @@ in a single test.
 
 Do not test private methods, mock internal collaborators, or assert internal
 call sequences. Such tests break during refactors even when observable
-behaviour is unchanged.
+behavior is unchanged.
 
 ```typescript
 test("checkout calls paymentService.process", async () => {

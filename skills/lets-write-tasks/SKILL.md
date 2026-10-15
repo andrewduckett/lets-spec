@@ -6,8 +6,8 @@ description: Use when turning an approved plan into an OpenSpec task list. Says 
 # Writing tasks
 
 A task list is the contract between planning and building. An agent with
-none of the planning conversation will pick up one task at a time, so each
-task must stand alone: what to build, and how to know it is done.
+none of the planning conversation picks up one task at a time. So each
+task stands alone: what to build, and how to know it is done.
 
 ## Size
 

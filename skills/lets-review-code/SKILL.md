@@ -5,7 +5,7 @@ description: Use when an implementation branch is finished and needs a code revi
 
 # Peer Code Review
 
-Have a different model family review the branch's code. A reviewer from the author's family shares the author's blind spots. Each family's own built-in reviewer runs the review where one exists, so this skill only finds the author, runs the review read-only, and acts on what it finds.
+Have a different model family review the branch's code. A reviewer from the author's family shares the author's blind spots. This skill finds the author, runs the review read-only through `lets-spawn`, and acts on what it finds.
 
 ## When to apply
 
@@ -18,7 +18,7 @@ Archive only checks that this review happened and still covers the code. It does
 
 `<base>` is the branch this one merges into: the pull request's base (`gh pr view --json baseRefName`), else the parent branch of a stacked story, else the repository's default branch.
 
-Find who wrote the code. First answer wins:
+Find who wrote each commit. Take the first source that names its author:
 
 - **The commits.** Every family named in their `Co-Authored-By` lines is an author:
 
@@ -26,7 +26,7 @@ Find who wrote the code. First answer wins:
   git log --format='%(trailers:key=Co-Authored-By,valueonly)' <base>..HEAD | sort -u
   ```
 
-  This works only when the tool that wrote a commit added a trailer that names its model. Claude Code adds one; other tools may not. A commit with no such trailer names no author, so use the next source for it.
+  A commit with no such trailer names no author. Use the next source for it.
 
 - **This session** — the commits name no model, and you wrote the code here.
 - **Ask the author.** Do not guess. A wrong answer turns the review into a rubber stamp.
@@ -49,9 +49,9 @@ Commit or stash first. The review covers commits, not the working tree.
 2. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Use those four in the report.
 3. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
-The `lets-spawn` skill picks the reviewer's family and model and starts it read-only in a fresh session. It sends each reviewer the right message: Claude's built-in `/code-review` where it exists, Codex's built-in reviewer outside a harness, and a review prompt otherwise. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+The `lets-spawn` skill picks the reviewer's family and model and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
 
-A project may keep its own review rules in `REVIEW.md`. If `REVIEW.md` does not exist, the reviewer runs without project rules. Say so in the report.
+If the project has no `REVIEW.md`, the reviewer runs without project rules. Say so in the report.
 
 Note the commit you reviewed: `git rev-parse --short HEAD`.
 

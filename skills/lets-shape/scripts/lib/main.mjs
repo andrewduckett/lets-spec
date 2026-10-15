@@ -15,8 +15,8 @@ Usage:
   backlog.mjs set-priority <n> <Must|Should|Could|Wont>
   backlog.mjs set-kind <n> <Epic|Story>
 
-Run it from the project root as
-node .agents/skills/lets-shape/scripts/backlog.mjs. It needs gh.
+Run it from the repo root as
+node .agents/skills/lets-shape/scripts/backlog.mjs.
 `;
 
 // A refusal: run() prints its message and exits 1.

@@ -54,7 +54,7 @@ most 32 characters. The name labels the thread or tab.
 |---|---|
 | 0 | Success. |
 | 2 | The command line is wrong. The usage follows the message. |
-| 3 | No reviewer family is available. |
+| 3 | No reviewer family is available, the author's included. |
 | 4 | The harness refused the spawn. |
 | 5 | The reviewer failed: its turn ended in an error, it stopped to ask a question, or its final message was empty. |
 | 6 | The reviewer did not finish before the timeout. |
@@ -67,8 +67,8 @@ The first yes wins.
 
 | Harness | How it knows | A critique | A handoff |
 |---|---|---|---|
-| `t3` | The T3 Code server is one of this process's parents. | A new thread in plan mode. It is archived when the review succeeds. | A new thread in the sidebar on the current branch. |
-| `herdr` | `HERDR_ENV` is `1` and `herdr` is on `PATH`. | A new unfocused tab running the reviewer. The result is the tab's recent terminal output, so it carries some screen chrome. The tab is closed when the review succeeds. | A new tab running `claude --remote-control`. |
+| `t3` | The T3 Code server is one of this process's parents. | A new thread in plan mode. The script archives it when the review succeeds. | A new thread in the sidebar on the current branch. |
+| `herdr` | `HERDR_ENV` is `1` and `herdr` is on `PATH`. | A new unfocused tab running the reviewer. The result is the tab's recent terminal output, so it carries some screen chrome. The script closes the tab when the review succeeds. | A new tab running `claude --remote-control`. |
 | `none` | Neither of the above. | A headless process: `codex`, `claude -p` or `agy`, read-only. | A new `gnome-terminal` window running `claude --remote-control`. With `--unattended`, `claude -p` in the background, logged to `.workspace/lets-spawn/<name>.log`. |
 
 Set `LETS_SPEC_HARNESS` to `t3`, `herdr` or `none` to skip detection. Use it
@@ -92,37 +92,14 @@ plainly in the report: the review was not independent.
 ## Fail fast
 
 The script never retries and never falls back to another harness or family.
-A failure means something needs to change. On failure it leaves the thread
-or tab in place and prints its id, so you can read what happened.
+On failure it leaves the thread or tab in place and prints its id. Read it,
+then fix the cause.
 
 - **2:** fix the command line.
-- **3:** install or enable another model family.
-- **4:** read the message. In t3, it may tell you to run `t3 project add <path>`.
+- **3:** install a reviewer, or enable one in t3. Any family will do; a second one makes the review independent.
+- **4:** read the message. In t3, it may tell you to run `t3 project add <path>`. The script keeps its t3 token in `~/.config/lets-spawn/t3-token` and replaces it when t3 rejects it.
 - **5:** read the reviewer's thread, then fix the prompt or the work.
 - **6:** read the thread. Raise `--timeout` only if the reviewer was still making progress.
 - **7:** inspect `git status`, undo the reviewer's changes, and find out why it wrote.
 
 Do not run the command again until something has changed.
-
-## Smoke test after a t3 update
-
-The t3 adapter depends on t3's internal protocol and database. After each t3
-update, run these from a t3 thread in a project t3 knows:
-
-```bash
-node .agents/skills/lets-spawn/scripts/lets-spawn.mjs detect
-node .agents/skills/lets-spawn/scripts/lets-spawn.mjs handoff --name smoke-handoff --prompt "Say hello and stop."
-printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
-node .agents/skills/lets-spawn/scripts/lets-spawn.mjs critique --name smoke-critique \
-  --author claude --effort low --prompt-file .workspace/p.md
-```
-
-Expect `t3`, then a new thread and a JSON line with its `threadId`, then
-`READY` on stdout and an archived Codex thread.
-
-## Prerequisites
-
-- Node 22.13 or later.
-- **t3:** a running T3 Code with this repo added as a project. The script keeps a t3 token in `~/.config/lets-spawn/t3-token` and issues a new one when t3 rejects it.
-- **herdr:** a herdr pane, which sets `HERDR_ENV`.
-- **none:** `codex`, `claude` or `agy` on `PATH`, and `gnome-terminal` for an attended handoff.

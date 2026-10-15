@@ -9,8 +9,8 @@ Usage:
   backlog.mjs next        print the next story, then its URL
   backlog.mjs claim <n>   assign issue <n> to you
 
-Run it from the project root as
-node .agents/skills/lets-build/scripts/backlog.mjs. It needs gh.
+Run it from the repo root as
+node .agents/skills/lets-build/scripts/backlog.mjs.
 `;
 
 // A refusal: run() prints its message and exits 1.

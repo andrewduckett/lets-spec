@@ -248,7 +248,7 @@ ship.
 
 | You are on | It does |
 |---|---|
-| The base branch, such as `main` | Picks the next story, assigns it to you, creates a branch and an OpenSpec change named after the story, and starts planning. It stops when the plan is ready. |
+| The default branch, such as `main` | Picks the next story, assigns it to you, creates a branch and an OpenSpec change named after the story, and starts planning. It stops when the plan is ready. |
 | A change's branch, plan unfinished | Carries on planning. |
 | A change's branch, plan finished | Builds the tasks, then reviews, verifies and archives the change. It marks the pull request ready for review. |
 | A branch whose change is archived | Tells you the pull request is ready for review. |
@@ -623,6 +623,23 @@ with the packaged commands, and evaluates the flake-parts module.
 In the dev shell, `bats tests` runs only the bats tests, and
 `node --test "tests/*/*.test.mjs"` runs only the Node tests. With mise,
 `mise run test` runs both.
+
+### After a t3 update
+
+The `lets-spawn` t3 adapter depends on t3's internal protocol and
+database. After each t3 update, run these from a t3 thread in a project
+t3 knows:
+
+```bash
+node skills/lets-spawn/scripts/lets-spawn.mjs detect
+node skills/lets-spawn/scripts/lets-spawn.mjs handoff --name smoke-handoff --prompt "Say hello and stop."
+printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
+node skills/lets-spawn/scripts/lets-spawn.mjs critique --name smoke-critique \
+  --author claude --effort low --prompt-file .workspace/p.md
+```
+
+Expect `t3`, then a new thread and a JSON line with its `threadId`, then
+`READY` on stdout and an archived Codex thread.
 
 ## 📄 License
 

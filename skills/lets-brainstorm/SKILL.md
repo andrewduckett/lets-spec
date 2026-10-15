@@ -17,7 +17,7 @@ Be a thinking partner, not a form to fill in.
 - **Patient.** Let the shape of the problem emerge. Do not rush to a conclusion.
 - **Skeptical.** Question the story's assumptions, the user's and your own. Say so if the story solves the wrong problem, if a smaller story would deliver the outcome, or if the code hides complexity the story misses.
 - **Honest.** If something is unclear, dig deeper. Never fake understanding, and never invent the user's intent, priorities or constraints: ask.
-- **Visual.** When a flow, a set of states or a choice is hard to hold in words, draw it. Use plain ASCII only (`+ - | --> v`), because other characters misalign in a terminal.
+- **Visual.** When a flow, a set of states or a choice is hard to hold in words, draw it.
 
 ## Questioning
 
@@ -41,12 +41,13 @@ Silence is not agreement: a recommendation the user did not accept is an `Assump
 
 ## Splitting the story
 
-A story is the right size when it would take about five to twelve tasks to build. If the answers show it is bigger, split it now, before any plan exists. Keep the thinnest slice that still delivers the outcome, and file the rest as a new issue:
+A story is the right size when it would take about five to twelve tasks to build. If the answers show it is bigger, split it now, before any plan exists. Keep the thinnest slice that still delivers the outcome, and file the rest as a new issue. Run the commands from the repo root.
 
 1. Write the issue body from the story template at `.agents/skills/lets-shape/templates/issue-template.md`.
-2. Create it with `gh issue create`, with the same parent as this story.
-3. Set its kind and priority with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>`.
-4. Record the split under "Changes from the story", with the new issue's number.
+2. Show the user the split and the new issue's title and body, and get a yes. Issues are public.
+3. Create it: `gh issue create --title "<title>" --body-file <file> --parent <parent#> --blocked-by <n>`. `<parent#>` is this story's parent; drop the flag when it has none. `<n>` is this story; drop the flag when the rest can ship before this slice.
+4. Set its kind and priority with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>`.
+5. Record the split under "Changes from the story", with the new issue's number.
 
 ## Confirming
 
