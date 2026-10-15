@@ -1,6 +1,6 @@
 ---
 name: lets-review-plan
-description: Use when someone asks for an independent review of a plan, design, spec, ADR, or skill, or when an OpenSpec change reaches its `review` artifact. Another model family reviews the work read-only, and the findings come back ranked.
+description: Use when someone asks for an independent review of a plan, design, spec, architecture decision record (ADR), or skill, or when an OpenSpec change reaches its `review` artifact. Another model family reviews the work read-only, and the findings come back ranked.
 ---
 
 # Peer Plan Review
@@ -22,9 +22,7 @@ Find who wrote the plan. First answer wins:
 - **This session** — you wrote or shaped the plan here.
 - **Ask the author.** Do not guess. A wrong answer turns the review into a rubber stamp.
 
-This skill does not use commit trailers to find the author. Only some tools add a `Co-Authored-By` trailer that names a model, so a plan's commits may name no author at all.
-
-## Run the critique
+## Run the review
 
 1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
 2. Run, from the repo root:
@@ -39,9 +37,11 @@ This skill does not use commit trailers to find the author. Only some tools add 
 3. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Copy those four into `review.md`.
 4. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
 
-The `lets-spawn` skill picks the reviewer's family and model, starts it read-only in a fresh session, and returns its final message. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+Note the commit you reviewed: `git rev-parse --short HEAD`. Record it in `review.md`, so a later session can tell whether the plan changed after the verdict.
 
-Scale the effort to what the plan changes, not its length: `low` for a narrow fix, `medium` for one subsystem on known patterns, `high` for new contracts, migrations, or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier as the effort.
+The `lets-spawn` skill picks the reviewer's family and model, and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+
+Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 
 This costs real tokens. Never loop it. Run again only when the plan or the question changed.
 

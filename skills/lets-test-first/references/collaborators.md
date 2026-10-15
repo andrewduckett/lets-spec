@@ -5,7 +5,7 @@ needed, databases or the file system. Prefer real in-process collaborators and
 a test database when those make the test more representative.
 
 Do not mock classes, modules, or services owned by the application. Verify
-behaviour through the public interface instead of treating calls between owned
+behavior through the public interface instead of treating calls between owned
 components as the result.
 
 ## Good collaborator boundaries
