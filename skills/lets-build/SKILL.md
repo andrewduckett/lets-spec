@@ -72,10 +72,10 @@ builds. When it stops, read `state` once more with
 
 - `ready` means the plan is finished. Offer the handoff: ask the user
   whether to build it in a fresh session named `<name>` with the prompt
-  `Run lets-build on branch <name>`, or to stop here. On yes, run
-  `node .agents/skills/lets-spawn/scripts/lets-spawn.mjs handoff --name <name> --prompt "Run lets-build on branch <name>"`
-  and show the user its output, then stop. On no, say that running
-  `lets-build` on this branch builds the plan.
+  `Run lets-build on branch <name>`, or to stop here. On yes, run the
+  `lets-spawn` skill's `handoff` command with that name and prompt, show
+  the user its output, then stop. On no, say that running `lets-build`
+  on this branch builds the plan.
 - Anything else means propose stopped early, for example to ask the user
   a question. Say so, and stop.
 
