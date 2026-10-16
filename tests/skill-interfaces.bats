@@ -64,16 +64,15 @@ named_skills() {
 }
 
 # flow_texts <flow>: the files lets-spec gives a flow's agent besides its
-# skills: the schema, and the flow's config fragment if it has one.
+# skills: the schema, and the flow's config.
 flow_texts() {
   echo "$repo/schemas/lets-$1/schema.yaml"
-  local fragment="$repo/overlays/openspec/config.d/lets-$1.yaml"
-  if [ -f "$fragment" ]; then echo "$fragment"; fi
+  echo "$repo/overlays/openspec/config.d/lets-$1.yaml"
 }
 
 # A skill no schema step calls, such as lets-spawn, is still reachable
 # when another skill the flow ships calls it. lets-review-code is reached
-# through the standard flow's archive guidance, in its config fragment.
+# through the standard flow's archive guidance, in its config.
 @test "each skill a flow ships, other than an entry point, is named by its schema, its config or a skill the flow ships" {
   local flow skill shipped named text
   for flow in standard minimal; do

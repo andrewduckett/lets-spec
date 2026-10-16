@@ -1,4 +1,4 @@
-schema: lets-standard
+schema: lets-minimal
 
 # Project context (optional)
 # This is shown to AI when creating artifacts.
@@ -19,10 +19,6 @@ schema: lets-standard
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
 
-# A lets-spec flow may add its own operations: block at the end of this
-# file. The project owns it, and may edit it. Add your own guidance to
-# that block, not to a second operations: key.
-#
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.
 # This is separate from artifact rules above.

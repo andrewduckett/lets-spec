@@ -82,18 +82,15 @@ cpSync(join(source, 'overlays'), join(out, 'init'), { recursive: true });
 makeWritable(out);
 renameSync(join(out, 'init/AGENTS.md'), join(out, 'fragments/AGENTS.md'));
 
-// The config lets-sync creates names the flow's schema, which
-// lets-sync then expects. A flow may also have a fragment in
-// openspec/config.d/<schema>.yaml: settings that flow's projects start
-// with, such as its archive guidance. The build appends it to the config,
-// and no project gets the config.d folder itself.
-const config = join(out, 'init/openspec/config.yaml');
-const fragments = join(out, 'init/openspec/config.d');
-const fragment = join(fragments, `${schema}.yaml`);
-let configText = readFileSync(config, 'utf8').replace(/^schema: .*$/gm, `schema: ${schema}`);
-if (existsSync(fragment)) configText += `\n${readFileSync(fragment, 'utf8')}`;
-writeFileSync(config, configText);
-rmSync(fragments, { recursive: true, force: true });
+// Each flow has its own config in openspec/config.d/<schema>.yaml: the
+// whole file lets-sync creates, naming the flow's schema and holding what
+// its projects start with, such as the standard flow's archive guidance.
+// The release ships it as the config, and no project gets the folder.
+const configs = join(out, 'init/openspec/config.d');
+const flowConfig = join(configs, `${schema}.yaml`);
+if (!existsSync(flowConfig)) die(`there is no config for ${schema} in overlays/openspec/config.d/.`);
+renameSync(flowConfig, join(out, 'init/openspec/config.yaml'));
+rmSync(configs, { recursive: true, force: true });
 
 // Each skill is one folder. A name used twice would hide one of them, so the
 // build fails instead.

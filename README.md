@@ -595,7 +595,7 @@ to set.
 | `lets-sync/` | The sync command, a Node package |
 | `skills/` | The authored skills, one `lets-*` folder each |
 | `schemas/` | One OpenSpec schema per flow, with its templates |
-| `overlays/` | The rules fragment, the files `lets-sync` creates in a project, and each flow's additions to `openspec/config.yaml` in `openspec/config.d/` |
+| `overlays/` | The rules fragment and the files `lets-sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
 | `tests/` | The bats tests, and the Node tests in `tests/lets-build/`, `tests/lets-shape/`, `tests/lets-spawn/` and `tests/lets-sync/` |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
