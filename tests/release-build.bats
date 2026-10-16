@@ -38,6 +38,22 @@ build_from() {
   [ "$(yq -o json -I0 . "$out/init/openspec/config.yaml")" = '{"schema":"lets-minimal"}' ]
 }
 
+@test "the standard release's config template holds the flow's archive guidance" {
+  local expected
+  build "$out" lets-standard labels lets-test-first
+  expected="$(yq -o json -I0 '{"schema": "lets-standard", "operations": .operations}' "$repo/overlays/openspec/config.d/lets-standard.yaml")"
+  [ "$(yq -o json -I0 . "$out/init/openspec/config.yaml")" = "$expected" ]
+}
+
+@test "no release creates the config fragments' folder in a project" {
+  local schema
+  for schema in lets-standard lets-minimal; do
+    rm -rf "$out"
+    build "$out" "$schema" labels lets-test-first
+    [ ! -e "$out/init/openspec/config.d" ] || { echo "$schema has config.d"; false; }
+  done
+}
+
 @test "the build writes the backlog mode into lets-shape's script, and keeps it executable" {
   local mode script
   for mode in labels fields; do
