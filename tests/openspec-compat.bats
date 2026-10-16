@@ -1,4 +1,5 @@
 load support/common
+load support/release
 
 # Each schema, read by the pinned OpenSpec CLI as a project links it in.
 # lets-build trusts what the CLI reports about a change, so these tests pin
@@ -138,4 +139,44 @@ expected_statuses() {
     grep -q 'Requirement: Greet by name' openspec/specs/greeting/spec.md
     [ ! -e "$change" ]
   done
+}
+
+# The standard flow's config carries the code review rule as archive
+# guidance, and lets-build reads it from the CLI. These tests pin that the
+# CLI returns it, from the config the release creates in a project.
+
+fragment="$repo/overlays/openspec/config.d/lets-standard.yaml"
+
+# new_standard_change: as new_change, with the config the standard
+# release creates in a project.
+new_standard_change() {
+  build "$BATS_TEST_TMPDIR/release" lets-standard labels lets-test-first >/dev/null
+  new_change lets-standard
+  cp "$BATS_TEST_TMPDIR/release/init/openspec/config.yaml" openspec/config.yaml
+}
+
+# archive_guidance: the guidance the CLI returns for archive, as JSON.
+archive_guidance() {
+  openspec instructions archive --change demo --json </dev/null >"$BATS_TEST_TMPDIR/archive.json" 2>/dev/null
+  jq -c .operationGuidance "$BATS_TEST_TMPDIR/archive.json"
+}
+
+@test "archive returns the standard flow's guidance, and only that" {
+  new_standard_change
+  [ "$(archive_guidance)" = "$(yq -o json -I0 .operations.archive.guidance "$fragment")" ]
+  [ "$(archive_guidance | jq length)" -eq 1 ]
+}
+
+@test "the standard flow's config names no operation the CLI rejects" {
+  new_standard_change
+  openspec instructions apply --change demo --json </dev/null >/dev/null 2>"$BATS_TEST_TMPDIR/apply.err"
+  run grep -F "Unknown operation ID" "$BATS_TEST_TMPDIR/apply.err"
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "archive still returns the standard flow's guidance once every task is ticked" {
+  new_standard_change
+  finish_change lets-standard
+  [ "$(apply_state)" = all_done ]
+  [ "$(archive_guidance)" = "$(yq -o json -I0 .operations.archive.guidance "$fragment")" ]
 }
