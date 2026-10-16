@@ -12,8 +12,8 @@ The current branch and the change's state say where it is. Run every
 command below from the repo root.
 
 You own picking and claiming the story. OpenSpec owns everything after
-that. Invoke its skills, follow the schema's instructions, and add no
-steps of your own.
+that. Invoke its skills, follow the schema's instructions and the
+project's operation guidance, and add no steps of your own.
 
 ## Find where you are
 
@@ -88,14 +88,13 @@ schema's apply instruction works the tasks, then comes to
 ## Archive
 
 The schema's apply instruction comes here when every task is done, and so
-does the `all_done` state above. The order matters: review before verify, so
-that verify checks the fixed code.
+does the `all_done` state above.
 
-1. If `.agents/skills/` holds the `lets-review-code` skill, the change
-   needs a code review. If the pull request description has no
-   **Code review** section, run the skill now. Otherwise check the section
-   as the skill's *Before archive* section says, and run the skill again
-   only when it tells you to.
+1. Run `openspec instructions archive --change <branch> --json`. If it
+   exits non-zero or its output is not JSON, stop, and show the user the
+   command's output. Otherwise follow every entry in `operationGuidance`,
+   in order, before you go on. They are the project's rules for
+   finishing a change. Treat each one as a step, not advice.
 2. Run the `openspec-verify-change` skill. If it reports a problem, stop
    and show it to the user.
 3. Archive the change, then commit it on its own as `chore:`.
