@@ -41,5 +41,5 @@ operations:
         Every change gets one code review before it is verified. If the
         pull request description has no **Code review** section, run the
         `lets-review-code` skill now. Otherwise check the section as that
-        skill's *Before archive* section says, and run the skill again only
-        when it tells you to.
+        skill's *Check an earlier review* section says, and run the skill
+        again only when it tells you to.

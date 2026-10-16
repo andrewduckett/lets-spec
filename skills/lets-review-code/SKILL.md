@@ -1,6 +1,6 @@
 ---
 name: lets-review-code
-description: Use when an implementation branch is finished and needs a code review before verify, archive, or a pull request — such as when an OpenSpec change's apply tasks are all done. Also use when someone asks for a code review of a branch's changes.
+description: Review a branch's commits with a model from another family, and check whether an earlier review still covers the branch. Use when a branch is finished and needs a code review, when a project rule or a workflow asks for one, or when someone asks for one.
 ---
 
 # Peer Code Review
@@ -9,10 +9,10 @@ Have a different model family review the branch's code. A reviewer from the auth
 
 ## When to apply
 
-- **Before verify.** The project's archive guidance asks for this review, and `lets-build` reads that guidance before it runs the verify workflow, so verify checks the fixed code. This is the one review per change.
+- **When a rule or a workflow asks for it.** The caller decides when a branch is reviewed, for example a project rule that wants a review before a change is finished. This skill does not decide that. Run it once per branch.
 - **On request.** Someone asks for a code review of a branch.
 
-Archive only checks that this review happened and still covers the code. It does not start a second review on its own.
+A caller that finds a **Code review** section already in the pull request checks it as [Check an earlier review](#check-an-earlier-review) says, and runs this skill again only when that section says to.
 
 ## Find the author
 
@@ -69,15 +69,15 @@ Fix each confirmed finding in its own commit with its real type (`fix:`, `refact
 
 List every finding with its verdict and, when confirmed, its fix commit, most severe first. Name the reviewer, the commit it reviewed, and whether the review was independent. If the reviewer ran without the repo's review rules, say so. Put the same list in the pull request description under **Code review**, so the person who merges sees what was found and refuted.
 
-The **Code review** section starts with this line, in exactly this form, so the check before archive can read the range:
+The **Code review** section starts with this line, in exactly this form, so a later check can read the range:
 
 ```text
 Reviewed: <base> <base-sha>..<head-sha>
 ```
 
-## Before archive
+## Check an earlier review
 
-Archive guidance checks the **Code review** section. Take `<base>`, `<base-sha>` and `<head-sha>` from its `Reviewed:` line. Run this skill again when any of these is true:
+A **Code review** section in the pull request says what an earlier review covered. Before asking for another review, take `<base>`, `<base-sha>` and `<head-sha>` from its `Reviewed:` line, and run this skill again when any of these is true:
 
 1. The pull request has no **Code review** section, or the section has no `Reviewed:` line.
 2. The reviewed head is no longer in the branch's history: `git merge-base --is-ancestor <head-sha> HEAD` fails. The branch was rebased or squashed after the review.
