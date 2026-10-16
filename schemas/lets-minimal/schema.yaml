@@ -128,5 +128,5 @@ apply:
     blocker, or a test that keeps failing.
 
     When every task is done, follow the Archive section of the `lets-build`
-    skill. This flow has no code review, so it runs the
-    `openspec-verify-change` skill and archives the change.
+    skill. It follows the project's archive guidance, runs the
+    `openspec-verify-change` skill, then archives the change.

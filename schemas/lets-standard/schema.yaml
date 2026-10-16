@@ -274,5 +274,5 @@ apply:
     Stop too on an unexpected blocker, or a test that keeps failing.
 
     When every task is done, follow the Archive section of the `lets-build`
-    skill. It runs the `lets-review-code` skill, then the
+    skill. It follows the project's archive guidance, runs the
     `openspec-verify-change` skill, then archives the change.
