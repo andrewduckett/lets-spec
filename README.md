@@ -168,7 +168,8 @@ runs. The first time, it:
 
 - adds the working rules to `AGENTS.md`, between two markers, and creates
   `AGENTS.md` if it is missing
-- creates `openspec/config.yaml`, set to your flow's schema
+- creates `openspec/config.yaml`, set to your flow's schema. In the
+  standard flow, it also holds the code review rule.
 - links `CLAUDE.md` to `AGENTS.md`, and `.claude/skills` to
   `.agents/skills`, so Claude Code reads the same files as other agents
 - copies the skills into `.agents/skills/` and the schema into
@@ -308,7 +309,7 @@ agent questions you about it until you agree on what to build.
 | Planning steps | brainstorm → proposal → specs → design → ADR → review → tasks | brainstorm → specs → tasks |
 | Independent plan review | Yes | No |
 | Building | One commit per task, test-first | One commit per task, test-first |
-| Independent code review | Yes | No |
+| Independent code review | Yes, turned on in `openspec/config.yaml` ([how](#turning-the-code-review-off-or-changing-it)) | No |
 | Skills it adds | `lets-brainstorm`, `lets-write-specs`, `lets-write-adrs`, `lets-write-tasks`, `lets-test-first`, `lets-review-plan`, `lets-review-code`, `lets-spawn` | `lets-brainstorm`, `lets-write-specs`, `lets-write-tasks`, `lets-test-first`, `lets-spawn` |
 
 ### `standard`
@@ -323,7 +324,7 @@ agent questions you about it until you agree on what to build.
 | 6. | review | A model from another family reviews the whole plan with `lets-review-plan` | `review.md` |
 | 7. | tasks | Breaks the work into a checklist | `tasks.md` |
 | 8. | apply | Builds each task test-first: a failing test, then the code. One commit per task. | Commits |
-| 9. | code review | A model from another family reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
+| 9. | code review | The project's archive guidance asks for a review, so a model from another family reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
 | 10. | verify, archive | Checks the code matches the plan, then archives the change and its specs | An archive commit |
 
 ### `minimal`
@@ -339,6 +340,23 @@ agent questions you about it until you agree on what to build.
 A minimal change has no `proposal.md`, so `openspec show <change>` fails
 on it. Status, validate, list and archive all work, and nothing in the
 workflow calls `show`.
+
+### Turning the code review off or changing it
+
+In the standard flow, the code review is a rule your project owns. It is
+the `operations.archive` entry in `openspec/config.yaml`. `lets-build`
+reads that entry each time it archives a change, and follows it before it
+verifies the change.
+
+`lets-sync` writes the entry when it creates the file, and never changes
+the file after that. A later Let's Spec release does not update the entry
+in an existing project.
+
+- To stop code reviews, delete the `operations.archive` entry.
+- To change when reviews run, edit the entry's text.
+
+The entry runs the `lets-review-code` skill, so that skill must stay
+installed. It ships with the standard flow only.
 
 ## 🧵 Fresh sessions
 
@@ -577,7 +595,7 @@ to set.
 | `lets-sync/` | The sync command, a Node package |
 | `skills/` | The authored skills, one `lets-*` folder each |
 | `schemas/` | One OpenSpec schema per flow, with its templates |
-| `overlays/` | The rules fragment and the files `lets-sync` creates in a project |
+| `overlays/` | The rules fragment, the files `lets-sync` creates in a project, and each flow's additions to `openspec/config.yaml` in `openspec/config.d/` |
 | `tests/` | The bats tests, and the Node tests in `tests/lets-build/`, `tests/lets-shape/`, `tests/lets-spawn/` and `tests/lets-sync/` |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
