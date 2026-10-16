@@ -9,7 +9,7 @@ Have a different model family review the branch's code. A reviewer from the auth
 
 ## When to apply
 
-- **After apply.** Every task in an OpenSpec change is done. Review before the verify workflow, so verify checks the fixed code. This is the one review per change.
+- **Before verify.** The project's archive guidance asks for this review, and `lets-build` reads that guidance before it runs the verify workflow, so verify checks the fixed code. This is the one review per change.
 - **On request.** Someone asks for a code review of a branch.
 
 Archive only checks that this review happened and still covers the code. It does not start a second review on its own.
@@ -45,7 +45,11 @@ The `lets-spawn` skill says how to run the command and what each exit code means
 
 If the project has no `REVIEW.md`, the reviewer runs without project rules. Say so in the report.
 
-Note the commit you reviewed: `git rev-parse --short HEAD`.
+Note the range you reviewed:
+
+- the commit you reviewed, `<head-sha>`: `git rev-parse --short HEAD`;
+- the base branch's name, `<base>`;
+- the base commit the reviewer diffed from, `<base-sha>`: `git rev-parse --short "$(git merge-base <base> HEAD)"`.
 
 When the reviewer finds nothing, its whole output is `(none)`. That is a clean result, not a failure.
 
@@ -65,11 +69,19 @@ Fix each confirmed finding in its own commit with its real type (`fix:`, `refact
 
 List every finding with its verdict and, when confirmed, its fix commit, most severe first. Name the reviewer, the commit it reviewed, and whether the review was independent. If the reviewer ran without the repo's review rules, say so. Put the same list in the pull request description under **Code review**, so the person who merges sees what was found and refuted.
 
+The **Code review** section starts with this line, in exactly this form, so the check before archive can read the range:
+
+```text
+Reviewed: <base> <base-sha>..<head-sha>
+```
+
 ## Before archive
 
-Archive guidance checks the **Code review** section. Run this skill again only when:
+Archive guidance checks the **Code review** section. Take `<base>`, `<base-sha>` and `<head-sha>` from its `Reviewed:` line. Run this skill again when any of these is true:
 
-- the section is missing; or
-- a commit after the reviewed one changes files outside `openspec/changes/` and is not a listed fix.
+1. The pull request has no **Code review** section, or the section has no `Reviewed:` line.
+2. The reviewed head is no longer in the branch's history: `git merge-base --is-ancestor <head-sha> HEAD` fails. The branch was rebased or squashed after the review.
+3. A commit after `<head-sha>` changes files outside `openspec/changes/` and is not a listed fix. `git log --oneline <head-sha>..HEAD -- . ':(exclude)openspec/changes/'` lists the commits that change such files. Before treating a listed fix commit as exempt, read its diff with `git show <sha>`. Confirm it touches only what its finding names. If it touches anything else, it does not count as a fix.
+4. The pull request's base no longer contains the reviewed base. Find the current base with `gh pr view --json baseRefName`, run `git fetch origin <current-base>`, then `git merge-base --is-ancestor <base-sha> origin/<current-base>`. If it fails, commits that the reviewer saw as already merged are now part of the pull request, unreviewed.
 
-Before treating a listed fix commit as exempt, read its diff with `git show <sha>`. Confirm it touches only what its finding names. If it touches anything else, run the review again.
+Rule 4 is what catches a stacked branch whose pull request is re-targeted to the default branch before its parent merges. If the parent was squash-merged, rule 4 also fires. Rebase the branch onto its new base first, so the one new review covers only this change's commits.
