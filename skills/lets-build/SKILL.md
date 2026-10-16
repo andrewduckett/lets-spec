@@ -29,7 +29,7 @@ project's operation guidance, and add no steps of your own.
 | is the default branch | — | [Claim a story](#claim-a-story), then [Propose](#propose) |
 | has a change folder | `blocked` | [Propose](#propose): the plan is not finished |
 | has a change folder | `ready` | [Apply](#apply): tasks are left |
-| has a change folder | `all_done` | [Archive](#archive): every task is ticked |
+| has a change folder | `all_done` | [Finish the change](#finish-the-change): every task is ticked |
 | has a change folder | anything else | OpenSpec has a state this skill does not know. Show the user the `instruction` from the CLI's output, and stop. |
 | has an archived folder whose whole name is `<date>-<branch>` in `openspec/changes/archive/` | — | Say the change is archived and its pull request is ready for review. Stop. |
 | anything else | — | Say that `lets-build` works on the default branch, or on a change's branch, which has the change's name. Stop. |
@@ -83,18 +83,21 @@ builds. When it stops, read `state` once more with
 
 Invoke the `openspec-apply-change` skill for the change `<branch>`. The
 schema's apply instruction works the tasks, then comes to
-[Archive](#archive) when every task is done.
+[Finish the change](#finish-the-change) when every task is done.
 
-## Archive
+## Finish the change
 
 The schema's apply instruction comes here when every task is done, and so
-does the `all_done` state above.
+does the `all_done` state above. Finishing goes in this order: the
+project's finishing rules, verify, archive, then mark the pull request
+ready.
 
 1. Run `openspec instructions archive --change <branch> --json`. If it
    exits non-zero or its output is not JSON, stop, and show the user the
    command's output. Otherwise follow every entry in `operationGuidance`,
    in order, before you go on. They are the project's rules for
-   finishing a change. Treat each one as a step, not advice.
+   finishing a change, which OpenSpec keeps under its `operations.archive`
+   key. Treat each one as a step, not advice.
 2. Run the `openspec-verify-change` skill. If it reports a problem, stop
    and show it to the user.
 3. Archive the change, then commit it on its own as `chore:`.

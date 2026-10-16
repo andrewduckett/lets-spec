@@ -33,7 +33,9 @@ schema: lets-standard
 
 # The code review rule. lets-spec put it here, and your project owns it:
 # delete it to stop code reviews, or edit it to change when they run.
-# lets-build follows each entry before it verifies and archives a change.
+# OpenSpec keeps a project's rules for finishing a change under
+# operations.archive. lets-build follows them once every task is done,
+# before it runs verify.
 operations:
   archive:
     guidance:

@@ -324,7 +324,7 @@ agent questions you about it until you agree on what to build.
 | 6. | review | A model from another family reviews the whole plan with `lets-review-plan` | `review.md` |
 | 7. | tasks | Breaks the work into a checklist | `tasks.md` |
 | 8. | apply | Builds each task test-first: a failing test, then the code. One commit per task. | Commits |
-| 9. | code review | The project's archive guidance asks for a review, so a model from another family reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
+| 9. | code review | The project's finishing rules ask for a review, so a model from another family reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
 | 10. | verify, archive | Checks the code matches the plan, then archives the change and its specs | An archive commit |
 
 ### `minimal`
@@ -344,9 +344,10 @@ workflow calls `show`.
 ### Turning the code review off or changing it
 
 In the standard flow, the code review is a rule your project owns. It is
-the `operations.archive` entry in `openspec/config.yaml`. `lets-build`
-reads that entry each time it archives a change, and follows it before it
-verifies the change.
+the `operations.archive` entry in `openspec/config.yaml`: OpenSpec's slot
+for a project's rules for finishing a change. `lets-build` follows those
+rules once every task is done, before it verifies and archives the
+change.
 
 `lets-sync` writes the entry when it creates the file, and never changes
 the file after that. A later Let's Spec release does not update the entry

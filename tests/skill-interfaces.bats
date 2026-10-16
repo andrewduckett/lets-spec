@@ -72,7 +72,7 @@ flow_texts() {
 
 # A skill no schema step calls, such as lets-spawn, is still reachable
 # when another skill the flow ships calls it. lets-review-code is reached
-# through the standard flow's archive guidance, in its config.
+# through the standard flow's finishing rules, in its config.
 @test "each skill a flow ships, other than an entry point, is named by its schema, its config or a skill the flow ships" {
   local flow skill shipped named text
   for flow in standard minimal; do

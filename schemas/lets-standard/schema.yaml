@@ -273,6 +273,6 @@ apply:
     trust boundary, a data schema, or a decision that is costly to reverse.
     Stop too on an unexpected blocker, or a test that keeps failing.
 
-    When every task is done, follow the Archive section of the `lets-build`
-    skill. It follows the project's archive guidance, runs the
+    When every task is done, follow the *Finish the change* section of the
+    `lets-build` skill. It follows the project's finishing rules, runs the
     `openspec-verify-change` skill, then archives the change.
