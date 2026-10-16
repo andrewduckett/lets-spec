@@ -63,32 +63,42 @@ named_skills() {
   tr -s '[:space:]' ' ' <"$1" | grep -oE '`[a-z-]+` skill' | cut -d'`' -f2 | sort -u
 }
 
+# flow_texts <flow>: the files lets-spec gives a flow's agent besides its
+# skills: the schema, and the flow's config.
+flow_texts() {
+  echo "$repo/schemas/lets-$1/schema.yaml"
+  echo "$repo/overlays/openspec/config.d/lets-$1.yaml"
+}
+
 # A skill no schema step calls, such as lets-spawn, is still reachable
-# when another skill the flow ships calls it.
-@test "each skill a flow ships, other than an entry point, is named by its schema or by a skill the flow ships" {
-  local flow skill shipped named
+# when another skill the flow ships calls it. lets-review-code is reached
+# through the standard flow's finishing rules, in its config.
+@test "each skill a flow ships, other than an entry point, is named by its schema, its config or a skill the flow ships" {
+  local flow skill shipped named text
   for flow in standard minimal; do
     shipped="$(flow_skills "$flow")"
     [ -n "$shipped" ] || { echo "flows.json lists no skills for $flow"; false; }
     named="$(
-      named_skills "$repo/schemas/lets-$flow/schema.yaml"
+      for text in $(flow_texts "$flow"); do named_skills "$text"; done
       for skill in $shipped; do named_skills "$repo/skills/$skill/SKILL.md"; done
     )"
     for skill in $shipped; do
       case "$skill" in lets-build | lets-shape) continue ;; esac
       grep -qx "$skill" <<<"$named" ||
-        { echo "$flow ships $skill, but neither its schema nor its skills name it"; false; }
+        { echo "$flow ships $skill, but none of its schema, config or skills name it"; false; }
     done
   done
 }
 
-@test "each skill a schema names is one its flow ships, or a generated OpenSpec skill" {
-  local flow skill
+@test "each skill a schema or config names is one its flow ships, or a generated OpenSpec skill" {
+  local flow skill text
   for flow in standard minimal; do
-    for skill in $(named_skills "$repo/schemas/lets-$flow/schema.yaml"); do
-      case "$skill" in openspec-*) continue ;; esac
-      flow_skills "$flow" | grep -qx "$skill" ||
-        { echo "the $flow schema names $skill, which the flow does not ship"; false; }
+    for text in $(flow_texts "$flow"); do
+      for skill in $(named_skills "$text"); do
+        case "$skill" in openspec-*) continue ;; esac
+        flow_skills "$flow" | grep -qx "$skill" ||
+          { echo "${text#"$repo/"} names $skill, which the $flow flow does not ship"; false; }
+      done
     done
   done
 }

@@ -139,3 +139,41 @@ expected_statuses() {
     [ ! -e "$change" ]
   done
 }
+
+# The standard flow's config carries the code review rule as archive
+# guidance, and lets-build reads it from the CLI. These tests pin that the
+# CLI returns it, from the config lets-sync creates in a project.
+
+standard_config="$repo/overlays/openspec/config.d/lets-standard.yaml"
+
+# new_standard_change: as new_change, with the standard flow's own config.
+new_standard_change() {
+  new_change lets-standard
+  cp "$standard_config" openspec/config.yaml
+}
+
+# archive_guidance: the guidance the CLI returns for archive, as JSON.
+archive_guidance() {
+  openspec instructions archive --change demo --json </dev/null >"$BATS_TEST_TMPDIR/archive.json" 2>/dev/null
+  jq -c .operationGuidance "$BATS_TEST_TMPDIR/archive.json"
+}
+
+@test "archive returns the standard flow's guidance, and only that" {
+  new_standard_change
+  [ "$(archive_guidance)" = "$(yq -o json -I0 .operations.archive.guidance "$standard_config")" ]
+  [ "$(archive_guidance | jq length)" -eq 1 ]
+}
+
+@test "the standard flow's config names no operation the CLI rejects" {
+  new_standard_change
+  openspec instructions apply --change demo --json </dev/null >/dev/null 2>"$BATS_TEST_TMPDIR/apply.err"
+  run grep -F "Unknown operation ID" "$BATS_TEST_TMPDIR/apply.err"
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "archive still returns the standard flow's guidance once every task is ticked" {
+  new_standard_change
+  finish_change lets-standard
+  [ "$(apply_state)" = all_done ]
+  [ "$(archive_guidance)" = "$(yq -o json -I0 .operations.archive.guidance "$standard_config")" ]
+}

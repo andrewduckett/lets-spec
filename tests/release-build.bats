@@ -33,7 +33,23 @@ build_from() {
   [ ! -e "$out/init/AGENTS.md" ]
 }
 
-@test "the release's config template names the flow's schema" {
+@test "the release's config is the flow's own, and names the flow's schema" {
+  local schema
+  for schema in lets-standard lets-minimal; do
+    rm -rf "$out"
+    build "$out" "$schema" labels lets-test-first
+    diff "$repo/overlays/openspec/config.d/$schema.yaml" "$out/init/openspec/config.yaml"
+    [ "$(yq -r .schema "$out/init/openspec/config.yaml")" = "$schema" ]
+    [ ! -e "$out/init/openspec/config.d" ] || { echo "$schema has config.d"; false; }
+  done
+}
+
+@test "the standard release's config holds the code review as archive guidance, and the minimal release's holds none" {
+  build "$out" lets-standard labels lets-test-first
+  [ "$(yq -o json -I0 '.operations | keys' "$out/init/openspec/config.yaml")" = '["archive"]' ]
+  [ "$(yq '.operations.archive.guidance | length' "$out/init/openspec/config.yaml")" -eq 1 ]
+  grep -q '`lets-review-code` skill' "$out/init/openspec/config.yaml"
+  rm -rf "$out"
   build "$out" lets-minimal labels lets-test-first
   [ "$(yq -o json -I0 . "$out/init/openspec/config.yaml")" = '{"schema":"lets-minimal"}' ]
 }
@@ -89,6 +105,16 @@ build_from() {
   run build "$out" nosuch labels lets-test-first
   [ "$status" -eq 1 ]
   [[ "$output" == *"there is no schema named nosuch"* ]]
+}
+
+@test "the build fails on a schema with no config of its own" {
+  local source="$BATS_TEST_TMPDIR/source"
+  mkdir -p "$source"
+  cp -R "$repo/schemas" "$repo/skills" "$repo/overlays" "$source/"
+  rm "$source/overlays/openspec/config.d/lets-minimal.yaml"
+  run node "$repo/build/build-release.mjs" "$source" "$(generated_skills "$BATS_TEST_TMPDIR/generated")" "$out" lets-minimal labels lets-test-first
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"there is no config for lets-minimal in overlays/openspec/config.d/"* ]]
 }
 
 @test "the build fails on an unknown backlog mode" {

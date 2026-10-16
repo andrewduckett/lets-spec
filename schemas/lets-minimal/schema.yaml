@@ -127,6 +127,6 @@ apply:
     guarantee, a trust boundary or a data schema. Stop too on an unexpected
     blocker, or a test that keeps failing.
 
-    When every task is done, follow the Archive section of the `lets-build`
-    skill. This flow has no code review, so it runs the
-    `openspec-verify-change` skill and archives the change.
+    When every task is done, follow the *Finish the change* section of the
+    `lets-build` skill. It follows the project's finishing rules, runs the
+    `openspec-verify-change` skill, then archives the change.
