@@ -1,4 +1,4 @@
-# For the lets-sync tests. Load after common and release.
+# For the lets sync tests. Load after common and release.
 #
 # Each test file builds one release, $release, in setup_file. Each test then
 # gets $project: a fresh git repo, and the working directory, holding only
@@ -37,7 +37,7 @@ sync_project() {
   WORKFLOW_RELEASE="${WORKFLOW_RELEASE:-$release}" node "$repo/lets/bin/lets" sync "$@"
 }
 
-# Run lets-sync once and check that it succeeded, so the project has its
+# Run lets sync once and check that it succeeded, so the project has its
 # files, and a test sees only the problem it sets up.
 init_project() {
   run sync_project
@@ -62,7 +62,7 @@ rules_in() {
   sed -n '/^<!-- BEGIN lets-spec rules/,/^<!-- END lets-spec rules -->$/p' "$1" | sed '1d;$d'
 }
 
-# The release's rules, as lets-sync writes them between the markers.
+# The release's rules, as lets sync writes them between the markers.
 fragment() {
   cat "$release/fragments/AGENTS.md"
 }

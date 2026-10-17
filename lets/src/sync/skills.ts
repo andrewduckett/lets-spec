@@ -23,7 +23,7 @@ function blockedAncestor(dstDir: string, file: string, io: Io) {
 }
 
 // True when a mode has any execute bit. Git tracks only this bit, so it is
-// the only part of a mode lets-sync compares.
+// the only part of a mode lets sync compares.
 function executable(mode: number) {
   return (mode & 0o111) !== 0;
 }

@@ -2,7 +2,7 @@ load support/common
 load support/release
 load support/project
 
-# lets-sync creates the files a project owns when they are missing, then
+# lets sync creates the files a project owns when they are missing, then
 # never edits them. It warns about their settings, and exits 0 when it
 # warns, so a problem never stops a dev shell from starting.
 
@@ -130,7 +130,7 @@ load support/project
 
 # release_with_schemas <n>: a copy of $release that ships n schemas: none,
 # or lets-standard plus n-1 copies named lets-extra<i>. Prints its path.
-# lets-sync owns only schemas named lets-*, so the copies are too.
+# lets sync owns only schemas named lets-*, so the copies are too.
 release_with_schemas() {
   local dir="$BATS_TEST_TMPDIR/store/n-lets-spec-release" i
   mkdir -p "$BATS_TEST_TMPDIR/store"

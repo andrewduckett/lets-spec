@@ -34,7 +34,7 @@ export function linkClaude({ root, io, stdout }: { root: string; io: Io; stdout:
   }
 }
 
-// Warnings for the two links when they are not as lets-sync makes them.
+// Warnings for the two links when they are not as lets sync makes them.
 export function checkClaude({ root, io }: { root: string; io: Io }) {
   const warnings = [];
   if (io.readlink(join(root, 'CLAUDE.md')) !== 'AGENTS.md') {

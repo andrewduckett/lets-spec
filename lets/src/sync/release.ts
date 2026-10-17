@@ -1,4 +1,4 @@
-// Find and validate the release: the folder of files lets-sync copies from.
+// Find and validate the release: the folder of files lets sync copies from.
 import { join } from 'node:path';
 import type { Deps, Io } from '../io.ts';
 import { schemaOf } from './config.ts';

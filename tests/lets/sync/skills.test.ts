@@ -139,7 +139,7 @@ test('checkSkills names each stale, missing or extra file', () => {
 });
 
 test('on disk, a read-only script is copied 755 and runs, a read-only file 644, and a copy can be updated', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const src = join(dir, 'rel/overlay/.agents/skills/lets-build');
     mkdirSync(join(src, 'scripts'), { recursive: true });
@@ -185,7 +185,7 @@ function onDisk(dir: string) {
 }
 
 test('on disk, a folder link inside a managed path is replaced, and its target is left alone', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     mkdirSync(join(dir, 'outside'));
@@ -206,7 +206,7 @@ test('on disk, a folder link inside a managed path is replaced, and its target i
 });
 
 test('on disk, a dangling folder link inside a managed path is replaced', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     symlinkSync('/nonexistent/gone', join(root, '.agents/skills/lets-build/scripts'));
@@ -220,7 +220,7 @@ test('on disk, a dangling folder link inside a managed path is replaced', () => 
 });
 
 test('on disk, a folder where the release has a file is out of date, then replaced by the file', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     mkdirSync(join(root, '.agents/skills/lets-build/scripts/backlog.sh'), { recursive: true });

@@ -64,7 +64,7 @@ test('checkConfig is quiet for the right schema, quoted or commented', () => {
 });
 
 test('checkConfig treats a folder at the config path as missing', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-config-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-config-'));
   try {
     const configPath = join(dir, 'openspec/config.yaml');
     mkdirSync(configPath, { recursive: true });

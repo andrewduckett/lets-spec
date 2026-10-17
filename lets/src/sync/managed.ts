@@ -1,4 +1,4 @@
-// What lets-sync owns: the skills and schemas the release ships, and the
+// What lets sync owns: the skills and schemas the release ships, and the
 // project paths with the same names. It touches nothing else.
 import { join } from 'node:path';
 import type { Io } from '../io.ts';
@@ -10,13 +10,13 @@ const MANAGED = [
   new RegExp(`^${SCHEMAS_DST}/lets-[^/]+$`),
 ];
 
-// True for a path relative to the project that lets-sync owns.
+// True for a path relative to the project that lets sync owns.
 export function isManaged(path: string) {
   return MANAGED.some((pattern) => pattern.test(path));
 }
 
 // What the release ships: where each folder goes in the project (dst) and
-// where it is in the release (src). Every dst must be one lets-sync owns.
+// where it is in the release (src). Every dst must be one lets sync owns.
 export function releasePaths({ release, io }: { release: string; io: Io }) {
   const skills = join(release, 'overlay', SKILLS_DST);
   const paths = io.listDirs(skills).map((name) => ({ dst: `${SKILLS_DST}/${name}`, src: join(skills, name) }));

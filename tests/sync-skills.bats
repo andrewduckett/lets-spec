@@ -2,13 +2,13 @@ load support/common
 load support/release
 load support/project
 
-# lets-sync copies each skill and the schema from the release into the
+# lets sync copies each skill and the schema from the release into the
 # project. LETS_SPEC_SKILLS decides whether git tracks the copies:
 # committed, the default, or ignored through a marked block in .gitignore.
 
 skills_block=$'# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.\n/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n# END lets-spec skills\n'
 
-# managed_paths: every path lets-sync should write in this project.
+# managed_paths: every path lets sync should write in this project.
 managed_paths() {
   local skill
   for skill in $(shipped_skills); do
@@ -141,7 +141,7 @@ edit_copy() {
 }
 
 @test "links the linked layout made under pre-rename names are removed" {
-  # Older releases linked skills and the schema under names lets-sync no
+  # Older releases linked skills and the schema under names lets sync no
   # longer owns. The exclude section lists them, so they are removed by it.
   local old="$BATS_TEST_TMPDIR/store/abc-lets-spec-release" path
   local -a renamed=(.agents/skills/brainstorming .agents/skills/writing-specs openspec/schemas/standard)
