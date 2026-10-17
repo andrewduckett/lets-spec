@@ -252,8 +252,8 @@
             touch "$out"
           '';
 
-        # The unit tests for the lets package and the skills' Node scripts,
-        # and the type check. They use fakes, so no harness and no real gh
+        # The unit tests for the lets package, the contrib resolver and the
+        # skills' Node scripts, and the type check. They use fakes, so no harness and no real gh
         # run here.
         node-tests = pkgs.runCommand "node-tests"
           {
@@ -267,7 +267,7 @@
             export HOME="$TMPDIR"
             pnpmConfigHook
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/lets-spawn/*.test.mjs"
+            node --test "tests/lets/**/*.test.ts" "tests/lets-delegate-resolver/*.test.ts" "tests/lets-spawn/*.test.mjs"
             pnpm check
             touch "$out"
           '';

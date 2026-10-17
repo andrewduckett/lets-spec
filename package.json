@@ -7,7 +7,7 @@
     "node": ">=26"
   },
   "scripts": {
-    "test": "node --test \"tests/lets/**/*.test.ts\" \"tests/lets-spawn/*.test.mjs\" && tsc --noEmit && bats tests",
+    "test": "node --test \"tests/lets/**/*.test.ts\" \"tests/lets-delegate-resolver/*.test.ts\" \"tests/lets-spawn/*.test.mjs\" && tsc --noEmit && bats tests",
     "check": "tsc --noEmit",
     "build": "pnpm --recursive build"
   },

@@ -1,7 +1,7 @@
 // The resolver contract. lets runs a resolver as `<resolver> <verb>`, writes
 // one JSON request to its stdin, and reads one JSON response from its stdout.
-// The contrib resolver keeps a copy of this file; the conformance check keeps
-// the two in step.
+// The contrib resolver keeps a copy of this file; a test and the conformance
+// check keep the two in step.
 import { isAbsolute } from 'node:path';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 
