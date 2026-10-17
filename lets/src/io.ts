@@ -43,6 +43,8 @@ export type Io = {
   listFiles(path: string): string[];
   execFile(cmd: string, args: string[], options?: ExecOptions): Promise<ExecResult>;
   commandExists(cmd: string): boolean;
+  // A file this process may run.
+  isExecutable(path: string): boolean;
   now(): number;
   // Rejects when signal aborts, so a caller can cancel a long wait.
   sleep(ms: number, signal?: AbortSignal): Promise<void>;
@@ -131,6 +133,14 @@ export function realIo(): Io {
         return false;
       }
     }),
+    isExecutable(path) {
+      try {
+        accessSync(path, constants.X_OK);
+        return statSync(path).isFile();
+      } catch {
+        return false;
+      }
+    },
     now: () => Date.now(),
     sleep: (ms, signal) => setTimeout(ms, undefined, { signal }),
   };

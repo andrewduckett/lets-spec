@@ -2,13 +2,14 @@
 // It is the last candidate in the lookup, so it never declines. It never
 // starts an interactive session; start answers with the command to run.
 import { join } from 'node:path';
-import type { Child, ExecResult, Io } from '../io.ts';
+import type { Child, Io } from '../io.ts';
 import { scrubbedEnv } from './env.ts';
 import type { Env } from './env.ts';
 import { exitCodeOf, SessionFailed, SpawnError, TimeoutError } from './errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, pickFamily } from './families.ts';
 import { normalizeName } from './protocol.ts';
 import type { Effort, Family, Handle, Requests, Responses, RunRequest, StartRequest, Verb } from './protocol.ts';
+import { withTimeout } from './wait.ts';
 
 const RESOLVER = 'default';
 // Relative to the repo root. The instructions name it this way.
@@ -71,7 +72,7 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
 
     const started: { child?: Child } = {};
     const finished = io.execFile(cmd, args, { cwd, env: scrubbedEnv(env), input, started: (child) => { started.child = child; } });
-    const result = await withTimeout(finished, timeoutMinutes * 60000);
+    const result = await withTimeout(io, finished, timeoutMinutes * 60000);
     if (result === null) {
       // Do not leave the session running, and spending tokens, after we stop waiting.
       started.child?.kill();
@@ -83,16 +84,6 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
     const text = (readResultFrom === 'stdout' ? result.stdout : io.readFile(readResultFrom)) ?? '';
     if (text.trim() === '') throw new SessionFailed(`${cmd} gave an empty final message`);
     return { resolver: RESOLVER, text, family, handle: { kind: 'process', id: String(started.child?.pid ?? ''), name } };
-  }
-
-  // The finished result, or null when ms pass first.
-  async function withTimeout(finished: Promise<ExecResult>, ms: number): Promise<ExecResult | null> {
-    const cancel = new AbortController();
-    try {
-      return await Promise.race([finished, io.sleep(ms, cancel.signal).then(() => null, () => null)]);
-    } finally {
-      cancel.abort();
-    }
   }
 
   function start({ cwd, name, prompt }: StartRequest): Responses['start'] {

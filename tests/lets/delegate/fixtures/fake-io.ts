@@ -2,11 +2,12 @@
 // records each call and answers from a queue; files live in a Map.
 //
 // options:
-//   results:  answers for execFile, in order. Each is an ExecResult, a
-//             function (cmd, args, opts) returning one, or a promise of one.
-//             When the queue is empty, execFile answers code 0.
-//   files:    initial files, { path: text }
-//   commands: the commands commandExists finds
+//   results:     answers for execFile, in order. Each is an ExecResult, a
+//                function (cmd, args, opts) returning one, or a promise of
+//                one. When the queue is empty, execFile answers code 0.
+//   files:       initial files, { path: text }
+//   commands:    the commands commandExists finds
+//   executables: the paths isExecutable finds
 //   any Io method replaces the default.
 import type { ExecOptions, ExecResult, Io } from '../../../../lets/src/io.ts';
 
@@ -21,13 +22,13 @@ export type FakeIo = Io & {
   sleeps: number[];
 };
 
-type Options = { results?: Result[]; files?: Record<string, string>; commands?: string[] } & Partial<Io>;
+type Options = { results?: Result[]; files?: Record<string, string>; commands?: string[]; executables?: string[] } & Partial<Io>;
 
 const notInFake = (name: string) => () => {
   throw new Error(`${name} is not in this fake`);
 };
 
-export function fakeIo({ results = [], files = {}, commands = [], ...overrides }: Options = {}): FakeIo {
+export function fakeIo({ results = [], files = {}, commands = [], executables = [], ...overrides }: Options = {}): FakeIo {
   const io: FakeIo = {
     calls: [],
     files: new Map(Object.entries(files)),
@@ -43,6 +44,7 @@ export function fakeIo({ results = [], files = {}, commands = [], ...overrides }
       return typeof next === 'function' ? next(cmd, args, opts) : next;
     },
     commandExists: (cmd) => commands.includes(cmd),
+    isExecutable: (path) => executables.includes(path),
     now: () => 0,
     // Resolves on the next turn of the event loop, so a command that has
     // already answered wins a race against it.
