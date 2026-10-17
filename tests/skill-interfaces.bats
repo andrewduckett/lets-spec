@@ -1,6 +1,6 @@
 load support/common
 
-# Agents read the skills, schemas and rules, then run the scripts and open
+# Agents read the skills, schemas and rules, then run the commands and open
 # the files they name. These tests check that every name still points at
 # something real, so a rename breaks a test, not an agent.
 
@@ -24,24 +24,16 @@ mentions() {
   done
 }
 
-@test "each script the prose names exists" {
-  local mention found=0
-  while IFS= read -r mention; do
+# A gh command in a code block starts its line; in a sentence it follows a
+# backtick. gh answers an unknown command with its group's help, and exits
+# 0, so the test reads the usage line instead.
+@test "each gh command the prose names is one gh knows" {
+  local group command found=0
+  while read -r group command; do
     found=1
-    [ -f "$repo/skills/$mention" ] || { echo "no such script: $mention"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.(sh|jq|mjs)')
-  [ "$found" -eq 1 ]
-}
-
-@test "each command the prose gives a Node script is one its usage lists" {
-  local script command found=0
-  while read -r script command; do
-    found=1
-    run node "$repo/skills/$script" --help
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"$(basename "$script") $command"* || "$output" == *"$(basename "$script" .mjs) $command"* ]] ||
-      { echo "$script has no command $command"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
+    gh "$group" "$command" --help 2>&1 | grep -qE "^  gh $group $command( |$)" ||
+      { echo "gh has no command: gh $group $command"; false; }
+  done < <(mentions '(^ *|`)gh [a-z]+ [a-z-]+' | sed -E 's/^[ `]*gh //' | sort -u)
   [ "$found" -eq 1 ]
 }
 

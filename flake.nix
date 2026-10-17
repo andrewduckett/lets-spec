@@ -152,10 +152,9 @@
               exit 1
             fi
             # A standard project also gets lets-minimal, for chores and
-            # small stories.
+            # small stories, and the skill that sets up its backlog.
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
-            # lets-build runs its own backlog script.
-            node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
+            [ -f .agents/skills/lets-setup-backlog/SKILL.md ]
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -212,7 +211,7 @@
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"
           touch "$out"
         '';
 
