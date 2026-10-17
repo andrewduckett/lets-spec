@@ -5,8 +5,8 @@ import { test } from 'node:test';
 import { SessionFailed, SpawnError } from '../../contrib/lets-delegate-resolver/src/errors.ts';
 import type { Db } from '../../contrib/lets-delegate-resolver/src/io.ts';
 import {
-  baseDir, buildTurnStart, createAdapter, dispatch, familiesFromT3Manifest, findProject, isAncestor, readMessage,
-  readRuntime, readToken, readTurn, t3ModelSelection, TOKEN_FILE_SUFFIX,
+  baseDir, buildLaunch, createAdapter, dispatch, familiesFromT3Manifest, findProject, isAncestor, launch, readFinalMessage,
+  readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
 } from '../../contrib/lets-delegate-resolver/src/t3.ts';
 import type { SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
@@ -29,17 +29,26 @@ function addProject(db: DatabaseSync, { id = 'p1', title = 'lets-spec', root = '
   db.prepare(`insert into projection_projects (project_id, title, workspace_root, scripts_json, created_at, updated_at, default_model_selection_json)
     values (?, ?, ?, '[]', 'now', 'now', ?)`).run(id, title, root, selection);
 }
-function addThread(db: DatabaseSync, threadId: string, { pendingInput = 0, pendingApproval = 0 } = {}) {
-  db.prepare(`insert into projection_threads (thread_id, project_id, title, created_at, updated_at, pending_user_input_count, pending_approval_count)
-    values (?, 'p1', 't', 'now', 'now', ?, ?)`).run(threadId, pendingInput, pendingApproval);
+function addThread(db: DatabaseSync, threadId: string) {
+  db.prepare(`insert into orchestration_v2_projection_threads (thread_id, project_id, title, default_provider, runtime_mode, interaction_mode, created_at, updated_at, payload_json)
+    values (?, 'p1', 't', 'claudeAgent', 'full-access', 'plan', 'now', 'now', '{}')`).run(threadId);
 }
-function addTurn(db: DatabaseSync, threadId: string, turnId: string, state: string, messageId: string | null = null) {
-  db.prepare(`insert into projection_turns (thread_id, turn_id, assistant_message_id, state, requested_at, checkpoint_files_json)
-    values (?, ?, ?, ?, 'now', '[]')`).run(threadId, turnId, messageId, state);
+// Runs are numbered; the newest has the highest ordinal.
+function addRun(db: DatabaseSync, threadId: string, runId: string, ordinal: number, status: string) {
+  db.prepare(`insert into orchestration_v2_projection_runs (run_id, thread_id, ordinal, provider, status, requested_at, payload_json)
+    values (?, ?, ?, 'claudeAgent', ?, 'now', '{}')`).run(runId, threadId, ordinal, status);
 }
-function addMessage(db: DatabaseSync, messageId: string, threadId: string, text: string, streaming: number) {
-  db.prepare(`insert into projection_thread_messages (message_id, thread_id, role, text, is_streaming, created_at, updated_at)
-    values (?, ?, 'assistant', ?, ?, 'now', 'now')`).run(messageId, threadId, text, streaming);
+function addMessage(db: DatabaseSync, messageId: string, runId: string, text: string, streaming: number, { role = 'assistant', createdAt = 'now' } = {}) {
+  db.prepare(`insert into orchestration_v2_projection_messages (message_id, thread_id, run_id, role, streaming, created_at, updated_at, payload_json)
+    values (?, 'T', ?, ?, ?, ?, ?, ?)`).run(messageId, runId, role, streaming, createdAt, createdAt, JSON.stringify({ text }));
+}
+function addPendingRequest(db: DatabaseSync, threadId: string) {
+  db.prepare(`insert into orchestration_v2_projection_runtime_requests (runtime_request_id, thread_id, node_id, kind, status, created_at, payload_json)
+    values ('rq1', ?, 'n1', 'user_input', 'pending', 'now', '{}')`).run(threadId);
+}
+function addFailure(db: DatabaseSync, runId: string, message: string) {
+  db.prepare(`insert into orchestration_v2_projection_turn_items (turn_item_id, thread_id, run_id, ordinal, type, status, updated_at, payload_json)
+    values ('e1', 'T', ?, 1, 'error', 'failed', 'now', ?)`).run(runId, JSON.stringify({ failure: { class: 'provider', message } }));
 }
 
 type Log = [string, unknown][];
@@ -66,6 +75,8 @@ function fakeWebSocket(reply: unknown, log: Log): typeof WebSocket {
   } as unknown as typeof WebSocket;
 }
 const SUCCESS = { _tag: 'Exit', requestId: '1', exit: { _tag: 'Success', value: { sequence: 9 } } };
+// launchThread answers with the thread and its projection; the resolver reads only the thread id.
+const LAUNCHED = { _tag: 'Exit', requestId: '1', exit: { _tag: 'Success', value: { threadId: 'T', projection: {}, resumed: false } } };
 
 // fetch answers from a list of statuses, recording each request.
 function fakeFetch(statuses: number[], log: [string, RequestInit | undefined][]): typeof fetch {
@@ -135,45 +146,60 @@ test('findProject matches the workspace root, or names the known projects', () =
     error instanceof SpawnError && /t3 project add \/x/.test(error.message) && /lets-spec, other/.test(error.message));
 });
 
-test('buildTurnStart has the upstream shape without a worktree', () => {
+test('buildLaunch has the shape the UI sends for a new thread, on the current branch', () => {
   const modelSelection = { instanceId: 'codex', model: 'gpt-6.1-sol', options: [{ id: 'reasoningEffort', value: 'high' }] };
-  const command = buildTurnStart({
-    threadId: 'T', projectId: 'P', title: 'x-plan-review', text: 'PROMPT', modelSelection,
-    interactionMode: 'plan', branch: 'main', now: '2026-10-13T00:00:00.000Z', messageId: 'M', commandId: 'C',
+  const input = buildLaunch({
+    threadId: 'T', projectId: 'P', title: 'x-plan-review', text: 'PROMPT', modelSelection, interactionMode: 'plan', branch: 'main', messageId: 'M', commandId: 'C',
   });
-  assert.deepEqual(command, {
-    type: 'thread.turn.start',
+  assert.deepEqual(input, {
     commandId: 'C',
+    creationSource: 'web',
     threadId: 'T',
-    message: { messageId: 'M', role: 'user', text: 'PROMPT', attachments: [] },
+    projectId: 'P',
+    title: 'x-plan-review',
+    generateTitle: true,
     modelSelection,
-    titleSeed: 'x-plan-review',
     runtimeMode: 'full-access',
     interactionMode: 'plan',
-    bootstrap: {
-      createThread: {
-        projectId: 'P', title: 'x-plan-review', modelSelection, runtimeMode: 'full-access',
-        interactionMode: 'plan', branch: 'main', worktreePath: null, createdAt: '2026-10-13T00:00:00.000Z',
-      },
-    },
-    createdAt: '2026-10-13T00:00:00.000Z',
+    workspaceStrategy: { type: 'root', branch: 'main' },
+    initialMessage: { messageId: 'M', text: 'PROMPT', attachments: [] },
   });
-  assert.equal('prepareWorktree' in command.bootstrap, false);
-  const plain = buildTurnStart({ threadId: 'T', projectId: 'P', title: 't', text: 'x', modelSelection, interactionMode: 'default', branch: null, now: 'n' });
+  // A detached HEAD has no branch, and the root strategy then has none either.
+  const plain = buildLaunch({ threadId: 'T', projectId: 'P', title: 't', text: 'x', modelSelection, interactionMode: 'default', branch: null });
   assert.equal(plain.interactionMode, 'default');
+  assert.deepEqual(plain.workspaceStrategy, { type: 'root' });
   assert.match(plain.commandId, /^[0-9a-f-]{36}$/);
+  assert.match(plain.initialMessage.messageId, /^[0-9a-f-]{36}$/);
 });
 
-test('readTurn returns the newest turn, or null when there is none', () => {
+test('readRun returns the newest run, or null when there is none', () => {
   const db = database();
   addThread(db, 'T');
-  assert.equal(readTurn(shared(db), 'T'), null);
-  addTurn(db, 'T', 'turn-1', 'completed', 'm1');
-  addTurn(db, 'T', 'turn-2', 'running');
-  assert.deepEqual(readTurn(shared(db), 'T'), { state: 'running', assistantMessageId: null, pendingUserInput: 0, pendingApproval: 0, lastError: null });
-  addMessage(db, 'm1', 'T', 'hi', 0);
-  assert.deepEqual(readMessage(shared(db), 'm1'), { text: 'hi', isStreaming: 0 });
-  assert.equal(readMessage(shared(db), 'nope'), null);
+  assert.equal(readRun(shared(db), 'T'), null);
+  addRun(db, 'T', 'run-1', 1, 'completed');
+  addRun(db, 'T', 'run-2', 2, 'running');
+  assert.deepEqual(readRun(shared(db), 'T'), { id: 'run-2', status: 'running', pendingRequests: 0, failure: null });
+  addPendingRequest(db, 'T');
+  assert.equal(readRun(shared(db), 'T')!.pendingRequests, 1);
+});
+
+test('readRun reads a failed run\'s failure from its error item', () => {
+  const db = database();
+  addThread(db, 'T');
+  addRun(db, 'T', 'run-1', 1, 'failed');
+  assert.equal(readRun(shared(db), 'T')!.failure, null);
+  addFailure(db, 'run-1', 'quota exceeded');
+  assert.equal(readRun(shared(db), 'T')!.failure, 'quota exceeded');
+});
+
+test('readFinalMessage returns the run\'s newest assistant message', () => {
+  const db = database();
+  assert.equal(readFinalMessage(shared(db), 'run-1'), null);
+  addMessage(db, 'u1', 'run-1', 'the prompt', 0, { role: 'user', createdAt: '2026-10-17T00:00:00.000Z' });
+  assert.equal(readFinalMessage(shared(db), 'run-1'), null);
+  addMessage(db, 'a1', 'run-1', 'first', 0, { createdAt: '2026-10-17T00:00:01.000Z' });
+  addMessage(db, 'a2', 'run-1', 'last', 1, { createdAt: '2026-10-17T00:00:02.000Z' });
+  assert.deepEqual(readFinalMessage(shared(db), 'run-1'), { text: 'last', streaming: true });
 });
 
 // An adapter whose database is `db` and whose sleep runs the next step.
@@ -183,42 +209,50 @@ function waitingAdapter(db: DatabaseSync, steps: (() => void)[]) {
 const HANDLE = { kind: 'thread', id: 'T', origin: ORIGIN };
 const SESSION = { handle: HANDLE };
 
-test('waitForResult waits for the turn to complete and the message to stop streaming', async () => {
+test('waitForResult waits for the run to complete and the message to stop streaming', async () => {
   const db = database();
   addThread(db, 'T');
-  addTurn(db, 'T', 'turn-1', 'running');
+  addRun(db, 'T', 'run-1', 1, 'running');
   const steps = [
-    () => { db.exec("update projection_turns set state = 'completed', assistant_message_id = 'm1'"); addMessage(db, 'm1', 'T', 'partial', 1); },
-    () => db.exec("update projection_thread_messages set text = 'FINDINGS', is_streaming = 0"),
+    () => { addMessage(db, 'a1', 'run-1', 'partial', 1); },
+    () => db.exec("update orchestration_v2_projection_runs set status = 'completed'"),
+    () => db.exec(`update orchestration_v2_projection_messages set payload_json = '{"text":"FINDINGS"}', streaming = 0`),
   ];
   assert.deepEqual(await waitingAdapter(db, steps).waitForResult(SESSION, { timeoutMs: 60000 }), { text: 'FINDINGS' });
   assert.equal(steps.length, 0);
 });
-test('waitForResult fails on a turn error with the session\'s last error', async () => {
+test('waitForResult fails on a failed run with its failure', async () => {
   const db = database();
   addThread(db, 'T');
-  addTurn(db, 'T', 'turn-1', 'error');
-  db.prepare("insert into projection_thread_sessions (thread_id, status, last_error, updated_at) values ('T', 'error', 'quota exceeded', 'now')").run();
+  addRun(db, 'T', 'run-1', 1, 'failed');
+  addFailure(db, 'run-1', 'quota exceeded');
   await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
     (error) => error instanceof SessionFailed && error.message === 'quota exceeded');
 });
 test('waitForResult fails when the session stops to ask', async () => {
-  const db = database();
-  addThread(db, 'T', { pendingInput: 1 });
-  addTurn(db, 'T', 'turn-1', 'running');
-  await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), /stopped to ask/);
+  for (const [status, pending] of [['waiting', false], ['running', true]] as const) {
+    const db = database();
+    addThread(db, 'T');
+    addRun(db, 'T', 'run-1', 1, status);
+    if (pending) addPendingRequest(db, 'T');
+    await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), /stopped to ask/);
+  }
 });
-test('waitForResult fails on an interrupted turn', async () => {
-  const db = database();
-  addThread(db, 'T');
-  addTurn(db, 'T', 'turn-1', 'interrupted');
-  await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), /turn interrupted/);
+test('waitForResult fails on an interrupted, cancelled or rolled back run', async () => {
+  for (const [status, reason] of [['interrupted', 'run interrupted'], ['cancelled', 'run cancelled'], ['rolled_back', 'run rolled back']]) {
+    const db = database();
+    addThread(db, 'T');
+    addRun(db, 'T', 'run-1', 1, status);
+    await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
+      (error) => error instanceof SessionFailed && error.message === reason);
+  }
 });
 test('waitForResult returns an empty final message as it is; the resolver rejects it', async () => {
   const db = database();
   addThread(db, 'T');
-  addTurn(db, 'T', 'turn-1', 'completed', 'm1');
-  addMessage(db, 'm1', 'T', '', 0);
+  addRun(db, 'T', 'run-1', 1, 'completed');
+  assert.deepEqual(await waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), { text: '' });
+  addMessage(db, 'a1', 'run-1', '', 0);
   assert.deepEqual(await waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), { text: '' });
 });
 
@@ -246,9 +280,16 @@ test('dispatch sends one request frame and returns the success value', async () 
   assert.deepEqual(await dispatch(io, { origin: ORIGIN, token: 'tok' }, command), { sequence: 9 });
   assert.deepEqual(fetches, [[`${ORIGIN}/api/auth/websocket-ticket`, { method: 'POST', headers: { authorization: 'Bearer tok' } }]]);
   assert.deepEqual(log, [
-    ['open', 'ws://127.0.0.1:3773/ws?wsTicket=TICKET'],
+    ['open', 'ws://127.0.0.1:3773/ws?wsTicket=TICKET&orchestrationProtocol=2'],
     ['send', { _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: command, headers: [] }],
   ]);
+});
+test('launch sends one launchThread request and returns the thread t3 names', async () => {
+  const log: Log = [];
+  const io = fakeIo({ env: {}, fetch: fakeFetch([200], []), WebSocket: fakeWebSocket(LAUNCHED, log) });
+  const input = buildLaunch({ threadId: 'T', projectId: 'P', title: 't', text: 'x', modelSelection: { instanceId: 'codex', model: 'm', options: [] }, interactionMode: 'plan', branch: null });
+  assert.deepEqual(await launch(io, { origin: ORIGIN, token: 'tok' }, input), { threadId: 'T' });
+  assert.deepEqual(log[1], ['send', { _tag: 'Request', id: '1', tag: 'orchestration.launchThread', payload: input, headers: [] }]);
 });
 test('dispatch re-issues a rejected token once', async () => {
   const fetches: [string, RequestInit | undefined][] = [];
@@ -349,20 +390,24 @@ test('spawn creates a plan-mode thread in the project for this repo, and the han
     results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }, { stdout: 'main\n', stderr: '', code: 0 }],
     openDb: () => shared(db),
     fetch: fakeFetch([200], []),
-    WebSocket: fakeWebSocket(SUCCESS, log),
+    WebSocket: fakeWebSocket(LAUNCHED, log),
   });
   const { handle } = await createAdapter(io).spawn(runRequest);
   assert.deepEqual(io.calls.map(([cmd, args]) => [cmd, args]), [
     ['git', ['-C', '/r/sub', 'rev-parse', '--path-format=absolute', '--git-common-dir']],
     ['git', ['-C', '/r/sub', 'branch', '--show-current']],
   ]);
-  const command = (log[1][1] as { payload: ReturnType<typeof buildTurnStart> }).payload;
-  assert.deepEqual(handle, { kind: 'thread', id: command.threadId, origin: ORIGIN });
-  assert.equal(command.interactionMode, 'plan');
-  assert.equal(command.bootstrap.createThread.projectId, 'p1');
-  assert.equal(command.bootstrap.createThread.branch, 'main');
-  assert.equal(command.titleSeed, 'x-plan-review');
-  assert.deepEqual(command.modelSelection, { instanceId: 'codex', model: 'gpt-6.1-sol', options: [{ id: 'reasoningEffort', value: 'high' }] });
+  const frame = log[1][1] as { tag: string; payload: ReturnType<typeof buildLaunch> };
+  assert.equal(frame.tag, 'orchestration.launchThread');
+  // The handle names the thread t3 answered with, and holds no token.
+  assert.deepEqual(handle, { kind: 'thread', id: 'T', origin: ORIGIN });
+  assert.match(frame.payload.threadId, /^[0-9a-f-]{36}$/);
+  assert.equal(frame.payload.interactionMode, 'plan');
+  assert.equal(frame.payload.projectId, 'p1');
+  assert.deepEqual(frame.payload.workspaceStrategy, { type: 'root', branch: 'main' });
+  assert.equal(frame.payload.title, 'x-plan-review');
+  assert.equal(frame.payload.initialMessage.text, 'PROMPT');
+  assert.deepEqual(frame.payload.modelSelection, { instanceId: 'codex', model: 'gpt-6.1-sol', options: [{ id: 'reasoningEffort', value: 'high' }] });
 });
 
 test('a start uses the project default, then claude-opus-5-5', async () => {
@@ -377,13 +422,13 @@ test('a start uses the project default, then claude-opus-5-5', async () => {
       results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }, { stdout: '\n', stderr: '', code: 0 }],
       openDb: () => shared(db),
       fetch: fakeFetch([200], []),
-      WebSocket: fakeWebSocket(SUCCESS, log),
+      WebSocket: fakeWebSocket(LAUNCHED, log),
     });
     await createAdapter(io).spawn({ kind: 'start', name: 'fix-login', prompt: 'Run it', cwd: '/r', family: 'claude', model: null, effort: null, readOnly: false });
-    const command = (log[1][1] as { payload: ReturnType<typeof buildTurnStart> }).payload;
-    assert.equal(command.interactionMode, 'default');
-    assert.equal(command.bootstrap.createThread.branch, null);
-    selections.push(command.modelSelection);
+    const { payload } = log[1][1] as { payload: ReturnType<typeof buildLaunch> };
+    assert.equal(payload.interactionMode, 'default');
+    assert.deepEqual(payload.workspaceStrategy, { type: 'root' });
+    selections.push(payload.modelSelection);
   }
   assert.deepEqual(selections, [
     { instanceId: 'codex', model: 'gpt-6-astra', options: [] },
