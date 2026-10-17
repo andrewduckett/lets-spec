@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { run, skillsMode } from '../../lets-sync/lib/main.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { run, skillsMode } from '../../../lets/src/sync/main.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 const RELEASE = '/store/abc-lets-spec-release';
 
@@ -13,14 +13,16 @@ const releaseFiles = {
   [`${RELEASE}/fragments/AGENTS.md`]: 'rules\n',
 };
 
-function setup({ env = { WORKFLOW_RELEASE: RELEASE }, files = releaseFiles, toplevel = null } = {}) {
+type Setup = { env?: Record<string, string>; files?: Record<string, string>; toplevel?: string | null };
+
+function setup({ env = { WORKFLOW_RELEASE: RELEASE }, files = releaseFiles, toplevel = null }: Setup = {}) {
   const io = fakeIo({ files, toplevel });
-  const out = [];
-  const err = [];
+  const out: string[] = [];
+  const err: string[] = [];
   const deps = {
     env, cwd: '/project', packageRoot: '/pkg', io,
-    stdout: (text) => out.push(text),
-    stderr: (text) => err.push(text),
+    stdout: (text: string) => out.push(text),
+    stderr: (text: string) => err.push(text),
   };
   return { io, deps, stdout: () => out.join(''), stderr: () => err.join('') };
 }
@@ -62,7 +64,7 @@ test('a release with two schemas is accepted', async () => {
 });
 
 test('a release with no schema is refused', async () => {
-  const files = { ...releaseFiles };
+  const files: Record<string, string> = { ...releaseFiles };
   delete files[`${RELEASE}/overlay/openspec/schemas/lets-standard/schema.yaml`];
   const t = setup({ files });
   assert.equal(await run([], t.deps), 1);
@@ -92,11 +94,10 @@ test('inside a git repo a valid run exits 0 quietly', async () => {
 
 test('a CLI version that differs from release.json is a warning in the footer', async () => {
   const release = '/pkg/releases/standard';
-  const files = {};
+  const files: Record<string, string> = {};
   for (const [path, text] of Object.entries(releaseFiles)) files[path.replace(RELEASE, release)] = text;
   files['/pkg/release.json'] = JSON.stringify({ version: '0.1.0', openspec: '1.2.3', commit: 'abc' });
   const t = setup({ env: {}, files, toplevel: '/project' });
-  t.io.openspec = null;
   const original = t.io.execFile;
   t.io.execFile = async (cmd, args, opts) => (cmd === 'openspec' ? { stdout: '1.4.0\n', stderr: '', code: 0 } : original(cmd, args, opts));
   t.io.dirs.add(release);

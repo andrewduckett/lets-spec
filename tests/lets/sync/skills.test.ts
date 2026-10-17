@@ -4,9 +4,10 @@ import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sta
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { realIo } from '../../lets-sync/lib/io.mjs';
-import { checkSkills, syncSkills } from '../../lets-sync/lib/skills.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { realIo } from '../../../lets/src/io.ts';
+import { checkSkills, syncSkills } from '../../../lets/src/sync/skills.ts';
+import type { FakeIo } from './fixtures/fake-io.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 const SCHEMA = 'lets-standard';
 const SRC = '/rel/overlay/.agents/skills/lets-build';
@@ -24,8 +25,8 @@ function release(extra = {}) {
   return io;
 }
 
-function sync(io) {
-  const out = [];
+function sync(io: FakeIo) {
+  const out: string[] = [];
   const result = syncSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io, stdout: (t) => out.push(t) });
   return { result, out: out.join('') };
 }
@@ -171,7 +172,7 @@ test('on disk, a read-only script is copied 755 and runs, a read-only file 644, 
 });
 
 // A release with one skill whose script sits in a subfolder, and a project.
-function onDisk(dir) {
+function onDisk(dir: string) {
   const src = join(dir, 'rel/overlay/.agents/skills/lets-build');
   mkdirSync(join(src, 'scripts'), { recursive: true });
   mkdirSync(join(dir, 'rel/overlay/openspec/schemas', SCHEMA), { recursive: true });

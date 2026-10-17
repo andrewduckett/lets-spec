@@ -1,12 +1,13 @@
 // The whole run: parse, find the release, then the steps in order. No process
 // access here; everything comes through deps, so tests run it with fakes.
 import { isAbsolute, join, relative } from 'node:path';
-import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.mjs';
-import { checkConfig } from './config.mjs';
-import { checkClaude, createInitFiles, linkClaude } from './init.mjs';
-import { isManaged } from './managed.mjs';
-import { AGENTS, defaultSchema, findRelease, openspecVersionWarning, requireRelease } from './release.mjs';
-import { checkSkills, syncSkills } from './skills.mjs';
+import type { Deps, Io } from '../io.ts';
+import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.ts';
+import { checkConfig } from './config.ts';
+import { checkClaude, createInitFiles, linkClaude } from './init.ts';
+import { isManaged } from './managed.ts';
+import { AGENTS, defaultSchema, findRelease, openspecVersionWarning, requireRelease } from './release.ts';
+import { checkSkills, syncSkills } from './skills.ts';
 
 const CONFIG = 'openspec/config.yaml';
 const GITIGNORE = '.gitignore';
@@ -57,7 +58,7 @@ The Nix wrapper sets WORKFLOW_RELEASE.
 `;
 
 // deps: { env, cwd, packageRoot, io, stdout(text), stderr(text) }
-export async function run(argv, deps) {
+export async function run(argv: string[], deps: Deps) {
   try {
     return await steps(argv, deps);
   } catch (error) {
@@ -69,7 +70,7 @@ export async function run(argv, deps) {
 
 // Whether git tracks the copied skills: LETS_SPEC_SKILLS, committed when
 // unset or empty, as for LETS_SPEC_FLOW.
-export function skillsMode(env) {
+export function skillsMode(env: Deps['env']) {
   const mode = env.LETS_SPEC_SKILLS || 'committed';
   if (mode !== 'committed' && mode !== 'ignored') {
     throw new UsageError(`LETS_SPEC_SKILLS must be committed or ignored, got '${mode}'.`);
@@ -77,7 +78,7 @@ export function skillsMode(env) {
   return mode;
 }
 
-async function steps(argv, deps) {
+async function steps(argv: string[], deps: Deps) {
   const { io } = deps;
   const parsed = parseArgs(argv);
   if (parsed.help) {
@@ -97,7 +98,7 @@ async function steps(argv, deps) {
   const mode = skillsMode(deps.env);
 
   const agentsPath = join(root, AGENTS);
-  const rulesBlock = renderBlock(RULES, io.readFile(join(release, 'fragments', AGENTS)));
+  const rulesBlock = renderBlock(RULES, io.readFile(join(release, 'fragments', AGENTS))!);
   const gitignorePath = join(root, GITIGNORE);
   const skillsBlock = renderBlock(SKILLS, SKILLS_BODY);
 
@@ -123,7 +124,7 @@ async function steps(argv, deps) {
   // a link or the file's permissions are kept.
   const rules = applyBlock(RULES, io.readFile(agentsPath), rulesBlock);
   if (rules.state === 'absent' || rules.state === 'missing' || rules.state === 'stale') {
-    io.writeFile(agentsPath, rules.text);
+    io.writeFile(agentsPath, rules.text!);
   }
   if (rules.state === 'absent') say(`lets-spec: created ${AGENTS}.\n`);
   if (rules.state === 'missing') say(`lets-spec: added the lets-spec rules to ${AGENTS}. Commit it.\n`);
@@ -143,11 +144,11 @@ async function steps(argv, deps) {
   if (mode === 'ignored') {
     const ignored = applyBlock(SKILLS, io.readFile(gitignorePath), skillsBlock);
     if (ignored.state === 'absent' || ignored.state === 'missing') {
-      io.writeFile(gitignorePath, ignored.text);
+      io.writeFile(gitignorePath, ignored.text!);
       say(`lets-spec: added the lets-spec skills block to ${GITIGNORE}. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit.\n`);
     }
     if (ignored.state === 'stale') {
-      io.writeFile(gitignorePath, ignored.text);
+      io.writeFile(gitignorePath, ignored.text!);
       say(`lets-spec: updated the lets-spec skills block in ${GITIGNORE}. Commit it.\n`);
     }
     if (ignored.state === 'unpaired') {
@@ -175,7 +176,7 @@ async function steps(argv, deps) {
 }
 
 // The --check failure for each state of the rules block.
-function checkRules(state) {
+function checkRules(state: string) {
   switch (state) {
     case 'absent':
     case 'missing':
@@ -198,7 +199,7 @@ const LEGACY_RELEASE = '-lets-spec-release/';
 // Remove each listed link into a release, never following it, then the
 // section, so git sees the copies. syncSkills replaces the links at managed
 // paths. Returns the warnings.
-function removeLegacyLinks({ root, exclude, io, stdout }) {
+function removeLegacyLinks({ root, exclude, io, stdout }: { root: string; exclude: string; io: Io; stdout: (text: string) => void }) {
   const text = io.readFile(exclude);
   if (blockState(LEGACY_LINKS, text, '') === 'unpaired') {
     const shown = relative(root, exclude).startsWith('..') ? exclude : relative(root, exclude);
@@ -221,7 +222,7 @@ function removeLegacyLinks({ root, exclude, io, stdout }) {
 }
 
 // Where git keeps the project's exclude file, or null when git cannot say.
-async function excludePath(root, io) {
+async function excludePath(root: string, io: Io) {
   const result = await io.execFile('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: root });
   if (result.code !== 0) return null;
   const path = result.stdout.trim();
@@ -229,7 +230,7 @@ async function excludePath(root, io) {
 }
 
 // Like the bash case: only the first argument counts.
-function parseArgs(argv) {
+function parseArgs(argv: string[]) {
   switch (argv[0] ?? '') {
     case '':
       return { check: false, help: false };

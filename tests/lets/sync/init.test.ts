@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkClaude, createInitFiles, linkClaude } from '../../lets-sync/lib/init.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { checkClaude, createInitFiles, linkClaude } from '../../../lets/src/sync/init.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 test('each missing init file is copied and named, and an existing one is kept', () => {
   const io = fakeIo({ files: {
@@ -10,7 +10,7 @@ test('each missing init file is copied and named, and an existing one is kept', 
     '/p/docs/note.md': 'mine',
   } });
   io.modes.set('/rel/init/openspec/config.yaml', 0o444);
-  const out = [];
+  const out: string[] = [];
   createInitFiles({ release: '/rel', root: '/p', io, stdout: (t) => out.push(t) });
   assert.equal(io.readFile('/p/openspec/config.yaml'), 'schema: lets-standard\n');
   assert.equal(io.modes.get('/p/openspec/config.yaml'), 0o644);
@@ -20,7 +20,7 @@ test('each missing init file is copied and named, and an existing one is kept', 
 
 test('linkClaude links both paths once and says so', () => {
   const io = fakeIo();
-  const out = [];
+  const out: string[] = [];
   linkClaude({ root: '/p', io, stdout: (t) => out.push(t) });
   assert.equal(io.readlink('/p/CLAUDE.md'), 'AGENTS.md');
   assert.equal(io.readlink('/p/.claude/skills'), '../.agents/skills');

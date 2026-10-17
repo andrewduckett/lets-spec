@@ -1,10 +1,11 @@
 // Read the schema name from openspec/config.yaml.
 // Node has no YAML parser, so this reads only the top-level `schema:` line.
+import type { Io } from '../io.ts';
 
 // The value of the first top-level `schema:` line, or null when absent or empty.
 // Removes surrounding whitespace, a trailing `# comment`, and one pair of
 // matching quotes.
-export function schemaOf(text) {
+export function schemaOf(text: string) {
   for (const line of text.split(/\r?\n/)) {
     const match = /^schema:(.*)$/.exec(line);
     if (!match) continue;
@@ -14,7 +15,7 @@ export function schemaOf(text) {
   return null;
 }
 
-function unquote(raw) {
+function unquote(raw: string) {
   const quote = raw[0];
   if (quote === '"' || quote === "'") {
     const end = raw.indexOf(quote, 1);
@@ -24,7 +25,7 @@ function unquote(raw) {
 }
 
 // The warnings about the project's config. Returns lines; prints nothing.
-export function checkConfig({ io, configPath, schemaName }) {
+export function checkConfig({ io, configPath, schemaName }: { io: Io; configPath: string; schemaName: string }) {
   // A folder at the path counts as missing.
   const text = io.isDir(configPath) ? null : io.readFile(configPath);
   if (text === null) return [`${configPath} is missing, and could not be created.`];

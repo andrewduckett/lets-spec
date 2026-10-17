@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { UsageError } from '../../lets-sync/lib/main.mjs';
-import { findRelease, openspecVersionWarning } from '../../lets-sync/lib/release.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { UsageError } from '../../../lets/src/sync/main.ts';
+import { findRelease, openspecVersionWarning } from '../../../lets/src/sync/release.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 const RELEASE = '/pkg/releases/standard';
 const RELEASE_JSON = '/pkg/release.json';
-const info = (openspec) => JSON.stringify({ version: '0.1.0', openspec, commit: 'abc' });
+const info = (openspec: string) => JSON.stringify({ version: '0.1.0', openspec, commit: 'abc' });
 
 test('WORKFLOW_RELEASE wins over the flow', () => {
   const env = { WORKFLOW_RELEASE: '/elsewhere', LETS_SPEC_FLOW: 'minimal' };

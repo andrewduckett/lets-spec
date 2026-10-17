@@ -1,8 +1,8 @@
-// The real entry. Builds deps from the real world, runs lib/main.mjs and
-// exits with its code.
+// The real entry, until lets sync replaces it. Builds deps from the real
+// world, runs lets/src/sync/main.ts and exits with its code.
 import { fileURLToPath } from 'node:url';
-import { realIo } from './io.mjs';
-import { run } from './main.mjs';
+import { realIo } from '../../lets/src/io.ts';
+import { run } from '../../lets/src/sync/main.ts';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 

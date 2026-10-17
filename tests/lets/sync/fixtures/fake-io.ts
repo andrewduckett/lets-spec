@@ -1,4 +1,5 @@
-// An in-memory tree with the same methods as lib/io.mjs. Paths are absolute.
+// An in-memory tree with the same methods as the Io in lets/src/io.ts. Paths
+// are absolute.
 //
 // options:
 //   files:    { path: text }
@@ -7,8 +8,21 @@
 //             fails with code 128.
 //   openspec: what `openspec --version` prints; without it the command
 //             cannot start (code null).
-export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null } = {}) {
-  const io = {
+import type { Io } from '../../../../lets/src/io.ts';
+
+export type FakeIo = Io & {
+  files: Map<string, string>;
+  dirs: Set<string>;
+  links: Map<string, string>;
+  modes: Map<string, number>;
+  calls: [string, string[], { cwd?: string }][];
+  toplevel: string | null;
+};
+
+type Options = { files?: Record<string, string>; dirs?: string[]; toplevel?: string | null; openspec?: string | null };
+
+export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null }: Options = {}): FakeIo {
+  const io: FakeIo = {
     files: new Map(Object.entries(files)),
     dirs: new Set(dirs),
     links: new Map(),
@@ -17,7 +31,7 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
     toplevel,
 
     readFile: (path) => io.files.get(path) ?? null,
-    readBytes: (path) => (io.files.has(path) ? Buffer.from(io.files.get(path)) : null),
+    readBytes: (path) => (io.files.has(path) ? Buffer.from(io.files.get(path)!) : null),
     writeFile(path, text) {
       io.files.set(path, text);
       if (!io.modes.has(path)) io.modes.set(path, 0o644);
@@ -42,12 +56,12 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
     stat: (path) => ({ mode: io.modes.get(path) ?? 0o644 }),
     chmod: (path, mode) => io.modes.set(path, mode),
     copyFile(src, dst) {
-      io.files.set(dst, io.files.get(src));
+      io.files.set(dst, io.files.get(src)!);
       io.modes.set(dst, io.modes.get(src) ?? 0o644);
     },
     listDirs(path) {
       const prefix = `${path}/`;
-      const names = new Set();
+      const names = new Set<string>();
       for (const p of [...io.files.keys(), ...io.dirs, ...io.links.keys()]) {
         if (!p.startsWith(prefix)) continue;
         const rest = p.slice(prefix.length);
@@ -58,7 +72,7 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
     },
     listNames(path) {
       const prefix = `${path}/`;
-      const names = new Set();
+      const names = new Set<string>();
       for (const p of [...io.files.keys(), ...io.dirs, ...io.links.keys()]) {
         if (p.startsWith(prefix)) names.add(p.slice(prefix.length).split('/')[0]);
       }

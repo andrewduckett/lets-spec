@@ -7,19 +7,54 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 
+// What a command printed, and its exit code. code is null when the command
+// cannot start.
+export type ExecResult = { stdout: string; stderr: string; code: number | null };
+
+export type Io = {
+  readFile(path: string): string | null;
+  readBytes(path: string): Buffer | null;
+  writeFile(path: string, text: string): void;
+  exists(path: string): boolean;
+  isSymlink(path: string): boolean;
+  isDir(path: string): boolean;
+  readlink(path: string): string | null;
+  symlink(target: string, path: string): void;
+  remove(path: string): void;
+  mkdirp(path: string): void;
+  stat(path: string): { mode: number };
+  chmod(path: string, mode: number): void;
+  copyFile(src: string, dst: string): void;
+  listDirs(path: string): string[];
+  listNames(path: string): string[];
+  listFiles(path: string): string[];
+  execFile(cmd: string, args: string[], options?: { cwd?: string }): Promise<ExecResult>;
+};
+
+// Everything a command needs from the real world.
+export type Deps = {
+  env: Record<string, string | undefined>;
+  cwd: string;
+  packageRoot: string;
+  io: Io;
+  stdout: (text: string) => void;
+  stderr: (text: string) => void;
+};
+
 // Run fn, and answer null when the path does not exist.
-function orNull(fn) {
+function orNull<T>(fn: () => T): T | null {
   try {
     return fn();
   } catch (error) {
-    if (error.code === 'ENOENT' || error.code === 'ENOTDIR' || error.code === 'EINVAL') return null;
+    const { code } = error as NodeJS.ErrnoException;
+    if (code === 'ENOENT' || code === 'ENOTDIR' || code === 'EINVAL') return null;
     throw error;
   }
 }
 
 // Every file under dir, as a path relative to dir.
-function walk(dir, prefix = '') {
-  const found = [];
+function walk(dir: string, prefix = ''): string[] {
+  const found: string[] = [];
   for (const entry of readdirSync(join(dir, prefix), { withFileTypes: true })) {
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) found.push(...walk(dir, rel));
@@ -28,7 +63,7 @@ function walk(dir, prefix = '') {
   return found;
 }
 
-export function realIo() {
+export function realIo(): Io {
   return {
     readFile: (path) => orNull(() => readFileSync(path, 'utf8')),
     readBytes: (path) => orNull(() => readFileSync(path)),
@@ -61,10 +96,10 @@ export function realIo() {
       return new Promise((resolve) => {
         const child = nodeExecFile(cmd, args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
           if (error && typeof error.code === 'string') return resolve({ stdout: '', stderr: error.message, code: null });
-          resolve({ stdout, stderr, code: error ? (error.code ?? 1) : 0 });
+          resolve({ stdout, stderr, code: error ? ((error.code as number | undefined) ?? 1) : 0 });
         });
-        child.stdin.on('error', () => {});
-        child.stdin.end();
+        child.stdin!.on('error', () => {});
+        child.stdin!.end();
       });
     },
   };
