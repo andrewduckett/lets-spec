@@ -187,6 +187,20 @@ const rejected = (response: Response) => response.status === 401 || response.sta
 
 type Frame = { _tag: string; requestId?: string; exit?: { _tag: string; value?: unknown } };
 
+// Why t3 refused a WebSocket upgrade. t3 answers a plain GET of /ws with
+// JSON whose message says why, such as a protocol it no longer speaks.
+export async function refusal(io: Io, origin: string): Promise<string> {
+  let why = 'it gave no reason';
+  try {
+    const response = await io.fetch(`${origin}/ws`);
+    const { message } = await response.json() as { message?: unknown };
+    why = typeof message === 'string' ? message : `HTTP ${response.status}`;
+  } catch {
+    // Keep the default reason.
+  }
+  return `t3 refused the WebSocket connection: ${why} A t3 update may have changed its protocol; see "After a t3 update" in the lets-spec README.`;
+}
+
 // The HTTP dispatch endpoint ignores `bootstrap`; only the WebSocket RPC
 // creates the thread, so go through /ws like the UI does.
 export async function dispatch(io: Io, { origin, token }: { origin: string; token: string }, command: { threadId?: string; [field: string]: unknown }) {
@@ -206,15 +220,28 @@ export async function dispatch(io: Io, { origin, token }: { origin: string; toke
     const exit = await new Promise<NonNullable<Frame['exit']>>((resolveExit, reject) => {
       // A timeout means "unknown", not "failed": the server may still act on it.
       timer = setTimeout(() => reject(new SpawnError(`no reply from t3 after ${REPLY_TIMEOUT_MS / 1000} s; check ${command.threadId} before running again`)), REPLY_TIMEOUT_MS);
-      ws.addEventListener('open', () => ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: command, headers: [] })));
+      let opened = false;
+      let refused = false;
+      // Before the socket opens, an error or a close means t3 refused the
+      // upgrade, and the WebSocket API hides why. Ask t3 itself, once.
+      const fail = (reason: string) => {
+        if (opened) return reject(new SpawnError(reason));
+        if (refused) return;
+        refused = true;
+        refusal(io, origin).then((why) => reject(new SpawnError(why)));
+      };
+      ws.addEventListener('open', () => {
+        opened = true;
+        ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: command, headers: [] }));
+      });
       ws.addEventListener('message', (event) => {
         for (const message of [JSON.parse(event.data as string) as Frame | Frame[]].flat()) {
           if (message._tag === 'Exit' && String(message.requestId) === '1') resolveExit(message.exit!);
           else if (message._tag === 'Defect' || message._tag === 'ClientProtocolError') reject(new SpawnError(`t3 rejected the request: ${JSON.stringify(message)}`));
         }
       });
-      ws.addEventListener('error', (event) => reject(new SpawnError(`t3 websocket error: ${(event as Event & { message?: string }).message ?? event.type}`)));
-      ws.addEventListener('close', (event) => reject(new SpawnError(`t3 websocket closed: ${event.code} ${event.reason}`)));
+      ws.addEventListener('error', (event) => fail(`t3 websocket error: ${(event as Event & { message?: string }).message || event.type}`));
+      ws.addEventListener('close', (event) => fail(`t3 websocket closed: ${event.code} ${event.reason}`));
     });
     if (exit._tag !== 'Success') throw new SpawnError(`t3 dispatch failed: ${JSON.stringify(exit)}`);
     return exit.value;

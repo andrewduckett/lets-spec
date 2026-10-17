@@ -267,6 +267,53 @@ test('dispatch fails on a Defect', async () => {
   await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), SpawnError);
 });
 
+// A WebSocket that t3 refuses: it fails and closes without opening.
+function refusedWebSocket(): typeof WebSocket {
+  return class {
+    listeners: Record<string, ((event: unknown) => void)[]> = {};
+    constructor() {
+      queueMicrotask(() => {
+        this.emit('error', { type: 'error', message: '' });
+        this.emit('close', { code: 1006, reason: '' });
+      });
+    }
+    addEventListener(type: string, listener: (event: unknown) => void) {
+      (this.listeners[type] ??= []).push(listener);
+    }
+    emit(type: string, event: unknown) {
+      for (const listener of this.listeners[type] ?? []) listener(event);
+    }
+    send() {}
+    close() {}
+  } as unknown as typeof WebSocket;
+}
+
+test('a refused WebSocket is reported with t3\'s own reason', async () => {
+  const fetches: string[] = [];
+  const fetch = (async (url: string) => {
+    fetches.push(url);
+    if (url.endsWith('/ws')) {
+      return { status: 426, ok: false, json: async () => ({ code: 'orchestration_protocol_incompatible', message: 'Update this client to one that supports orchestration protocol 2.' }) };
+    }
+    return { status: 200, ok: true, json: async () => ({ ticket: 'TICKET' }) };
+  }) as unknown as typeof globalThis.fetch;
+  const io = fakeIo({ env: {}, fetch, WebSocket: refusedWebSocket() });
+  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), (error) =>
+    error instanceof SpawnError
+    && error.message.startsWith('t3 refused the WebSocket connection: Update this client to one that supports orchestration protocol 2.')
+    && error.message.includes('After a t3 update'));
+  assert.deepEqual(fetches, [`${ORIGIN}/api/auth/websocket-ticket`, `${ORIGIN}/ws`]);
+});
+
+test('a refused WebSocket with no reason to read still says it was refused', async () => {
+  const fetch = (async (url: string) => {
+    if (url.endsWith('/ws')) throw new Error('connection reset');
+    return { status: 200, ok: true, json: async () => ({ ticket: 'TICKET' }) };
+  }) as unknown as typeof globalThis.fetch;
+  const io = fakeIo({ env: {}, fetch, WebSocket: refusedWebSocket() });
+  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), /^Error: t3 refused the WebSocket connection: it gave no reason/);
+});
+
 test('finish archives the thread on ok and leaves it otherwise', async () => {
   const log: Log = [];
   const io = fakeIo({ env: {}, files: RUNNING, fetch: fakeFetch([200], []), WebSocket: fakeWebSocket(SUCCESS, log) });
