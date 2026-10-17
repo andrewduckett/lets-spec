@@ -29,9 +29,5 @@
         "lets-setup-backlog"
       ]
     }
-  },
-  "backlogs": {
-    "github-labels": { "mode": "labels", "skills": [] },
-    "github-fields": { "mode": "fields", "skills": [] }
   }
 }

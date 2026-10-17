@@ -11,14 +11,13 @@ export const AGENTS = 'AGENTS.md';
 const CONFIG = 'init/openspec/config.yaml';
 
 // Where the release is: WORKFLOW_RELEASE when set, else the release this
-// package ships for the flow and backlog.
+// package ships for the flow.
 export function findRelease(env, packageRoot, io) {
   if ((env.WORKFLOW_RELEASE ?? '') !== '') return env.WORKFLOW_RELEASE;
   const flow = env.LETS_SPEC_FLOW || 'standard';
-  const backlog = env.LETS_SPEC_BACKLOG || 'github-labels';
-  const release = join(packageRoot, 'releases', `${flow}-${backlog}`);
+  const release = join(packageRoot, 'releases', flow);
   if (!io.isDir(release)) {
-    throw new UsageError(`there is no release for flow '${flow}' and backlog '${backlog}' at ${release}. Set LETS_SPEC_FLOW and LETS_SPEC_BACKLOG to a pair this release ships, or WORKFLOW_RELEASE to a release folder.`);
+    throw new UsageError(`there is no release for flow '${flow}' at ${release}. Set LETS_SPEC_FLOW to a flow this release ships, or WORKFLOW_RELEASE to a release folder.`);
   }
   return release;
 }

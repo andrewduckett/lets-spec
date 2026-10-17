@@ -5,7 +5,6 @@
 #   perSystem = { config, pkgs, ... }: {
 #     letsSpec = {
 #       flow = "standard";            # or "minimal"
-#       backlog = "github-labels";   # or "github-fields"
 #       skills = "committed";        # or "ignored"
 #     };
 #     devShells.default = pkgs.mkShell {
@@ -17,18 +16,18 @@
 # `self` is this repo's flake. So lets-sync, the skills and the OpenSpec CLI
 # come from the commit the project pins, not from the project's nixpkgs. The
 # wrapper that sets the skills mode is built with the project's own pkgs.
-# `flows` and `backlogs` are the choices the flake builds a package for.
-{ self, flows, backlogs }:
+# `flows` are the choices the flake builds a package for.
+{ self, flows }:
 { flake-parts-lib, lib, ... }:
 {
   options.perSystem = flake-parts-lib.mkPerSystemOption ({ config, system, pkgs, ... }:
     let
       cfg = config.letsSpec;
-      package = self.packages.${system}."${cfg.flow}-${cfg.backlog}";
+      package = self.packages.${system}.${cfg.flow};
       # The package, with lets-sync wrapped to pass on the skills mode. So
       # lets-sync uses the mode whether the shell hook runs it or you do.
       wrapped = pkgs.symlinkJoin {
-        name = "lets-spec-${cfg.flow}-${cfg.backlog}-${cfg.skills}";
+        name = "lets-spec-${cfg.flow}-${cfg.skills}";
         paths = [ package ];
         nativeBuildInputs = [ pkgs.makeWrapper ];
         postBuild = "wrapProgram $out/bin/lets-sync --set LETS_SPEC_SKILLS ${cfg.skills}";
@@ -43,17 +42,6 @@
             The flow: the OpenSpec schema the project plans its changes with,
             and the skills that schema calls. Set `schema:` in
             openspec/config.yaml to the same name.
-          '';
-        };
-        backlog = lib.mkOption {
-          type = lib.types.enum (lib.attrNames backlogs);
-          default = "github-labels";
-          description = ''
-            How the project's GitHub issues record kind and priority:
-            "github-labels" (labels, which every repo has) or "github-fields"
-            (the Epic issue type and the Priority issue field). lets-shape's
-            backlog script writes this convention, and lets-build's reads
-            both.
           '';
         };
         skills = lib.mkOption {
@@ -71,12 +59,11 @@
           type = lib.types.listOf lib.types.package;
           readOnly = true;
           default = [ wrapped ];
-          defaultText = lib.literalExpression ''[ inputs.lets-spec.packages.''${system}."''${flow}-''${backlog}", with lets-sync wrapped to set LETS_SPEC_SKILLS ]'';
+          defaultText = lib.literalExpression ''[ inputs.lets-spec.packages.''${system}.''${flow}, with lets-sync wrapped to set LETS_SPEC_SKILLS ]'';
           description = ''
-            The pinned OpenSpec CLI and lets-sync for the chosen flow and
-            backlog, with the gh the skills' scripts call. lets-sync
-            uses the chosen skills mode. Add these to the project's
-            development shell.
+            The pinned OpenSpec CLI and lets-sync for the chosen flow,
+            with the gh the skills call. lets-sync uses the chosen skills
+            mode. Add these to the project's development shell.
           '';
         };
         shellHook = lib.mkOption {

@@ -18,11 +18,7 @@
       packagesFor = pkgs: self.packages.${pkgs.stdenv.hostPlatform.system};
 
       inherit (nixpkgs) lib;
-      inherit (lib.importJSON ./flows.json) flows backlogs;
-
-      # Every flow and backlog pair. The flake has one package for each, named
-      # <flow>-<backlog>, such as standard-github-labels.
-      pairs = lib.cartesianProduct { flow = lib.attrNames flows; backlog = lib.attrNames backlogs; };
+      inherit (lib.importJSON ./flows.json) flows;
 
       # Only the folders a release is built from, so a change elsewhere, such
       # as to the README, does not make a new release.
@@ -38,7 +34,7 @@
       };
     in
     {
-      flakeModules.default = import ./nix/flake-module.nix { inherit self flows backlogs; };
+      flakeModules.default = import ./nix/flake-module.nix { inherit self flows; };
 
       packages = forAllSystems (pkgs: let
         # The pinned CLI, without its check for npm updates.
@@ -57,17 +53,16 @@
             node ${./build/generate-skills.mjs} ${./build/openspec.json} "$out"
           '';
 
-        # What lets-sync copies and creates for one flow and backlog.
-        # The build writes the backlog's mode into the skills' scripts.
-        release = flow: backlog: let recipe = flows.${flow}; in
+        # What lets-sync copies and creates for one flow.
+        release = flow: let recipe = flows.${flow}; in
           pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
             node ${./build/build-release.mjs} ${releaseSource} ${openspec-skills} $out \
-              ${lib.concatStringsSep "," recipe.schemas} ${backlogs.${backlog}.mode} \
-              ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
+              ${lib.concatStringsSep "," recipe.schemas} \
+              ${lib.escapeShellArgs recipe.skills}
           '';
 
         # lets-sync, bound to one release.
-        lets-sync = flow: backlog:
+        lets-sync = flow:
           pkgs.runCommand "lets-sync"
             { nativeBuildInputs = [ pkgs.makeWrapper ]; }
             ''
@@ -75,17 +70,17 @@
               cp -R ${./lets-sync} $out/libexec/lets-sync
               makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/lets-sync \
                 --add-flags $out/libexec/lets-sync/bin/lets-sync \
-                --set WORKFLOW_RELEASE ${release flow backlog} \
+                --set WORKFLOW_RELEASE ${release flow} \
                 --prefix PATH : ${lib.makeBinPath [ pkgs.git ]}
             '';
 
         # The folder the release tarball is made from: lets-sync, and one
-        # release for every flow and backlog pair. CI sets the real version.
+        # release for every flow. CI sets the real version.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
           mkdir -p $out/releases
           cp -R ${./lets-sync}/. $out
           chmod -R u+w $out
-          ${lib.concatMapStringsSep "\n" (p: "cp -R ${release p.flow p.backlog} $out/releases/${p.flow}-${p.backlog}") pairs}
+          ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
             version = "0.0.0-dev";
             openspec = pkgs.openspec.version;
@@ -93,26 +88,25 @@
           })} $out/release.json
         '';
 
-        # Everything a project's dev shell needs from this repo. The skills'
-        # scripts run in the shell on Node, so it carries Node and the gh
-        # they call.
-        bundle = flow: backlog: pkgs.buildEnv {
-          name = "lets-spec-${flow}-${backlog}";
-          paths = [ openspec (lets-sync flow backlog) pkgs.gh pkgs.nodejs_24 ];
+        # Everything a project's dev shell needs from this repo. It carries
+        # Node for lets-sync and lets-spawn, and the gh the skills call.
+        bundle = flow: pkgs.buildEnv {
+          name = "lets-spec-${flow}";
+          paths = [ openspec (lets-sync flow) pkgs.gh pkgs.nodejs_24 ];
         };
       in
-        { inherit openspec openspec-skills dist; default = bundle "standard" "github-labels"; }
-        // lib.listToAttrs (map (p: lib.nameValuePair "${p.flow}-${p.backlog}" (bundle p.flow p.backlog)) pairs));
+        { inherit openspec openspec-skills dist; default = bundle "standard"; }
+        // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
         lets-sync = app pkgs "lets-sync" "Set up this project for lets-spec, copy in the skills, and warn about anything to fix";
       });
 
       checks = forAllSystems (pkgs: {
-        # Builds the package for every flow and backlog pair, so a broken
-        # recipe never reaches a project.
+        # Builds the package for every flow, so a broken recipe never
+        # reaches a project.
         flows = pkgs.linkFarmFromDrvs "every-flow"
-          (map (p: (packagesFor pkgs)."${p.flow}-${p.backlog}") pairs);
+          (map (flow: (packagesFor pkgs).${flow}) (lib.attrNames flows));
 
         # The bats tests run the scripts directly. The smoke test then sets up
         # a project with the packaged commands, to prove the wrappers find the
@@ -161,7 +155,7 @@
             mkdir minimal
             cd minimal
             git init --quiet
-            minimal=${(packagesFor pkgs).minimal-github-labels}
+            minimal=${(packagesFor pkgs).minimal}
             $minimal/bin/lets-sync >/dev/null 2>&1
             $minimal/bin/lets-sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
@@ -182,7 +176,7 @@
         # project would after installing the tarball.
         dist = let
           dist = (packagesFor pkgs).dist;
-          names = lib.concatStringsSep "\n" (lib.sort (a: b: a < b) (map (p: "${p.flow}-${p.backlog}") pairs));
+          names = lib.concatStringsSep "\n" (lib.sort (a: b: a < b) (lib.attrNames flows));
         in pkgs.runCommand "dist-check"
           { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git pkgs.jq (packagesFor pkgs).openspec ]; }
           ''
@@ -193,7 +187,7 @@
             mkdir project
             cd project
             git init --quiet
-            export LETS_SPEC_FLOW=minimal LETS_SPEC_BACKLOG=github-fields
+            export LETS_SPEC_FLOW=minimal
             # The build sandbox has no /usr/bin/env, so node runs the script.
             node ${dist}/bin/lets-sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
@@ -215,9 +209,8 @@
           touch "$out"
         '';
 
-        # A flake-parts project can import the module, choose its flow,
-        # backlog and skills mode, and read the packages and shell hook those
-        # give.
+        # A flake-parts project can import the module, choose its flow and
+        # skills mode, and read the packages and shell hook those give.
         flake-module = let
           system = pkgs.stdenv.hostPlatform.system;
           consumerInputs = { inherit nixpkgs; self = { inputs = consumerInputs; outPath = ./.; }; };
@@ -225,7 +218,7 @@
             systems = [ system ];
             imports = [ self.flakeModules.default ];
             perSystem = { config, pkgs, ... }: {
-              letsSpec = { flow = "standard"; backlog = "github-fields"; skills = "ignored"; };
+              letsSpec = { flow = "standard"; skills = "ignored"; };
               devShells.default = pkgs.mkShell {
                 packages = config.letsSpec.packages;
                 shellHook = config.letsSpec.shellHook;

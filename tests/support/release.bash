@@ -13,13 +13,13 @@ generated_skills() {
   echo "$1"
 }
 
-# build <out> <schemas> <mode> [skill...]: run the release build on this
-# repo. <schemas> is comma-separated; the first is the default.
+# build <out> <schemas> [skill...]: run the release build on this repo.
+# <schemas> is comma-separated; the first is the default.
 build() {
-  local out="$1" schemas="$2" mode="$3"
-  shift 3
+  local out="$1" schemas="$2"
+  shift 2
   node "$repo/build/build-release.mjs" "$repo" "$(generated_skills "$out.generated")" \
-    "$out" "$schemas" "$mode" "$@"
+    "$out" "$schemas" "$@"
 }
 
 # make_release <dir> [extra skill...]: build a read-only release of the
@@ -28,7 +28,7 @@ build() {
 make_release() {
   local dir="$1" skill
   shift
-  build "$dir" lets-standard labels "${fixture_skills[@]}" >&2
+  build "$dir" lets-standard "${fixture_skills[@]}" >&2
   for skill in "$@"; do
     mkdir -p "$dir/overlay/.agents/skills/$skill"
     echo "$skill" >"$dir/overlay/.agents/skills/$skill/SKILL.md"

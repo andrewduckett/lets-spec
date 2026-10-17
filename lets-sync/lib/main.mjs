@@ -52,9 +52,8 @@ still has the skills block. With LETS_SPEC_SKILLS=ignored, it exits 1 if
 .gitignore lacks a current skills block. Run it in CI.
 
 WORKFLOW_RELEASE names the release folder. Without it, LETS_SPEC_FLOW
-(default standard) and LETS_SPEC_BACKLOG (default github-labels) pick one
-of the releases that ship with lets-sync. The Nix wrapper sets
-WORKFLOW_RELEASE.
+(default standard) picks one of the releases that ship with lets-sync.
+The Nix wrapper sets WORKFLOW_RELEASE.
 `;
 
 // deps: { env, cwd, packageRoot, io, stdout(text), stderr(text) }
@@ -69,7 +68,7 @@ export async function run(argv, deps) {
 }
 
 // Whether git tracks the copied skills: LETS_SPEC_SKILLS, committed when
-// unset or empty, as for LETS_SPEC_FLOW and LETS_SPEC_BACKLOG.
+// unset or empty, as for LETS_SPEC_FLOW.
 export function skillsMode(env) {
   const mode = env.LETS_SPEC_SKILLS || 'committed';
   if (mode !== 'committed' && mode !== 'ignored') {

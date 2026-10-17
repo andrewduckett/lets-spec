@@ -4,31 +4,31 @@ import { UsageError } from '../../lets-sync/lib/main.mjs';
 import { findRelease, openspecVersionWarning } from '../../lets-sync/lib/release.mjs';
 import { fakeIo } from './fixtures/fake-io.mjs';
 
-const RELEASE = '/pkg/releases/standard-github-labels';
+const RELEASE = '/pkg/releases/standard';
 const RELEASE_JSON = '/pkg/release.json';
 const info = (openspec) => JSON.stringify({ version: '0.1.0', openspec, commit: 'abc' });
 
-test('WORKFLOW_RELEASE wins over the flow and backlog', () => {
+test('WORKFLOW_RELEASE wins over the flow', () => {
   const env = { WORKFLOW_RELEASE: '/elsewhere', LETS_SPEC_FLOW: 'minimal' };
   assert.equal(findRelease(env, '/pkg', fakeIo()), '/elsewhere');
 });
 
-test('the default pair is standard-github-labels under packageRoot/releases', () => {
+test('the default flow is standard under packageRoot/releases', () => {
   const io = fakeIo({ dirs: [RELEASE] });
   assert.equal(findRelease({}, '/pkg', io), RELEASE);
 });
 
-test('LETS_SPEC_FLOW and LETS_SPEC_BACKLOG pick the pair', () => {
-  const io = fakeIo({ dirs: ['/pkg/releases/minimal-github-fields'] });
-  const env = { LETS_SPEC_FLOW: 'minimal', LETS_SPEC_BACKLOG: 'github-fields' };
-  assert.equal(findRelease(env, '/pkg', io), '/pkg/releases/minimal-github-fields');
+test('LETS_SPEC_FLOW picks the flow', () => {
+  const io = fakeIo({ dirs: ['/pkg/releases/minimal'] });
+  const env = { LETS_SPEC_FLOW: 'minimal' };
+  assert.equal(findRelease(env, '/pkg', io), '/pkg/releases/minimal');
 });
 
-test('a missing pair names both variables', () => {
-  const env = { LETS_SPEC_FLOW: 'minimal', LETS_SPEC_BACKLOG: 'jira' };
+test('a missing flow names the variable', () => {
+  const env = { LETS_SPEC_FLOW: 'jira' };
   assert.throws(() => findRelease(env, '/pkg', fakeIo()), (error) => {
     assert.ok(error instanceof UsageError);
-    assert.equal(error.message, "there is no release for flow 'minimal' and backlog 'jira' at /pkg/releases/minimal-jira. Set LETS_SPEC_FLOW and LETS_SPEC_BACKLOG to a pair this release ships, or WORKFLOW_RELEASE to a release folder.");
+    assert.equal(error.message, "there is no release for flow 'jira' at /pkg/releases/jira. Set LETS_SPEC_FLOW to a flow this release ships, or WORKFLOW_RELEASE to a release folder.");
     return true;
   });
 });
