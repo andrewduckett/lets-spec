@@ -45,13 +45,18 @@ jobs:
       - name: Sync into a scratch project
         run: |
           set -euo pipefail
+          # The scratch project has no mise.toml, so mise's shims would fall
+          # back to the runner's own, older node. Use this repo's tools, as a
+          # project that pins them would.
+          eval "$(mise env --shell bash)"
           export PATH="$PWD/result/bin:$PATH"
           export OPENSPEC_TELEMETRY=0
           scratch="$RUNNER_TEMP/project"
           mkdir -p "$scratch"
           cd "$scratch"
           git init -q
-          lets sync 2> "$RUNNER_TEMP/sync.err"
+          node --version
+          lets sync 2> "$RUNNER_TEMP/sync.err" || { cat "$RUNNER_TEMP/sync.err" >&2; exit 1; }
           cat "$RUNNER_TEMP/sync.err"
           test -f .agents/skills/openspec-propose/SKILL.md
           test ! -L .agents/skills/openspec-propose/SKILL.md
