@@ -1,10 +1,12 @@
-// Bundle the CLI into one file, dist/lets, that any Node 26 runs with no
-// node_modules beside it. The banner repeats the Node check in bin/lets.
+// Bundle the CLI into one file that any Node 26 runs with no node_modules
+// beside it. The banner repeats the Node check in bin/lets.
+//
+//   node build.mjs [outfile]     outfile defaults to dist/lets
 import { chmodSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
-const outfile = fileURLToPath(new URL('dist/lets', import.meta.url));
+const outfile = process.argv[2] ?? fileURLToPath(new URL('dist/lets', import.meta.url));
 
 const banner = `#!/usr/bin/env node
 if (Number(process.versions.node.split('.')[0]) < 26) {

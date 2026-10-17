@@ -27,6 +27,30 @@
         fileset = lib.fileset.unions [ ./schemas ./skills ./overlays ];
       };
 
+      # Only the pnpm workspace, so a skill edit does not rebuild the CLI.
+      # Every workspace package must be here, or the lockfile does not match.
+      workspaceSource = lib.fileset.toSource {
+        root = ./.;
+        fileset = lib.fileset.unions ([
+          ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
+        ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib);
+      };
+
+      # The workspace's dependencies from pnpm-lock.yaml. When the lockfile
+      # changes, set hash to lib.fakeHash, build, and copy in the hash Nix
+      # prints.
+      pnpmDepsFor = pkgs: pkgs.fetchPnpmDeps {
+        pname = "lets-spec";
+        version = "0.0.0";
+        src = workspaceSource;
+        fetcherVersion = 4;
+        # Fetch esbuild's and TypeScript's binaries for every system above,
+        # so the hash is the same on each. pnpm fetches only the host's
+        # unless told.
+        pnpmInstallFlags = [ "--os=linux,darwin" "--cpu=x64,arm64" ];
+        hash = "sha256-qx8RTpo/oR00t8b5kQcOg1noEyPLgBLlIwsytgGyF5I=";
+      };
+
       app = pkgs: name: description: {
         type = "app";
         meta.description = description;
@@ -37,6 +61,8 @@
       flakeModules.default = import ./nix/flake-module.nix { inherit self flows; };
 
       packages = forAllSystems (pkgs: let
+        pnpmDeps = pnpmDepsFor pkgs;
+
         # The pinned CLI, without its check for npm updates.
         openspec = pkgs.symlinkJoin {
           name = "openspec-${pkgs.openspec.version}";
@@ -47,39 +73,58 @@
 
         # The openspec-* skills for the workflows in build/openspec.json.
         openspec-skills = pkgs.runCommand "openspec-skills-${pkgs.openspec.version}"
-          { nativeBuildInputs = [ pkgs.openspec pkgs.nodejs_24 ]; }
+          { nativeBuildInputs = [ pkgs.openspec pkgs.nodejs_26 ]; }
           ''
             export HOME="$TMPDIR"
             node ${./build/generate-skills.mjs} ${./build/openspec.json} "$out"
           '';
 
-        # What lets-sync copies and creates for one flow.
+        # What lets sync copies and creates for one flow.
         release = flow: let recipe = flows.${flow}; in
-          pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
+          pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_26 ]; } ''
             node ${./build/build-release.mjs} ${releaseSource} ${openspec-skills} $out \
               ${lib.concatStringsSep "," recipe.schemas} \
               ${lib.escapeShellArgs recipe.skills}
           '';
 
-        # lets-sync, bound to one release.
-        lets-sync = flow:
-          pkgs.runCommand "lets-sync"
+        # The lets command: the bundle esbuild makes, in libexec, and a
+        # bin/lets that runs it with Node 26. The bundle keeps its
+        # #!/usr/bin/env node, because the tarball ships it as it is.
+        lets-cli = pkgs.stdenv.mkDerivation {
+          pname = "lets";
+          version = "0.0.0";
+          src = workspaceSource;
+          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
+          inherit pnpmDeps;
+          dontPatchShebangs = true;
+          buildPhase = ''
+            runHook preBuild
+            pnpm --filter lets build
+            runHook postBuild
+          '';
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 lets/dist/lets $out/libexec/lets
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets --add-flags $out/libexec/lets
+            runHook postInstall
+          '';
+        };
+
+        # lets, bound to one release.
+        lets = flow:
+          pkgs.runCommand "lets"
             { nativeBuildInputs = [ pkgs.makeWrapper ]; }
             ''
-              mkdir -p $out/bin $out/libexec
-              cp -R ${./lets-sync} $out/libexec/lets-sync
-              makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/lets-sync \
-                --add-flags $out/libexec/lets-sync/bin/lets-sync \
+              makeWrapper ${lets-cli}/bin/lets $out/bin/lets \
                 --set WORKFLOW_RELEASE ${release flow} \
                 --prefix PATH : ${lib.makeBinPath [ pkgs.git ]}
             '';
 
-        # The folder the release tarball is made from: lets-sync, and one
-        # release for every flow. CI sets the real version.
+        # The folder the release tarball is made from: the lets bundle, and
+        # one release for every flow. CI sets the real version.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
-          mkdir -p $out/releases
-          cp -R ${./lets-sync}/. $out
-          chmod -R u+w $out
+          mkdir -p $out/bin $out/releases
+          cp ${lets-cli}/libexec/lets $out/bin/lets
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
             version = "0.0.0-dev";
@@ -89,17 +134,17 @@
         '';
 
         # Everything a project's dev shell needs from this repo. It carries
-        # Node for lets-sync and lets-spawn, and the gh the skills call.
+        # Node for lets and lets-spawn, and the gh the skills call.
         bundle = flow: pkgs.buildEnv {
           name = "lets-spec-${flow}";
-          paths = [ openspec (lets-sync flow) pkgs.gh pkgs.nodejs_24 ];
+          paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
-        lets-sync = app pkgs "lets-sync" "Set up this project for lets-spec, copy in the skills, and warn about anything to fix";
+        lets = app pkgs "lets" "The lets-spec command. lets sync sets up this project, copies in the skills, and warns about anything to fix";
       });
 
       checks = forAllSystems (pkgs: {
@@ -108,27 +153,32 @@
         flows = pkgs.linkFarmFromDrvs "every-flow"
           (map (flow: (packagesFor pkgs).${flow}) (lib.attrNames flows));
 
-        # The bats tests run the scripts directly. The smoke test then sets up
-        # a project with the packaged commands, to prove the wrappers find the
-        # release, and that the pinned OpenSpec CLI works with the result.
+        # The bats tests run the scripts directly, so they need the
+        # workspace's node_modules. The smoke test then sets up a project with
+        # the packaged commands, to prove the wrappers find the release, and
+        # that the pinned OpenSpec CLI works with the result.
         commands = pkgs.runCommand "commands-check"
-          { nativeBuildInputs = [ pkgs.bats pkgs.git pkgs.yq-go pkgs.jq pkgs.nodejs_24 (packagesFor pkgs).default ]; }
+          {
+            nativeBuildInputs = [ pkgs.bats pkgs.git pkgs.yq-go pkgs.jq pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook (packagesFor pkgs).default ];
+            pnpmDeps = pnpmDepsFor pkgs;
+          }
           ''
             export HOME="$TMPDIR" OPENSPEC_TELEMETRY=0
             cp -R ${self} repo
             chmod -R u+w repo
+            (cd repo && pnpmConfigHook)
             bats repo/tests
 
             mkdir project
             cd project
             git init --quiet
             # The first run creates the project's files.
-            lets-sync >/dev/null 2>&1
+            lets sync >/dev/null 2>&1
             # A context the pinned OpenSpec CLI must pass on to agents.
             yq -i '.context = "CONTEXT-MARKER"' openspec/config.yaml
-            lets-sync 2>warnings
+            lets sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
-            # lets-sync copies the skills in. It does not link them.
+            # lets sync copies the skills in. It does not link them.
             [ ! -L .agents/skills/openspec-propose ]
             [ -f .agents/skills/openspec-propose/SKILL.md ]
             [ -f .claude/skills/lets-test-first/SKILL.md ]
@@ -136,7 +186,7 @@
             grep -q '^## Workflow$' CLAUDE.md
             # Once the project commits the copies, the check passes.
             git add -A
-            lets-sync --check
+            lets sync --check
 
             openspec new change gate </dev/null >/dev/null 2>&1
             openspec instructions brainstorm --change gate </dev/null >instructions 2>stderr
@@ -156,8 +206,8 @@
             cd minimal
             git init --quiet
             minimal=${(packagesFor pkgs).minimal}
-            $minimal/bin/lets-sync >/dev/null 2>&1
-            $minimal/bin/lets-sync 2>warnings
+            $minimal/bin/lets sync >/dev/null 2>&1
+            $minimal/bin/lets sync 2>warnings
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
             [ "$(yq -r .schema openspec/config.yaml)" = lets-minimal ]
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
@@ -172,16 +222,20 @@
             touch "$out"
           '';
 
-        # The folder the release tarball is made from. Run its lets-sync as a
-        # project would after installing the tarball.
+        # The folder the release tarball is made from. Run its lets as a
+        # project would after installing the tarball: one script, run by the
+        # project's own node, with no node_modules.
         dist = let
           dist = (packagesFor pkgs).dist;
           names = lib.concatStringsSep "\n" (lib.sort (a: b: a < b) (lib.attrNames flows));
         in pkgs.runCommand "dist-check"
-          { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git pkgs.jq (packagesFor pkgs).openspec ]; }
+          { nativeBuildInputs = [ pkgs.nodejs_26 pkgs.git pkgs.jq (packagesFor pkgs).openspec ]; }
           ''
             export HOME="$TMPDIR"
-            [ -x ${dist}/bin/lets-sync ]
+            [ "$(ls ${dist}/bin)" = lets ]
+            [ -x ${dist}/bin/lets ]
+            [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
+            [ ! -e ${dist}/node_modules ]
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
             mkdir project
@@ -189,25 +243,34 @@
             git init --quiet
             export LETS_SPEC_FLOW=minimal
             # The build sandbox has no /usr/bin/env, so node runs the script.
-            node ${dist}/bin/lets-sync >/dev/null 2>stderr
+            [ "$(node ${dist}/bin/lets --version)" = 0.0.0-dev ]
+            node ${dist}/bin/lets sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml
             git add -A
-            node ${dist}/bin/lets-sync --check
+            node ${dist}/bin/lets sync --check
             touch "$out"
           '';
 
-        # The unit tests for the lets-sync package and the skills' Node
-        # scripts. They use fakes, so no harness and no real gh run here.
-        node-tests = pkgs.runCommand "node-tests" { nativeBuildInputs = [ pkgs.nodejs_24 pkgs.git ]; } ''
-          cp -R ${self} repo
-          chmod -R u+w repo
-          cd repo
-          export HOME="$TMPDIR"
-          # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs"
-          touch "$out"
-        '';
+        # The unit tests for the lets package and the skills' Node scripts,
+        # and the type check. They use fakes, so no harness and no real gh
+        # run here.
+        node-tests = pkgs.runCommand "node-tests"
+          {
+            nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.git ];
+            pnpmDeps = pnpmDepsFor pkgs;
+          }
+          ''
+            cp -R ${self} repo
+            chmod -R u+w repo
+            cd repo
+            export HOME="$TMPDIR"
+            pnpmConfigHook
+            # Node's runner expands the glob itself. It does not take a folder.
+            node --test "tests/lets/**/*.test.ts" "tests/lets-spawn/*.test.mjs"
+            pnpm check
+            touch "$out"
+          '';
 
         # A flake-parts project can import the module, choose its flow and
         # skills mode, and read the packages and shell hook those give.
@@ -229,14 +292,14 @@
           hook = pkgs.writeText "shell-hook" shell.shellHook;
         in pkgs.runCommand "flake-module-check" { nativeBuildInputs = [ pkgs.git ]; } ''
           export HOME="$TMPDIR"
-          lets_sync="$(grep -o '/nix/store/[^ "'"'"';]*/bin/lets-sync' ${hook} | head -n 1)"
-          # The module wraps lets-sync to pass on the skills mode.
-          if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$lets_sync"; then
-            echo "The shell hook's lets-sync does not set LETS_SPEC_SKILLS=ignored." >&2
-            cat ${hook} "$lets_sync" >&2
+          lets="$(grep -o '/nix/store/[^ "'"'"';]*/bin/lets' ${hook} | head -n 1)"
+          # The module wraps lets to pass on the skills mode.
+          if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$lets"; then
+            echo "The shell hook's lets does not set LETS_SPEC_SKILLS=ignored." >&2
+            cat ${hook} "$lets" >&2
             exit 1
           fi
-          # In CI the hook syncs nothing, so lets-sync --check sees the
+          # In CI the hook syncs nothing, so lets sync --check sees the
           # committed tree. Elsewhere it syncs.
           mkdir project
           cd project
@@ -255,7 +318,7 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.yq-go pkgs.jq pkgs.nodejs_24 ];
+          packages = [ (packagesFor pkgs).openspec pkgs.bats pkgs.yq-go pkgs.jq pkgs.nodejs_26 pkgs.pnpm ];
         };
       });
     };
