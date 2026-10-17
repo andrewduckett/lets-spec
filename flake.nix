@@ -266,9 +266,15 @@
             cd repo
             export HOME="$TMPDIR"
             pnpmConfigHook
+            # The test fixtures and the resolver's dev entry run as programs,
+            # and the sandbox has no /usr/bin/env.
+            patchShebangs tests contrib/lets-delegate-resolver/bin
             # Node's runner expands the glob itself. It does not take a folder.
             node --test "tests/lets/**/*.test.ts" "tests/lets-delegate-resolver/*.test.ts" "tests/lets-spawn/*.test.mjs"
             pnpm check
+            # The built-in default and the contrib resolver keep the shape of
+            # the contract. Neither starts a session here.
+            pnpm conformance
             touch "$out"
           '';
 

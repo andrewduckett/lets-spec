@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
+import { run as conformance } from './delegate/conformance.ts';
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
@@ -83,6 +84,13 @@ started, handle is null and instructions holds the text to show the user.
 
 Exit codes: 0 ok, 2 usage error, 4 the session could not start.`;
 
+const CONFORMANCE_HELP = `
+It prints one line per check, and exits 1 if any fails.
+
+The live part runs "Reply with the single word ready and stop" read-only,
+checks the answer and the tree, and sends finish. Then it starts a session
+with "Say hello and stop", and leaves it for you to close.`;
+
 // --timeout-minutes: a whole number of minutes.
 function wholeMinutes(value: string): number {
   if (!/^[1-9][0-9]*$/.test(value)) throw new InvalidArgumentError('Give a whole number of minutes.');
@@ -156,6 +164,17 @@ delegate
   .addHelpText('after', HANDOFF_HELP)
   .action(async (options: HandoffOptions) => {
     process.exitCode = await handoff(options, realDeps());
+  });
+
+delegate
+  .command('conformance')
+  .summary('check that a resolver keeps the contract')
+  .description('Check that a resolver keeps the contract. The checks send requests that start nothing, unless you give --live.')
+  .argument('<command...>', 'the resolver, and any arguments to give it before the verb')
+  .option('--live', 'also run a session and start another: this spends tokens and may open a thread')
+  .addHelpText('after', CONFORMANCE_HELP)
+  .action(async (command: string[], { live }: { live?: boolean }) => {
+    process.exitCode = await conformance({ command, live: live === true }, realDeps());
   });
 
 try {
