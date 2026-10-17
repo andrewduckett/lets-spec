@@ -1,0 +1,28 @@
+#!/bin/sh
+# A complete lets delegate resolver: run sends the prompt to claude, headless
+# and read-only. It needs jq, and claude for run. It issues no handles, and
+# leaves the timeout to lets, which stops it a minute after timeoutMinutes.
+# The contract: contrib/lets-delegate-resolver/README.md
+# Check it with: lets delegate conformance contrib/headless-resolver
+
+request=$(cat)
+if ! printf '%s' "$request" | jq -e '.protocol == 1' >/dev/null 2>&1; then
+  echo "headless-resolver: not a protocol 1 request" >&2; exit 2
+fi
+field() { printf '%s' "$request" | jq -r ".$1"; }
+
+case "$1" in
+  probe) echo '{"resolver":"headless-sh"}' ;;
+  run)
+    command -v claude >/dev/null || { echo "headless-resolver: claude is not on PATH" >&2; exit 3; }
+    cd "$(field cwd)" || exit 2
+    # The new session must not think it is a child of the one that called lets.
+    unset CLAUDECODE CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_SESSION_ID CLAUDE_CODE_BRIDGE_SESSION_ID \
+      CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_ENTRYPOINT CLAUDE_PID CLAUDE_EFFORT
+    text=$(field prompt | claude -p --permission-mode plan --effort "$(field effort)") || exit 5
+    [ -n "$text" ] || { echo "headless-resolver: claude gave an empty answer" >&2; exit 5; }
+    jq -cn --arg text "$text" '{resolver: "headless-sh", family: "claude", text: $text}' ;;
+  start) echo "headless-resolver: this resolver only runs headless" >&2; exit 75 ;;
+  finish) ;; # It issues no handles, so it has nothing to finish.
+  *) echo "headless-resolver: unknown verb $1" >&2; exit 2 ;;
+esac

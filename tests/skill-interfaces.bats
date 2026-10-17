@@ -127,3 +127,9 @@ flow_texts() {
   run grep -n '[[:space:]]$' $(prose)
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
+
+@test "the resolver README shows contrib/headless-resolver as it is" {
+  local readme="$repo/contrib/lets-delegate-resolver/README.md"
+  diff "$repo/contrib/headless-resolver" \
+    <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$readme")
+}
