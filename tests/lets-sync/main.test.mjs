@@ -32,7 +32,7 @@ test('--help prints the usage and exits 0', async () => {
   assert.ok(t.stdout().includes('Usage: lets-sync [--check]'));
   assert.ok(t.stdout().includes('LETS_SPEC_SKILLS=ignored'));
   assert.ok(!t.stdout().includes('Nix store'));
-  assert.ok(t.stdout().endsWith('The Nix wrapper sets\nWORKFLOW_RELEASE.\n'));
+  assert.ok(t.stdout().endsWith('The Nix wrapper sets WORKFLOW_RELEASE.\n'));
   assert.ok(!t.stdout().includes('set -euo'));
 });
 
@@ -45,7 +45,7 @@ test('an unknown option is a usage error', async () => {
 test('no WORKFLOW_RELEASE is a usage error', async () => {
   const t = setup({ env: {} });
   assert.equal(await run([], t.deps), 1);
-  assert.ok(t.stderr().includes("there is no release for flow 'standard' and backlog 'github-labels' at /pkg/releases/standard-github-labels."));
+  assert.ok(t.stderr().includes("there is no release for flow 'standard' at /pkg/releases/standard."));
 });
 
 test('a folder that is not a release is refused', async () => {
@@ -54,11 +54,26 @@ test('a folder that is not a release is refused', async () => {
   assert.ok(t.stderr().includes(`${RELEASE} is not a release of lets-spec`));
 });
 
-test('a release with two schemas is refused', async () => {
+test('a release with two schemas is accepted', async () => {
   const files = { ...releaseFiles, [`${RELEASE}/overlay/openspec/schemas/lets-minimal/schema.yaml`]: 'x' };
+  const t = setup({ files, toplevel: '/project' });
+  assert.equal(await run([], t.deps), 0);
+  assert.equal(t.stderr(), '');
+});
+
+test('a release with no schema is refused', async () => {
+  const files = { ...releaseFiles };
+  delete files[`${RELEASE}/overlay/openspec/schemas/lets-standard/schema.yaml`];
   const t = setup({ files });
   assert.equal(await run([], t.deps), 1);
-  assert.ok(t.stderr().includes('holds 2 schemas'));
+  assert.ok(t.stderr().includes('holds no schema'));
+});
+
+test('a release whose config names a schema it does not ship is refused', async () => {
+  const files = { ...releaseFiles, [`${RELEASE}/init/openspec/config.yaml`]: 'schema: lets-minimal\n' };
+  const t = setup({ files });
+  assert.equal(await run([], t.deps), 1);
+  assert.ok(t.stderr().includes("names 'lets-minimal', which the release does not ship"));
 });
 
 test('outside a git repo nothing is written', async () => {
@@ -76,7 +91,7 @@ test('inside a git repo a valid run exits 0 quietly', async () => {
 });
 
 test('a CLI version that differs from release.json is a warning in the footer', async () => {
-  const release = '/pkg/releases/standard-github-labels';
+  const release = '/pkg/releases/standard';
   const files = {};
   for (const [path, text] of Object.entries(releaseFiles)) files[path.replace(RELEASE, release)] = text;
   files['/pkg/release.json'] = JSON.stringify({ version: '0.1.0', openspec: '1.2.3', commit: 'abc' });

@@ -1,30 +1,30 @@
 #!/usr/bin/env node
-// Build the release for one flow and one backlog: the files lets-sync
-// links into a project and creates in it. The flake runs it once for each
-// pair of a recipe in flows.json and a backlog, with the skills of both.
+// Build the release for one flow: the files lets-sync copies into a
+// project and creates in it. The flake runs it once for each recipe in
+// flows.json.
 //
-// Usage: build-release.mjs <source> <generated> <out> <schema> <mode> [skill...]
+// Usage: build-release.mjs <source> <generated> <out> <schemas> [skill...]
 //   source     this repo, or a copy of its schemas/, skills/ and overlays/
 //              folders
 //   generated  a folder that holds the generated openspec-* skills
 //   out        the release folder to create
-//   schema     the folder in schemas/ to ship
-//   mode       labels or fields: how the backlog records kind and priority
+//   schemas    the folders in schemas/ to ship, comma-separated. The first
+//              is the default, and names the config
 //   skill      each folder in skills/ to ship
 //
 // The release has three folders:
-//   overlay/    files lets-sync links into a project, at the same
-//               paths: the skills and the schema
+//   overlay/    files lets-sync copies into a project, at the same
+//               paths: the skills and the schemas
 //   init/       files lets-sync creates in a project when they are
 //               missing
 //   fragments/  text lets-sync keeps in a marked block of the project's
 //               file at the same path
 import {
-  chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync,
+  chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, statSync,
 } from 'node:fs';
 import { join } from 'node:path';
 
-const USAGE = 'usage: build-release.mjs <source> <generated> <out> <schema> <mode> [skill...]';
+const USAGE = 'usage: build-release.mjs <source> <generated> <out> <schemas> [skill...]';
 
 function die(message) {
   process.stderr.write(`error: ${message}\n`);
@@ -62,11 +62,13 @@ if (args[0] === '-h' || args[0] === '--help') {
   process.stdout.write(`${USAGE}\n`);
   process.exit(0);
 }
-if (args.length < 5) die(USAGE);
-const [source, generated, out, schema, mode, ...skillNames] = args;
+if (args.length < 4) die(USAGE);
+const [source, generated, out, schemaList, ...skillNames] = args;
+const schemas = schemaList.split(',');
 
-if (!isDir(join(source, 'schemas', schema))) die(`there is no schema named ${schema} in schemas/.`);
-if (mode !== 'labels' && mode !== 'fields') die(`the backlog mode must be labels or fields, got '${mode}'.`);
+for (const schema of schemas) {
+  if (!isDir(join(source, 'schemas', schema))) die(`there is no schema named ${schema} in schemas/.`);
+}
 if (!isDir(generated)) die(`there is no folder of generated skills at ${generated}.`);
 for (const skill of skillNames) {
   if (!isDir(join(source, 'skills', skill))) die(`there is no skill named ${skill} in skills/.`);
@@ -75,7 +77,9 @@ for (const skill of skillNames) {
 const overlay = join(out, 'overlay');
 const skills = join(overlay, '.agents/skills');
 for (const dir of [join(overlay, 'openspec/schemas'), skills, join(out, 'fragments')]) mkdirSync(dir, { recursive: true });
-cpSync(join(source, 'schemas', schema), join(overlay, 'openspec/schemas', schema), { recursive: true });
+for (const schema of schemas) {
+  cpSync(join(source, 'schemas', schema), join(overlay, 'openspec/schemas', schema), { recursive: true });
+}
 // overlays/ holds the files a project gets, at their paths in the project.
 // AGENTS.md is a fragment, and lets-sync creates each other file.
 cpSync(join(source, 'overlays'), join(out, 'init'), { recursive: true });
@@ -85,10 +89,11 @@ renameSync(join(out, 'init/AGENTS.md'), join(out, 'fragments/AGENTS.md'));
 // Each flow has its own config in openspec/config.d/<schema>.yaml: the
 // whole file lets-sync creates, naming the flow's schema and holding what
 // its projects start with, such as the standard flow's archive guidance.
-// The release ships it as the config, and no project gets the folder.
+// The release ships the default schema's as the config, and no project
+// gets the folder.
 const configs = join(out, 'init/openspec/config.d');
-const flowConfig = join(configs, `${schema}.yaml`);
-if (!existsSync(flowConfig)) die(`there is no config for ${schema} in overlays/openspec/config.d/.`);
+const flowConfig = join(configs, `${schemas[0]}.yaml`);
+if (!existsSync(flowConfig)) die(`there is no config for ${schemas[0]} in overlays/openspec/config.d/.`);
 renameSync(flowConfig, join(out, 'init/openspec/config.yaml'));
 rmSync(configs, { recursive: true, force: true });
 
@@ -104,15 +109,4 @@ for (const skill of skillNames) {
 for (const name of readdirSync(generated).sort()) {
   const dir = join(generated, name);
   if (!name.startsWith('.') && isDir(dir)) addSkill(dir, name, 'has the same name as a generated OpenSpec skill');
-}
-
-// A skill's script that writes to the backlog holds @backlog-mode@ where
-// the mode goes, so the shipped skill needs nothing from outside it. Write
-// through the file, not over it, to keep its permissions. The skills were
-// copied from the read-only store, so make them writable first.
-makeWritable(skills);
-for (const path of walk(skills)) {
-  if (!lstatSync(path).isFile()) continue;
-  const text = readFileSync(path, 'utf8');
-  if (text.includes('@backlog-mode@')) writeFileSync(path, text.replaceAll('@backlog-mode@', mode));
 }

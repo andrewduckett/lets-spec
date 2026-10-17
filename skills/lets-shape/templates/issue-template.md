@@ -1,6 +1,6 @@
 # Issue templates
 
-Two shapes. Every field is required unless marked optional.
+One shape for each Kind. Every field is required unless marked optional.
 
 ## Parent issue (one per discovery run)
 
@@ -59,3 +59,21 @@ Title: `<kebab-story-name> — <one-line outcome>`
 
 When the run fits one story, the parent issue takes this shape instead, keeping the
 status line and input reference above the outcome until the run finalizes.
+
+## Bug issue
+
+Title: `<kebab-bug-name> — <one-line outcome>`
+
+```markdown
+<one-line outcome: what works once this is fixed>
+
+- **Expected**: <what should happen>
+- **Actual**: <what happens, with the error text if there is one>
+- **How to reproduce**: <steps, or the command>
+- **Relevant code**: <paths / modules, or "unknown">
+- **Scope**: in: <1-3 items> / out: <1-2 items>
+```
+
+## Chore issue
+
+Title: `<kebab-chore-name> — <one-line outcome>`. A chore has no template: its body is the one-line outcome.

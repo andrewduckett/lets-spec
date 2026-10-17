@@ -5,7 +5,7 @@ import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBl
 import { checkConfig } from './config.mjs';
 import { checkClaude, createInitFiles, linkClaude } from './init.mjs';
 import { isManaged } from './managed.mjs';
-import { AGENTS, findRelease, openspecVersionWarning, releaseSchema, requireRelease } from './release.mjs';
+import { AGENTS, defaultSchema, findRelease, openspecVersionWarning, requireRelease } from './release.mjs';
 import { checkSkills, syncSkills } from './skills.mjs';
 
 const CONFIG = 'openspec/config.yaml';
@@ -30,7 +30,7 @@ openspec/config.yaml from the release's template, and the CLAUDE.md and
 .claude/skills links. It never edits one that exists, and names each file
 it creates or changes.
 
-Copies each skill into .agents/skills, and the schema into openspec/schemas.
+Copies each skill into .agents/skills, and each schema into openspec/schemas.
 With LETS_SPEC_SKILLS=committed, the default, the project commits them.
 With LETS_SPEC_SKILLS=ignored, lets-sync keeps a block in .gitignore that
 ignores them.
@@ -38,6 +38,7 @@ ignores them.
 Then it warns if:
 - the rules block in AGENTS.md has a marker without its pair
 - openspec/config.yaml is invalid, or names a schema other than the release's
+  default
 - CLAUDE.md is not a link to AGENTS.md, or .claude/skills is not a link to
   ../.agents/skills
 
@@ -51,9 +52,8 @@ still has the skills block. With LETS_SPEC_SKILLS=ignored, it exits 1 if
 .gitignore lacks a current skills block. Run it in CI.
 
 WORKFLOW_RELEASE names the release folder. Without it, LETS_SPEC_FLOW
-(default standard) and LETS_SPEC_BACKLOG (default github-labels) pick one
-of the releases that ship with lets-sync. The Nix wrapper sets
-WORKFLOW_RELEASE.
+(default standard) picks one of the releases that ship with lets-sync.
+The Nix wrapper sets WORKFLOW_RELEASE.
 `;
 
 // deps: { env, cwd, packageRoot, io, stdout(text), stderr(text) }
@@ -68,7 +68,7 @@ export async function run(argv, deps) {
 }
 
 // Whether git tracks the copied skills: LETS_SPEC_SKILLS, committed when
-// unset or empty, as for LETS_SPEC_FLOW and LETS_SPEC_BACKLOG.
+// unset or empty, as for LETS_SPEC_FLOW.
 export function skillsMode(env) {
   const mode = env.LETS_SPEC_SKILLS || 'committed';
   if (mode !== 'committed' && mode !== 'ignored') {
@@ -86,7 +86,7 @@ async function steps(argv, deps) {
   }
   const release = findRelease(deps.env, deps.packageRoot, io);
   requireRelease(release, io);
-  const schemaName = releaseSchema(release, io);
+  const schemaName = defaultSchema(release, io);
 
   const git = await io.execFile('git', ['rev-parse', '--show-toplevel'], { cwd: deps.cwd });
   if (git.code !== 0) {

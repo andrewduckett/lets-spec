@@ -1,8 +1,8 @@
-// What lets-sync owns: the skills and schema the release ships, and the
+// What lets-sync owns: the skills and schemas the release ships, and the
 // project paths with the same names. It touches nothing else.
 import { join } from 'node:path';
 import { UsageError } from './main.mjs';
-import { releaseSchema, SCHEMAS_DST, SKILLS_DST } from './release.mjs';
+import { releaseSchemas, SCHEMAS_DST, SKILLS_DST } from './release.mjs';
 
 const MANAGED = [
   new RegExp(`^${SKILLS_DST.replace('.', '\\.')}/(lets|openspec)-[^/]+$`),
@@ -19,8 +19,9 @@ export function isManaged(path) {
 export function releasePaths({ release, io }) {
   const skills = join(release, 'overlay', SKILLS_DST);
   const paths = io.listDirs(skills).map((name) => ({ dst: `${SKILLS_DST}/${name}`, src: join(skills, name) }));
-  const schema = releaseSchema(release, io);
-  paths.push({ dst: `${SCHEMAS_DST}/${schema}`, src: join(release, 'overlay', SCHEMAS_DST, schema) });
+  for (const schema of releaseSchemas(release, io)) {
+    paths.push({ dst: `${SCHEMAS_DST}/${schema}`, src: join(release, 'overlay', SCHEMAS_DST, schema) });
+  }
   for (const { dst } of paths) {
     if (!isManaged(dst)) throw new UsageError(`${release} ships ${dst}, which lets-sync does not own.`);
   }

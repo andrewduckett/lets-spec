@@ -41,13 +41,11 @@ Silence is not agreement: a recommendation the user did not accept is an `Assump
 
 ## Splitting the story
 
-A story is the right size when it would take about five to twelve tasks to build. If the answers show it is bigger, split it now, before any plan exists. Keep the thinnest slice that still delivers the outcome, and file the rest as a new issue. Run the commands from the repo root.
+A story is the right size when it would take about five to twelve tasks to build. If the answers show it is bigger, split it now, before any plan exists. Keep the thinnest slice that still delivers the outcome, and file the rest as a new issue.
 
-1. Write the issue body from the story template at `.agents/skills/lets-shape/templates/issue-template.md`.
-2. Show the user the split and the new issue's title and body, and get a yes. Issues are public.
-3. Create it: `gh issue create --title "<title>" --body-file <file> --parent <parent#> --blocked-by <n>`. `<parent#>` is this story's parent; drop the flag when it has none. `<n>` is this story; drop the flag when the rest can ship before this slice.
-4. Set its kind and priority with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>`.
-5. Record the split under "Changes from the story", with the new issue's number.
+1. Show the user the split: what this story keeps, and what moves to the new issue. Get a yes.
+2. File the rest with the `lets-shape` skill: run its single-issue pass on the rest. Tell it that the rest is split from #<n>, this story. Its parent is this story's parent, if it has one. It is blocked by #<n>, unless the rest can ship before this slice. `lets-shape` writes the new issue's packet and sets its fields on the Project.
+3. Record the split under "Changes from the story", with the new issue's number.
 
 ## Confirming
 

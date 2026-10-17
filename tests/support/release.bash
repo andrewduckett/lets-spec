@@ -1,8 +1,9 @@
 # Build releases with build/build-release.mjs, as the flake does.
 
 # The skills a test release ships. A fixture, not a copy of flows.json: it
-# needs one entry point of each kind, and a skill that only some flows ship.
-fixture_skills=(lets-build lets-shape lets-test-first lets-review-code)
+# needs one entry point of each kind, a skill that only some flows ship,
+# and a skill with a script.
+fixture_skills=(lets-build lets-shape lets-test-first lets-review-code lets-spawn)
 
 # generated_skills <dir>: make a folder that stands in for the generated
 # openspec-* skills, and print its path.
@@ -12,12 +13,13 @@ generated_skills() {
   echo "$1"
 }
 
-# build <out> <schema> <mode> [skill...]: run the release build on this repo.
+# build <out> <schemas> [skill...]: run the release build on this repo.
+# <schemas> is comma-separated; the first is the default.
 build() {
-  local out="$1" schema="$2" mode="$3"
-  shift 3
+  local out="$1" schemas="$2"
+  shift 2
   node "$repo/build/build-release.mjs" "$repo" "$(generated_skills "$out.generated")" \
-    "$out" "$schema" "$mode" "$@"
+    "$out" "$schemas" "$@"
 }
 
 # make_release <dir> [extra skill...]: build a read-only release of the
@@ -26,7 +28,7 @@ build() {
 make_release() {
   local dir="$1" skill
   shift
-  build "$dir" lets-standard labels "${fixture_skills[@]}" >&2
+  build "$dir" lets-standard "${fixture_skills[@]}" >&2
   for skill in "$@"; do
     mkdir -p "$dir/overlay/.agents/skills/$skill"
     echo "$skill" >"$dir/overlay/.agents/skills/$skill/SKILL.md"

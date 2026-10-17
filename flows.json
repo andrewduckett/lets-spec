@@ -1,7 +1,7 @@
 {
   "flows": {
     "standard": {
-      "schema": "lets-standard",
+      "schemas": ["lets-standard", "lets-minimal"],
       "skills": [
         "lets-build",
         "lets-brainstorm",
@@ -11,23 +11,23 @@
         "lets-test-first",
         "lets-review-plan",
         "lets-review-code",
-        "lets-spawn"
+        "lets-spawn",
+        "lets-shape",
+        "lets-setup-backlog"
       ]
     },
     "minimal": {
-      "schema": "lets-minimal",
+      "schemas": ["lets-minimal"],
       "skills": [
         "lets-build",
         "lets-brainstorm",
         "lets-write-specs",
         "lets-write-tasks",
         "lets-test-first",
-        "lets-spawn"
+        "lets-spawn",
+        "lets-shape",
+        "lets-setup-backlog"
       ]
     }
-  },
-  "backlogs": {
-    "github-labels": { "mode": "labels", "skills": ["lets-shape"] },
-    "github-fields": { "mode": "fields", "skills": ["lets-shape"] }
   }
 }

@@ -1,6 +1,6 @@
 load support/common
 
-# Agents read the skills, schemas and rules, then run the scripts and open
+# Agents read the skills, schemas and rules, then run the commands and open
 # the files they name. These tests check that every name still points at
 # something real, so a rename breaks a test, not an agent.
 
@@ -24,24 +24,16 @@ mentions() {
   done
 }
 
-@test "each script the prose names exists" {
-  local mention found=0
-  while IFS= read -r mention; do
+# A gh command in a code block starts its line; in a sentence it follows a
+# backtick. gh answers an unknown command with its group's help, and exits
+# 0, so the test reads the usage line instead.
+@test "each gh command the prose names is one gh knows" {
+  local group command found=0
+  while read -r group command; do
     found=1
-    [ -f "$repo/skills/$mention" ] || { echo "no such script: $mention"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.(sh|jq|mjs)')
-  [ "$found" -eq 1 ]
-}
-
-@test "each command the prose gives a Node script is one its usage lists" {
-  local script command found=0
-  while read -r script command; do
-    found=1
-    run node "$repo/skills/$script" --help
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"$(basename "$script") $command"* || "$output" == *"$(basename "$script" .mjs) $command"* ]] ||
-      { echo "$script has no command $command"; false; }
-  done < <(mentions '[a-z-]+/scripts/[a-z-]+\.mjs [a-z][a-z-]+')
+    gh "$group" "$command" --help 2>&1 | grep -qE "^  gh $group $command( |$)" ||
+      { echo "gh has no command: gh $group $command"; false; }
+  done < <(mentions '(^ *|`)gh [a-z]+ [a-z-]+' | sed -E 's/^[ `]*gh //' | sort -u)
   [ "$found" -eq 1 ]
 }
 
@@ -64,9 +56,12 @@ named_skills() {
 }
 
 # flow_texts <flow>: the files lets-spec gives a flow's agent besides its
-# skills: the schema, and the flow's config.
+# skills: each schema the flow ships, and the flow's config.
 flow_texts() {
-  echo "$repo/schemas/lets-$1/schema.yaml"
+  local schema
+  for schema in $(jq -r --arg flow "$1" '.flows[$flow].schemas[]' "$repo/flows.json"); do
+    echo "$repo/schemas/$schema/schema.yaml"
+  done
   echo "$repo/overlays/openspec/config.d/lets-$1.yaml"
 }
 
@@ -83,7 +78,7 @@ flow_texts() {
       for skill in $shipped; do named_skills "$repo/skills/$skill/SKILL.md"; done
     )"
     for skill in $shipped; do
-      case "$skill" in lets-build | lets-shape) continue ;; esac
+      case "$skill" in lets-build | lets-shape | lets-setup-backlog) continue ;; esac
       grep -qx "$skill" <<<"$named" ||
         { echo "$flow ships $skill, but none of its schema, config or skills name it"; false; }
     done
