@@ -4,7 +4,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Command, CommanderError } from 'commander';
+import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
+import { run as handoff } from './delegate/handoff.ts';
+import type { HandoffOptions } from './delegate/handoff.ts';
+import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
+import { run as review } from './delegate/review.ts';
+import type { ReviewOptions } from './delegate/review.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
 import { run as sync } from './sync/main.ts';
@@ -49,6 +54,41 @@ WORKFLOW_RELEASE names the release folder. Without it, LETS_SPEC_FLOW
 (default standard) picks one of the releases that ship with lets.
 The Nix wrapper sets WORKFLOW_RELEASE.`;
 
+const DELEGATE_HELP = `
+A resolver turns each request into a real session. lets asks, in order:
+the executable LETS_SPEC_RESOLVER names, lets-delegate-resolver on PATH,
+then the built-in default, which runs codex, claude or agy headless. The
+first that does not decline answers.
+
+Run lets delegate from the repo root.`;
+
+const REVIEW_HELP = `
+stdout: the session's final message.
+stderr: one JSON line with resolver, family, model, independent, handle,
+gitClean and durationSeconds. independent is true when the family that
+answered is not the source family.
+
+Exit codes:
+  0  the final message is on stdout
+  2  usage error
+  3  no family is available, the source's included
+  4  the harness refused the session, or the resolver broke the contract
+  5  the session failed: an error, it stopped to ask, or an empty message
+  6  the session did not finish in time
+  7  the session changed files outside .workspace/`;
+
+const HANDOFF_HELP = `
+stdout: one JSON line, { resolver, handle }. When no session could be
+started, handle is null and instructions holds the text to show the user.
+
+Exit codes: 0 ok, 2 usage error, 4 the session could not start.`;
+
+// --timeout-minutes: a whole number of minutes.
+function wholeMinutes(value: string): number {
+  if (!/^[1-9][0-9]*$/.test(value)) throw new InvalidArgumentError('Give a whole number of minutes.');
+  return Number(value);
+}
+
 // The release's version from its release.json, else 0.0.0-dev.
 function version(): string {
   try {
@@ -85,6 +125,37 @@ program
   .addHelpText('after', SYNC_HELP)
   .action(async ({ check }: { check?: boolean }) => {
     process.exitCode = await sync({ check: check === true }, realDeps());
+  });
+
+const delegate = program
+  .command('delegate')
+  .summary('run a prompt in a fresh session, through a resolver')
+  .description('Run a prompt in a fresh session. A resolver makes the session; lets checks the result.')
+  .addHelpText('after', DELEGATE_HELP);
+
+delegate
+  .command('review')
+  .summary('run a prompt in a fresh, read-only session and wait for its answer')
+  .description('Run a prompt in a fresh, read-only session, from another model family when one is available, and wait for its final message.')
+  .requiredOption('--name <name>', 'a label for the session, normalized to lowercase kebab-case')
+  .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
+  .addOption(new Option('--source-family <family>', 'the model family that wrote the work').choices(FAMILIES).makeOptionMandatory())
+  .addOption(new Option('--effort <effort>', 'how hard the session thinks').choices(EFFORTS).makeOptionMandatory())
+  .option('--timeout-minutes <minutes>', 'how long to wait (default: 15, or 45 with --effort high)', wholeMinutes)
+  .addHelpText('after', REVIEW_HELP)
+  .action(async (options: ReviewOptions) => {
+    process.exitCode = await review(options, realDeps());
+  });
+
+delegate
+  .command('handoff')
+  .summary('start a fresh, interactive session and return at once')
+  .description('Start a fresh, interactive session with a prompt, and return at once.')
+  .requiredOption('--name <name>', 'a label for the session, normalized to lowercase kebab-case')
+  .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
+  .addHelpText('after', HANDOFF_HELP)
+  .action(async (options: HandoffOptions) => {
+    process.exitCode = await handoff(options, realDeps());
   });
 
 try {
