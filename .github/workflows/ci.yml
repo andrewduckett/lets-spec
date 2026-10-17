@@ -25,7 +25,7 @@ jobs:
         run: nix flake check
 
   # Checks the folder that the release tarball is made from. It installs the
-  # tools with mise, as a project would, and runs lets-sync from PATH.
+  # tools with mise, as a project would, and runs lets sync from PATH.
   mise-smoke:
     name: mise smoke
     runs-on: ubuntu-latest
@@ -45,23 +45,28 @@ jobs:
       - name: Sync into a scratch project
         run: |
           set -euo pipefail
+          # The scratch project has no mise.toml, so mise's shims would fall
+          # back to the runner's own, older node. Use this repo's tools, as a
+          # project that pins them would.
+          eval "$(mise env --shell bash)"
           export PATH="$PWD/result/bin:$PATH"
           export OPENSPEC_TELEMETRY=0
           scratch="$RUNNER_TEMP/project"
           mkdir -p "$scratch"
           cd "$scratch"
           git init -q
-          lets-sync 2> "$RUNNER_TEMP/sync.err"
+          node --version
+          lets sync 2> "$RUNNER_TEMP/sync.err" || { cat "$RUNNER_TEMP/sync.err" >&2; exit 1; }
           cat "$RUNNER_TEMP/sync.err"
           test -f .agents/skills/openspec-propose/SKILL.md
           test ! -L .agents/skills/openspec-propose/SKILL.md
           git add -A
-          lets-sync --check
+          lets sync --check
           if grep -q "OpenSpec CLI on PATH" "$RUNNER_TEMP/sync.err"; then
-            echo "lets-sync warned about the OpenSpec CLI version" >&2
+            echo "lets sync warned about the OpenSpec CLI version" >&2
             exit 1
           fi
-          LETS_SPEC_SKILLS=ignored lets-sync
+          LETS_SPEC_SKILLS=ignored lets sync
           # Git ignores only untracked files, so untrack them as the message says.
           git rm -r -q --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*
           git check-ignore -q .agents/skills/lets-build

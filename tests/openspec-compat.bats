@@ -142,7 +142,7 @@ expected_statuses() {
 
 # The standard flow's config carries the code review rule as archive
 # guidance, and lets-build reads it from the CLI. These tests pin that the
-# CLI returns it, from the config lets-sync creates in a project.
+# CLI returns it, from the config lets sync creates in a project.
 
 standard_config="$repo/overlays/openspec/config.d/lets-standard.yaml"
 

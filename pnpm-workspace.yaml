@@ -1,0 +1,8 @@
+packages:
+  - lets
+  - contrib/*
+
+# esbuild's install script only checks its binary, which comes from its
+# platform package. Nix installs with scripts off, so keep them off here too.
+allowBuilds:
+  esbuild: false

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build the release for one flow: the files lets-sync copies into a
+// Build the release for one flow: the files lets sync copies into a
 // project and creates in it. The flake runs it once for each recipe in
 // flows.json.
 //
@@ -13,11 +13,11 @@
 //   skill      each folder in skills/ to ship
 //
 // The release has three folders:
-//   overlay/    files lets-sync copies into a project, at the same
+//   overlay/    files lets sync copies into a project, at the same
 //               paths: the skills and the schemas
-//   init/       files lets-sync creates in a project when they are
+//   init/       files lets sync creates in a project when they are
 //               missing
-//   fragments/  text lets-sync keeps in a marked block of the project's
+//   fragments/  text lets sync keeps in a marked block of the project's
 //               file at the same path
 import {
   chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, statSync,
@@ -81,13 +81,13 @@ for (const schema of schemas) {
   cpSync(join(source, 'schemas', schema), join(overlay, 'openspec/schemas', schema), { recursive: true });
 }
 // overlays/ holds the files a project gets, at their paths in the project.
-// AGENTS.md is a fragment, and lets-sync creates each other file.
+// AGENTS.md is a fragment, and lets sync creates each other file.
 cpSync(join(source, 'overlays'), join(out, 'init'), { recursive: true });
 makeWritable(out);
 renameSync(join(out, 'init/AGENTS.md'), join(out, 'fragments/AGENTS.md'));
 
 // Each flow has its own config in openspec/config.d/<schema>.yaml: the
-// whole file lets-sync creates, naming the flow's schema and holding what
+// whole file lets sync creates, naming the flow's schema and holding what
 // its projects start with, such as the standard flow's archive guidance.
 // The release ships the default schema's as the config, and no project
 // gets the folder.

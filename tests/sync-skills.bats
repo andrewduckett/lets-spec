@@ -2,13 +2,13 @@ load support/common
 load support/release
 load support/project
 
-# lets-sync copies each skill and the schema from the release into the
+# lets sync copies each skill and the schema from the release into the
 # project. LETS_SPEC_SKILLS decides whether git tracks the copies:
 # committed, the default, or ignored through a marked block in .gitignore.
 
 skills_block=$'# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.\n/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n# END lets-spec skills\n'
 
-# managed_paths: every path lets-sync should write in this project.
+# managed_paths: every path lets sync should write in this project.
 managed_paths() {
   local skill
   for skill in $(shipped_skills); do
@@ -141,7 +141,7 @@ edit_copy() {
 }
 
 @test "links the linked layout made under pre-rename names are removed" {
-  # Older releases linked skills and the schema under names lets-sync no
+  # Older releases linked skills and the schema under names lets sync no
   # longer owns. The exclude section lists them, so they are removed by it.
   local old="$BATS_TEST_TMPDIR/store/abc-lets-spec-release" path
   local -a renamed=(.agents/skills/brainstorming .agents/skills/writing-specs openspec/schemas/standard)
@@ -178,7 +178,7 @@ edit_copy() {
   cp .git/info/exclude "$BATS_TEST_TMPDIR/exclude"
   run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"- .git/info/exclude has a lets-spec links marker without its pair, so its old links were not removed. Delete the marker, and the lines between the markers, then run lets-sync again."* ]]
+  [[ "$output" == *"- .git/info/exclude has a lets-spec links marker without its pair, so its old links were not removed. Delete the marker, and the lines between the markers, then run lets sync again."* ]]
   cmp "$BATS_TEST_TMPDIR/exclude" .git/info/exclude
   [ -L .agents/skills/brainstorming ]
 }
@@ -278,7 +278,7 @@ edit_copy() {
   printf '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.\n/mine\n' >.gitignore
   run sync_project --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"lets-spec: .gitignore still has the lets-spec skills block. Run lets-sync, then commit .gitignore."* ]]
+  [[ "$output" == *"lets-spec: .gitignore still has the lets-spec skills block. Run lets sync, then commit .gitignore."* ]]
 }
 
 @test "switching to ignored says what to untrack" {
@@ -294,7 +294,7 @@ edit_copy() {
   edit_copy .agents/skills/lets-build/SKILL.md
   run sync_project --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets-sync, then commit it."* ]]
+  [[ "$output" == *"lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it."* ]]
 }
 
 @test "--check fails on a missing skill and on an extra file" {
@@ -311,7 +311,7 @@ edit_copy() {
   LETS_SPEC_SKILLS=ignored init_project
   run sync_project --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"lets-spec: .gitignore still has the lets-spec skills block. Run lets-sync, then commit .gitignore."* ]]
+  [[ "$output" == *"lets-spec: .gitignore still has the lets-spec skills block. Run lets sync, then commit .gitignore."* ]]
 }
 
 @test "--check in ignored mode passes without the skills present" {
@@ -326,7 +326,7 @@ edit_copy() {
   init_project
   LETS_SPEC_SKILLS=ignored run sync_project --check
   [ "$status" -eq 1 ]
-  [[ "$output" == *"lets-spec: .gitignore has no current lets-spec skills block. Run lets-sync, then commit .gitignore."* ]]
+  [[ "$output" == *"lets-spec: .gitignore has no current lets-spec skills block. Run lets sync, then commit .gitignore."* ]]
 }
 
 @test "an unknown LETS_SPEC_SKILLS is a usage error" {

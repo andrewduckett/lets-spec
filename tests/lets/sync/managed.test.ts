@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isManaged, projectPaths, releasePaths } from '../../lets-sync/lib/managed.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { isManaged, projectPaths, releasePaths } from '../../../lets/src/sync/managed.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 test('lets- skills, openspec- skills and lets- schemas are managed', () => {
   assert.equal(isManaged('.agents/skills/lets-build'), true);

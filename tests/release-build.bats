@@ -116,3 +116,18 @@ build_from() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"lets-test-first has the same name as a generated OpenSpec skill"* ]]
 }
+
+# The tarball's bin/lets is this bundle. A mise project runs it with its own
+# node, from anywhere, with no node_modules beside it.
+@test "the lets bundle is one executable script that runs with no node_modules" {
+  local bin="$BATS_TEST_TMPDIR/bin/lets"
+  node "$repo/lets/build.mjs" "$bin"
+  [ -x "$bin" ]
+  [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
+  [ "$(ls -A "$BATS_TEST_TMPDIR/bin")" = lets ]
+  mkdir "$BATS_TEST_TMPDIR/empty"
+  cd "$BATS_TEST_TMPDIR/empty"
+  run node "$bin" --version
+  [ "$status" -eq 0 ]
+  [ "$output" = 0.0.0-dev ]
+}
