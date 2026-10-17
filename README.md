@@ -70,7 +70,6 @@ mise. You can choose to have git ignore the copies instead. See
 | OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. The flake supplies the matching version. With mise, you pin it. See [With mise](#with-mise). |
 | Node | 26 or later | `lets` and `lets-spawn` run on it. The flake supplies it. With mise, you pin it. |
 | At least one of `codex`, `claude` or `agy` | any | The review skills run a reviewer through one of these. Install one from a model family other than the one that writes your code, or the reviews are not independent. The review runs in a fresh session that the `lets-spawn` skill starts, in your harness when it can. |
-| pnpm | 12.9 or later | Only to work on Let's Spec itself. See [Development](#️-development). The flake's dev shell supplies it. |
 
 ### 1. Choose a flow and a skills mode
 
@@ -332,18 +331,18 @@ its Kind, Priority and Size are set. Status Todo says nobody has taken it.
 |---|---|---|
 | A skill creates an issue | Todo, or whatever the Project's item-added workflow sets | `gh issue create --project` |
 | `lets-shape` writes the packet, Kind, Priority and Size | Todo | `lets-shape`, once |
-| A blocker is open, or closes | unchanged | Nobody. The "blocked by" link hides the issue from `next` while the blocker is open. |
+| A blocker is open, or closes | unchanged | Nobody. While the blocker is open, the "blocked by" link keeps `lets-build` from picking the issue. |
 | `lets-build` claims the issue | In Progress | `lets-build` |
 | The pull request merges, or the issue is closed | Done | The Project's default workflows |
 
 Only `lets-shape` and `lets-build` set Project fields. Agents never set
 one with `gh` by hand. A Project may add options such as Backlog or
-Blocked for its own board; `next` picks only Todo.
+Blocked for its own board; `lets-build` picks only Todo.
 
 > [!IMPORTANT]
 > Put each blocker on the story it blocks, not on the epic. GitHub search
-> cannot see a blocker on a parent issue, so `next` would pick a story
-> that is not ready.
+> cannot see a blocker on a parent issue, so `lets-build` would pick a
+> story that is not ready.
 
 ## 🔀 The flows
 
@@ -495,13 +494,14 @@ Each time `lets sync` runs, it:
 A copy is mode 0755 when the release's file is executable, and 0644
 otherwise. So the skills' scripts stay executable.
 
-After a run it exits 0, even when it warns, so a problem never stops the
-shell from starting. It exits 2 when you give it an unknown option. It
-exits 1, and changes nothing, when:
+It exits 0 even when it warns, so a problem never stops the shell from
+starting. It changes nothing when it exits with any other code.
 
-- it cannot find the release, or the folder it finds is not a valid release
-- no release ships for the `LETS_SPEC_FLOW` you set
-- `LETS_SPEC_SKILLS` is set to a value other than `committed`, `ignored` or empty
+| Exit | When |
+|---|---|
+| 0 | The run finished, with or without warnings. |
+| 1 | It cannot find the release, or the folder it finds is not a valid release. Or no release ships for the `LETS_SPEC_FLOW` you set, or `LETS_SPEC_SKILLS` is not `committed`, `ignored` or empty. With `--check`, also when the project is out of date. |
+| 2 | You gave it an unknown option. |
 
 ### What `lets sync` owns
 
@@ -531,8 +531,7 @@ You set the mode with `letsSpec.skills` in the Nix module, or with the
 `LETS_SPEC_SKILLS` environment variable.
 
 In the `ignored` mode, `lets sync` keeps this block in `.gitignore`. You
-own the rest of the file. Its first line still names `lets-sync`, the
-command's old name, so a block that an older version wrote stays current.
+own the rest of the file.
 
 ```gitignore
 # BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.
@@ -541,6 +540,10 @@ command's old name, so a block that an older version wrote stays current.
 /openspec/schemas/lets-*
 # END lets-spec skills
 ```
+
+The first line says `lets-sync`, the command's old name. It keeps that
+text so that blocks older versions wrote still match. The rules block in
+`AGENTS.md` does the same.
 
 When you switch modes, the next run tells you what to do:
 
@@ -576,14 +579,13 @@ just synced.
 | Variable | Default | What it does |
 |---|---|---|
 | `LETS_SPEC_SKILLS` | `committed` | The skills mode: `committed` or `ignored`. Unset or empty means `committed`. Any other value is an error. The Nix module sets it. |
-| `LETS_SPEC_FLOW` | `standard` | The flow, with mise. |
+| `LETS_SPEC_FLOW` | `standard` | The flow to sync when `WORKFLOW_RELEASE` is not set. Set it with mise. |
 | `WORKFLOW_RELEASE` | | The release folder to use. The Nix package sets it, so the flow comes from your flake, and `LETS_SPEC_FLOW` has no effect. |
 
 ## 🔄 Updating
 
-Commit the update on `main` in the same pull request as the new pin. The
-pull request then holds the new pin, the new rules and the new skills
-together.
+Commit what `lets sync` writes in the same pull request as the new pin.
+That pull request then holds the pin, the rules and the skills together.
 
 ### With Nix
 
@@ -619,13 +621,13 @@ together:
 
 Then run `mise install`, run `lets sync`, and commit what it wrote.
 
-### Upgrading from 0.1
+### From 0.1: `lets-sync` is now `lets sync`
 
 Version 0.1 had a command named `lets-sync`. It is now `lets sync`, and it
 needs Node 26.
 
-With mise, change these two lines in your project's `mise.toml`, along
-with the new pin:
+With mise, change these two lines in your project's `mise.toml` when you
+move the pin:
 
 ```toml
 node = "26"           # was "24"
@@ -655,6 +657,10 @@ to set.
 
 ## 🛠️ Development
 
+To work on Let's Spec itself, enter the dev shell with `nix develop`, or
+run `mise install`. Both give you Node 26, pnpm, bats, `jq`, `yq` and the
+OpenSpec CLI. Then run `pnpm install` once.
+
 ### Layout
 
 | Path | What it holds |
@@ -668,7 +674,8 @@ to set.
 | `skills/` | The authored skills, one `lets-*` folder each |
 | `schemas/` | The OpenSpec schemas, each with its templates |
 | `overlays/` | The rules fragment and the files `lets sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
-| `tests/` | The bats tests, and the Node tests in `tests/lets/` and `tests/lets-spawn/` |
+| `tests/*.bats` | End-to-end tests: `lets sync` in real git repos, the release build, the pinned OpenSpec CLI reading each schema, and every command, file and skill the prose names |
+| `tests/lets/`, `tests/lets-spawn/` | Unit tests for the `lets` command and the `lets-spawn` scripts, run with fakes |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
 | `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
@@ -704,12 +711,16 @@ notes name the OpenSpec CLI version.
 nix flake check
 ```
 
-This runs the bats tests and the Node tests, builds every flow, builds
-the `dist` folder (the release tarball's contents)
-and runs its `lets sync` in a sample project, sets up a sample project
-with the packaged commands, and evaluates the flake-parts module.
+This:
 
-In the dev shell, run `pnpm install` once. Then:
+- runs the bats tests, the Node tests and the type check
+- builds every flow
+- builds the `dist` folder, the release tarball's contents, and runs its
+  `lets sync` in a sample project
+- sets up a sample project with the packaged commands
+- evaluates the flake-parts module
+
+In the dev shell:
 
 | Command | What it runs |
 |---|---|
@@ -718,8 +729,8 @@ In the dev shell, run `pnpm install` once. Then:
 | `pnpm build` | The bundle, into `lets/dist/lets` |
 | `bats tests` | The bats tests alone |
 
-The Node tests run the TypeScript source directly, so no build is needed
-to test. With mise, `mise run test` runs `pnpm test`.
+Node runs the TypeScript source directly, so you do not need to build
+before you test. With mise, `mise run test` runs `pnpm test`.
 
 ### After a t3 update
 
