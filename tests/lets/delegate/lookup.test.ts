@@ -1,0 +1,144 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { realIo } from '../../../lets/src/io.ts';
+import type { Io } from '../../../lets/src/io.ts';
+import { UsageError } from '../../../lets/src/delegate/errors.ts';
+import { callResolver, candidates, resolve } from '../../../lets/src/delegate/lookup.ts';
+import { buildRequest } from '../../../lets/src/delegate/protocol.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
+
+const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));
+const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'low' });
+const probeRequest = buildRequest('probe', { cwd: '/r' });
+
+// The real io, with the fake resolver's settings added to the env of each
+// command it runs, and the commands it finds on PATH.
+function ioWith(settings: Record<string, string>, onPath: string[] = []): Io {
+  const io = realIo();
+  return {
+    ...io,
+    commandExists: (cmd) => onPath.includes(cmd),
+    execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, ...settings } }),
+  };
+}
+
+const kinds = (list: { kind: string }[]) => list.map(({ kind }) => kind);
+
+test('the candidates are the override, the resolver on PATH, then the default', () => {
+  const io = fakeIo({ executables: ['/bin/mine'], commands: ['lets-delegate-resolver'] });
+  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r' });
+  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', 'lets-delegate-resolver', 'default']);
+  assert.deepEqual(kinds(list), ['external', 'external', 'default']);
+});
+
+test('without an override or a resolver on PATH, only the default is a candidate', () => {
+  assert.deepEqual(candidates({ env: { LETS_SPEC_RESOLVER: '' }, io: fakeIo(), cwd: '/r' }).map((c) => c.name), ['default']);
+});
+
+test('a relative override is taken from the working directory', () => {
+  const io = fakeIo({ executables: ['/r/bin/mine'] });
+  assert.equal(candidates({ env: { LETS_SPEC_RESOLVER: 'bin/mine' }, io, cwd: '/r' })[0].name, '/r/bin/mine');
+});
+
+test('an override that is missing or not executable is a usage error that names the path', () => {
+  assert.throws(() => candidates({ env: { LETS_SPEC_RESOLVER: '/no/such' }, io: fakeIo(), cwd: '/r' }),
+    (error) => error instanceof UsageError && error.message.includes('/no/such') && error.message.includes('LETS_SPEC_RESOLVER'));
+});
+
+test('the override answers when it does not decline, and is passed the verb and the request on stdin', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'lets-lookup-'));
+  const log = join(dir, 'log');
+  const io = ioWith({ FAKE_RESOLVER_LOG: log }, ['lets-delegate-resolver']);
+  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  assert.equal(candidate.name, FAKE);
+  assert.equal(outcome.code, 0);
+  assert.deepEqual(outcome.response, { resolver: 'fake', text: 'FINDINGS', family: 'gpt', model: 'fake-model', handle: { kind: 'fake', id: 'f-1', extra: 'kept' } });
+  assert.equal(readFileSync(log, 'utf8'), `run\t${JSON.stringify(runRequest)}\n`);
+});
+
+test('a decline passes the request to the next candidate', async () => {
+  const io = ioWith({ FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  assert.equal(candidate.name, 'default');
+  assert.deepEqual(outcome.response, { resolver: 'default' });
+});
+
+test('the resolver on PATH is run by name', async () => {
+  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '{"resolver":"t3"}', stderr: '', code: 0 }] });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r' });
+  assert.equal(candidate.name, 'lets-delegate-resolver');
+  assert.deepEqual(outcome.response, { resolver: 't3' });
+  const [[cmd, args, opts]] = io.calls;
+  assert.equal(cmd, 'lets-delegate-resolver');
+  assert.deepEqual(args, ['probe']);
+  assert.equal(opts.cwd, '/r');
+  assert.equal(opts.env, undefined, 'a resolver inherits the real env');
+  assert.equal(opts.input, JSON.stringify(probeRequest));
+});
+
+test('the default answers in process and is never skipped', async () => {
+  const io = fakeIo();
+  const { candidate, outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r' });
+  assert.equal(candidate.name, 'default');
+  assert.equal(outcome.code, 3);
+  assert.match(outcome.stderr, /no family is available/);
+});
+
+test('a valid response with a non-zero exit: the exit code wins', async () => {
+  const io = ioWith({ FAKE_RESOLVER_EXIT: '5', FAKE_RESOLVER_STDERR: 'session stopped to ask' });
+  const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  assert.equal(outcome.code, 5);
+  assert.equal(outcome.response, null);
+  assert.match(outcome.stderr, /session stopped to ask/);
+});
+
+test('a decline after printing to stdout is a bug: exit 4', async () => {
+  const io = ioWith({ FAKE_RESOLVER_EXIT: '75' });
+  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  assert.equal(candidate.name, FAKE);
+  assert.equal(outcome.code, 4);
+  assert.match(outcome.stderr, /declined after printing/);
+});
+
+test('a malformed request, a bad response or an unknown exit is exit 4 with the reason', async () => {
+  const cases: [Record<string, string>, RegExp][] = [
+    [{ FAKE_RESOLVER_EXIT: '2', FAKE_RESOLVER_STDOUT: '', FAKE_RESOLVER_STDERR: 'unknown protocol' }, /unknown protocol/],
+    [{ FAKE_RESOLVER_STDOUT: '{"resolver":"fake","text":"T"}' }, /broke the contract.*family/],
+    [{ FAKE_RESOLVER_STDOUT: 'not json' }, /broke the contract.*not JSON/],
+    [{ FAKE_RESOLVER_EXIT: '9', FAKE_RESOLVER_STDOUT: '' }, /exited 9/],
+  ];
+  for (const [settings, message] of cases) {
+    const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith(settings), cwd: '/r' });
+    assert.equal(outcome.code, 4, JSON.stringify(settings));
+    assert.match(outcome.stderr, message);
+  }
+});
+
+test('a resolver that cannot start is exit 4', async () => {
+  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '', stderr: 'spawn EACCES', code: null }] });
+  const { outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r' });
+  assert.equal(outcome.code, 4);
+  assert.match(outcome.stderr, /cannot run lets-delegate-resolver: spawn EACCES/);
+});
+
+test('a resolver past the timeout is killed and reported as exit 6', async () => {
+  const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r' }).filter((c) => c.kind === 'external');
+  const started = Date.now();
+  const outcome = await callResolver(candidate, 'probe', probeRequest, { io: ioWith({ FAKE_RESOLVER_SLEEP_MS: '30000' }), timeoutMs: 200 });
+  assert.equal(outcome?.code, 6);
+  assert.match(outcome!.stderr, /did not answer probe/);
+  assert.ok(Date.now() - started < 10000, 'the resolver was killed, not waited for');
+});
+
+test('the backstop for run is the session timeout plus one minute', async () => {
+  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [new Promise(() => {})] });
+  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r' });
+  assert.equal(outcome.code, 6);
+  assert.deepEqual(io.sleeps, [16 * 60000]);
+  assert.deepEqual(io.killed, [4242]);
+});

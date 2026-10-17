@@ -39,8 +39,8 @@ edit_copy() {
 
 @test "a script keeps its executable bit" {
   init_project
-  [ "$(stat -c %a .agents/skills/lets-spawn/scripts/lets-spawn.mjs)" = 755 ]
-  [ "$(stat -c %a .agents/skills/lets-spawn/SKILL.md)" = 644 ]
+  [ "$(stat -c %a .agents/skills/lets-test-first/scripts/check.sh)" = 755 ]
+  [ "$(stat -c %a .agents/skills/lets-test-first/SKILL.md)" = 644 ]
 }
 
 @test "a fresh clone of a committed project passes --check and syncs quietly" {
@@ -99,12 +99,13 @@ edit_copy() {
 }
 
 @test "a skill the new release no longer ships is removed" {
-  WORKFLOW_RELEASE="$(store_release old lets-retired)" init_project
-  [ -f .agents/skills/lets-retired/SKILL.md ]
+  # lets-spawn is a real case: releases before lets delegate shipped it.
+  WORKFLOW_RELEASE="$(store_release old lets-spawn)" init_project
+  [ -f .agents/skills/lets-spawn/SKILL.md ]
   run sync_project
   [ "$status" -eq 0 ]
-  [ ! -e .agents/skills/lets-retired ]
-  [[ "$output" == *"lets-spec: removed .agents/skills/lets-retired."* ]]
+  [ ! -e .agents/skills/lets-spawn ]
+  [[ "$output" == *"lets-spec: removed .agents/skills/lets-spawn."* ]]
 }
 
 @test "a skill of another name is left alone" {

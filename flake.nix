@@ -134,7 +134,7 @@
         '';
 
         # Everything a project's dev shell needs from this repo. It carries
-        # Node for lets and lets-spawn, and the gh the skills call.
+        # Node for lets, and the gh the skills call.
         bundle = flow: pkgs.buildEnv {
           name = "lets-spec-${flow}";
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
@@ -252,8 +252,8 @@
             touch "$out"
           '';
 
-        # The unit tests for the lets package and the skills' Node scripts,
-        # and the type check. They use fakes, so no harness and no real gh
+        # The unit tests for the lets package and the contrib resolver, and
+        # the type check. They use fakes, so no harness and no real gh
         # run here.
         node-tests = pkgs.runCommand "node-tests"
           {
@@ -266,9 +266,15 @@
             cd repo
             export HOME="$TMPDIR"
             pnpmConfigHook
+            # The test fixtures and the resolver's dev entry run as programs,
+            # and the sandbox has no /usr/bin/env.
+            patchShebangs tests contrib/lets-delegate-resolver/bin
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/lets-spawn/*.test.mjs"
+            node --test "tests/lets/**/*.test.ts" "tests/lets-delegate-resolver/*.test.ts"
             pnpm check
+            # The built-in default and the contrib resolver keep the shape of
+            # the contract. Neither starts a session here.
+            pnpm conformance
             touch "$out"
           '';
 
