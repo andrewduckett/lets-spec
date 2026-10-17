@@ -96,8 +96,10 @@ To run a real session, see [After a t3 update](#after-a-t3-update).
 ## After a t3 update
 
 The T3 half of the resolver depends on t3's internal protocol and
-database. A t3 update can break it. After each update, run these from a
-T3 thread in a project that T3 knows:
+database: it speaks orchestration protocol 2, makes each thread with the
+same `launchThread` request as the T3 UI, and reads the result from
+`statev2.sqlite`. A t3 update can break it. After each update, run these
+from a T3 thread in a project that T3 knows:
 
 ```sh
 lets delegate conformance --live lets-delegate-resolver

@@ -1,22 +1,23 @@
 // Inside T3 Code: each session is a new thread in the sidebar. The thread is
-// created the way the desktop UI does it, with one `thread.turn.start` that
-// carries `bootstrap`, sent over the server's WebSocket RPC. The result is
-// read back from t3's state database.
+// created the way the desktop UI does it, with one `orchestration.launchThread`
+// request over the server's WebSocket RPC, which makes the thread and sends
+// the first message. The result is read back from t3's state database.
 //
-// Copied and trimmed on 2026-10-13 from t3-thread:
-//   https://github.com/matheustimbo/t3code, branch fork-main,
-//   .agents/skills/t3-thread/scripts/t3-thread.mjs
-// Protocol types live in packages/contracts/src/orchestration.ts of
+// This speaks orchestration protocol 2, read on 2026-10-17 from the t3code
+// 0.1.0 server bundle (apps/server/dist/binCli-*.mjs) and its web client.
+// Protocol types live in packages/contracts/src/orchestrationV2.ts of
 // https://github.com/pingdotgg/t3code. A t3 update can change any of this;
 // run the smoke test in the README after each one.
 //
-// Kept: token issue and refresh, project lookup by cwd, model selection,
-// dispatch over the WebSocket, archive.
-// Dropped: the worktree (prepareWorktree, runSetupScript), --local-base,
-// --dry-run, --stop, -p/--project, -b, -t, --instance, --selection, and the
-// message from stdin. The sqlite3 binary is replaced by node:sqlite.
-// Upstream's serverCli() finds the server's own executable, with a fallback
-// for the macOS app bundle. That is dropped: on this machine `t3` is on PATH.
+// What is private here, and why it stays:
+// - The WebSocket RPC and the `launchThread` and `thread.archive` calls are
+//   the UI's own, so they move only when the UI does.
+// - t3's CLI has no thread commands. Its MCP tools reach only the agent
+//   process t3 started, not a child like this one. The `acp-mcp-call`
+//   terminal fallback exists only where t3 sets `T3_ACP_MCP_NODE`, which it
+//   does for ACP agents and not for Claude Code.
+// - The state database (userdata/statev2.sqlite) is the only place to read a
+//   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { SessionFailed, SpawnError } from './errors.ts';
@@ -28,6 +29,9 @@ import type { Effort, Family, Handle } from './protocol.ts';
 import { pollUntil } from './wait.ts';
 
 export const TOKEN_FILE_SUFFIX = '.config/lets-delegate/t3-token';
+
+// The protocol this adapter speaks. t3 refuses a WebSocket that names another.
+export const ORCHESTRATION_PROTOCOL = 2;
 
 const POLL_MS = 5000;
 const REPLY_TIMEOUT_MS = 120_000;
@@ -100,58 +104,73 @@ export function findProject(db: Db, repoRoot: string): Project {
   return { ...project };
 }
 
-type TurnStartInput = {
+type LaunchInput = {
   threadId: string; projectId: string; title: string; text: string; modelSelection: ModelSelection;
-  interactionMode: 'plan' | 'default'; branch: string | null; now: string; messageId?: string; commandId?: string;
+  interactionMode: 'plan' | 'default'; branch: string | null; messageId?: string; commandId?: string;
 };
 
-// messageId and commandId are random unless given, so tests can fix them.
-export function buildTurnStart({
-  threadId, projectId, title, text, modelSelection, interactionMode, branch, now, messageId = randomUUID(), commandId = randomUUID(),
-}: TurnStartInput) {
-  const runtimeMode = 'full-access';
+// The `orchestration.launchThread` request, as the UI sends it for a new
+// thread: the thread's settings, a root workspace on the current branch, and
+// the first message. The title is a seed; t3 generates a durable one from
+// the message. messageId and commandId are random unless given, so tests
+// can fix them.
+export function buildLaunch({
+  threadId, projectId, title, text, modelSelection, interactionMode, branch, messageId = randomUUID(), commandId = randomUUID(),
+}: LaunchInput) {
   return {
-    type: 'thread.turn.start',
     commandId,
+    creationSource: 'web',
     threadId,
-    message: { messageId, role: 'user', text, attachments: [] },
+    projectId,
+    title,
+    generateTitle: true,
     modelSelection,
-    titleSeed: title,
-    runtimeMode,
+    runtimeMode: 'full-access',
     interactionMode,
-    bootstrap: {
-      createThread: { projectId, title, modelSelection, runtimeMode, interactionMode, branch, worktreePath: null, createdAt: now },
-    },
-    createdAt: now,
+    workspaceStrategy: { type: 'root', ...(branch === null ? {} : { branch }) },
+    initialMessage: { messageId, text, attachments: [] },
   };
 }
 
-export type Turn = { state: string; assistantMessageId: string | null; pendingUserInput: number; pendingApproval: number; lastError: string | null };
+// A run is one user message and the work it starts. These are t3's statuses.
+export type Run = { id: string; status: string; pendingRequests: number; failure: string | null };
 
-// The thread's newest turn, with what the thread and its session say.
-export function readTurn(db: Db, threadId: string): Turn | null {
+// The thread's newest run, with whether it has stopped to ask and, when it
+// failed, why.
+export function readRun(db: Db, threadId: string): Run | null {
+  const run = db.prepare(`
+    select run_id, status from orchestration_v2_projection_runs
+    where thread_id = ? order by ordinal desc limit 1`).get(threadId) as { run_id: string; status: string } | undefined;
+  if (!run) return null;
+  const { pending } = db.prepare(`
+    select count(*) as pending from orchestration_v2_projection_runtime_requests
+    where thread_id = ? and status = 'pending'`).get(threadId) as { pending: number };
+  // A failed run leaves an error item; its failure says what went wrong.
+  const error = db.prepare(`
+    select payload_json from orchestration_v2_projection_turn_items
+    where run_id = ? and type = 'error' and status = 'failed'
+    order by updated_at desc, ordinal desc limit 1`).get(run.run_id) as { payload_json: string } | undefined;
+  let failure: string | null = null;
+  if (error) {
+    try {
+      const { message } = (JSON.parse(error.payload_json) as { failure?: { message?: unknown } }).failure ?? {};
+      failure = typeof message === 'string' ? message : null;
+    } catch {
+      failure = null;
+    }
+  }
+  return { id: run.run_id, status: run.status, pendingRequests: pending, failure };
+}
+
+// The run's newest assistant message, or null when it has none yet.
+export function readFinalMessage(db: Db, runId: string): { text: string; streaming: boolean } | null {
   const row = db.prepare(`
-    select t.state, t.assistant_message_id, th.pending_user_input_count, th.pending_approval_count, s.last_error
-    from projection_turns t
-    left join projection_threads th on th.thread_id = t.thread_id
-    left join projection_thread_sessions s on s.thread_id = t.thread_id
-    where t.thread_id = ?
-    order by t.row_id desc
-    limit 1`).get(threadId) as Record<string, string | number | null> | undefined;
+    select payload_json, streaming from orchestration_v2_projection_messages
+    where run_id = ? and role = 'assistant'
+    order by created_at desc, rowid desc limit 1`).get(runId) as { payload_json: string; streaming: number } | undefined;
   if (!row) return null;
-  return {
-    state: row.state as string,
-    assistantMessageId: row.assistant_message_id as string | null,
-    pendingUserInput: (row.pending_user_input_count as number | null) ?? 0,
-    pendingApproval: (row.pending_approval_count as number | null) ?? 0,
-    lastError: row.last_error as string | null,
-  };
-}
-
-export function readMessage(db: Db, messageId: string): { text: string; isStreaming: number } | null {
-  const row = db.prepare('select text, is_streaming from projection_thread_messages where message_id = ?').get(messageId) as
-    { text: string; is_streaming: number } | undefined;
-  return row ? { text: row.text, isStreaming: row.is_streaming } : null;
+  const { text } = JSON.parse(row.payload_json) as { text?: unknown };
+  return { text: typeof text === 'string' ? text : '', streaming: row.streaming === 1 };
 }
 
 const tokenPath = (io: Io) => `${io.homedir()}/${TOKEN_FILE_SUFFIX}`;
@@ -201,9 +220,13 @@ export async function refusal(io: Io, origin: string): Promise<string> {
   return `t3 refused the WebSocket connection: ${why} A t3 update may have changed its protocol; see "After a t3 update" in the lets-spec README.`;
 }
 
-// The HTTP dispatch endpoint ignores `bootstrap`; only the WebSocket RPC
-// creates the thread, so go through /ws like the UI does.
-export async function dispatch(io: Io, { origin, token }: { origin: string; token: string }, command: { threadId?: string; [field: string]: unknown }) {
+type Server = { origin: string; token: string };
+type Rpc = { tag: string; payload: Record<string, unknown>; threadId: string | undefined };
+
+// One request over the WebSocket RPC, as the UI makes it: a ticket for the
+// token, then one Request frame, then its Exit. The result is the Exit's
+// value.
+async function request(io: Io, { origin, token }: Server, { tag, payload, threadId }: Rpc): Promise<unknown> {
   let response = await requestTicket(io, origin, token);
   if (rejected(response)) {
     response = await requestTicket(io, origin, await issueToken(io));
@@ -214,12 +237,13 @@ export async function dispatch(io: Io, { origin, token }: { origin: string; toke
 
   const url = new URL('/ws', origin.replace(/^http/, 'ws'));
   url.searchParams.set('wsTicket', ticket);
+  url.searchParams.set('orchestrationProtocol', String(ORCHESTRATION_PROTOCOL));
   const ws = new io.WebSocket(url);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const exit = await new Promise<NonNullable<Frame['exit']>>((resolveExit, reject) => {
       // A timeout means "unknown", not "failed": the server may still act on it.
-      timer = setTimeout(() => reject(new SpawnError(`no reply from t3 after ${REPLY_TIMEOUT_MS / 1000} s; check ${command.threadId} before running again`)), REPLY_TIMEOUT_MS);
+      timer = setTimeout(() => reject(new SpawnError(`no reply from t3 after ${REPLY_TIMEOUT_MS / 1000} s; check ${threadId} before running again`)), REPLY_TIMEOUT_MS);
       let opened = false;
       let refused = false;
       // Before the socket opens, an error or a close means t3 refused the
@@ -232,7 +256,7 @@ export async function dispatch(io: Io, { origin, token }: { origin: string; toke
       };
       ws.addEventListener('open', () => {
         opened = true;
-        ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: command, headers: [] }));
+        ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag, payload, headers: [] }));
       });
       ws.addEventListener('message', (event) => {
         for (const message of [JSON.parse(event.data as string) as Frame | Frame[]].flat()) {
@@ -243,7 +267,7 @@ export async function dispatch(io: Io, { origin, token }: { origin: string; toke
       ws.addEventListener('error', (event) => fail(`t3 websocket error: ${(event as Event & { message?: string }).message || event.type}`));
       ws.addEventListener('close', (event) => fail(`t3 websocket closed: ${event.code} ${event.reason}`));
     });
-    if (exit._tag !== 'Success') throw new SpawnError(`t3 dispatch failed: ${JSON.stringify(exit)}`);
+    if (exit._tag !== 'Success') throw new SpawnError(`t3 ${tag} failed: ${JSON.stringify(exit)}`);
     return exit.value;
   } finally {
     clearTimeout(timer);
@@ -251,8 +275,19 @@ export async function dispatch(io: Io, { origin, token }: { origin: string; toke
   }
 }
 
+// Send one orchestration command, such as `thread.archive`.
+export function dispatch(io: Io, server: Server, command: { threadId?: string; [field: string]: unknown }): Promise<unknown> {
+  return request(io, server, { tag: 'orchestration.dispatchCommand', payload: command, threadId: command.threadId });
+}
+
+// Create a thread and send its first message. The answer names the thread.
+export async function launch(io: Io, server: Server, input: ReturnType<typeof buildLaunch>): Promise<{ threadId: string }> {
+  const result = await request(io, server, { tag: 'orchestration.launchThread', payload: input, threadId: input.threadId }) as { threadId?: unknown } | null;
+  return { threadId: typeof result?.threadId === 'string' ? result.threadId : input.threadId };
+}
+
 export function createAdapter(io: Io): Adapter {
-  const databasePath = () => `${userdata(io)}/state.sqlite`;
+  const databasePath = () => `${userdata(io)}/statev2.sqlite`;
 
   // Open the database, run read(db), and close it again.
   function withDb<T>(read: (db: Db) => T): T {
@@ -305,17 +340,15 @@ export function createAdapter(io: Io): Adapter {
       const project = withDb((db) => findProject(db, repoRoot));
       const branch = (await git(cwd, ['branch', '--show-current'])) || null;
       const modelSelection = kind === 'run' ? t3ModelSelection({ family, model, effort: effort! }) : startSelection(project);
-      const threadId = randomUUID();
       const token = await readToken(io);
-      await dispatch(io, { origin, token }, buildTurnStart({
-        threadId,
+      const { threadId } = await launch(io, { origin, token }, buildLaunch({
+        threadId: randomUUID(),
         projectId: project.project_id,
         title: name,
         text: prompt,
         modelSelection,
         interactionMode: readOnly ? 'plan' : 'default',
         branch,
-        now: new Date(io.now()).toISOString(),
       }));
       return { handle: { kind: 'thread', id: threadId, origin } };
     },
@@ -324,14 +357,17 @@ export function createAdapter(io: Io): Adapter {
       // Open the database fresh on each check: the server writes it, and a
       // long-lived handle can see stale state.
       const check = () => withDb((db) => {
-        const turn = readTurn(db, handle.id);
-        if (turn === null) return undefined;
-        if (turn.pendingUserInput > 0 || turn.pendingApproval > 0) throw new SessionFailed('the session stopped to ask');
-        if (turn.state === 'error') throw new SessionFailed(turn.lastError ?? 'turn error');
-        if (turn.state === 'interrupted') throw new SessionFailed('turn interrupted');
-        if (turn.state !== 'completed' || turn.assistantMessageId === null) return undefined;
-        const message = readMessage(db, turn.assistantMessageId);
-        if (message === null || message.isStreaming === 1) return undefined;
+        const run = readRun(db, handle.id);
+        if (run === null) return undefined;
+        if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
+        if (run.status === 'failed') throw new SessionFailed(run.failure ?? 'run failed');
+        if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
+        if (run.status !== 'completed') return undefined;
+        // A completed run with no message yet is one with none at all; the
+        // resolver rejects the empty text. One still streaming will finish.
+        const message = readFinalMessage(db, run.id);
+        if (message === null) return { text: '' };
+        if (message.streaming) return undefined;
         return { text: message.text };
       });
       return pollUntil(check, { intervalMs: POLL_MS, timeoutMs, now: io.now, sleep: io.sleep });
