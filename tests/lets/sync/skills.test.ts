@@ -88,6 +88,17 @@ test('a file the release no longer has under a managed path is removed', () => {
   assert.equal(result.written, 0);
 });
 
+test('a project synced before lets-spawn was dropped loses the skill, scripts and all', () => {
+  const io = release({
+    '/p/.agents/skills/lets-spawn/SKILL.md': 'x',
+    '/p/.agents/skills/lets-spawn/scripts/lets-spawn.mjs': 'y',
+    '/p/.agents/skills/lets-spawn/scripts/adapters/t3.mjs': 'z',
+  });
+  const { result } = sync(io);
+  assert.deepEqual(result.removed, ['.agents/skills/lets-spawn']);
+  assert.equal(io.exists('/p/.agents/skills/lets-spawn'), false);
+});
+
 test('a managed path the release does not ship is removed and reported', () => {
   const io = release({ '/p/.agents/skills/lets-old/SKILL.md': 'x', '/p/openspec/schemas/lets-old/schema.yaml': 'y' });
   io.links.set('/p/.agents/skills/openspec-gone', '/store/a-lets-spec-release/b');

@@ -2,7 +2,7 @@
 
 - **Review round**: <!-- 1, 2, ... -->
 - **Prior round**: <!-- none | one-line summary of previous round's verdict -->
-- **Reviewer context**: <!-- cross-model (<family>, <tool>) | same family in a fresh process -->
+- **Reviewer context**: <!-- fresh context, other family | fresh context, same family | subagent, same family -->
 - **Independent**: <!-- yes | no, and why -->
 - **Tool restrictions**: <!-- read-only: view, grep, glob only -->
 - **Artifacts reviewed**: brainstorm.md, proposal.md, design.md, specs/, adr.md, relevant source files
