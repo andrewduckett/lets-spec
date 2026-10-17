@@ -18,15 +18,15 @@ These rules come from lets-spec, and apply to every agent.
   report. The project's own instructions say how to run them.
 - **When you review code, also apply the project's `REVIEW.md`,** if it
   has one.
-- **Use the entry points' backlog scripts for issue selection, kind and
-  priority.** `lets-build`'s script picks and claims stories, and
-  `lets-shape`'s sets kind and priority. Never set an issue's kind or
-  priority with `gh` directly. Every story is an issue, and its pull
-  request says `Closes #<n>`. An epic is a parent issue with its stories
-  as sub-issues. Dependencies are "blocked by" links. Put a blocker on
-  each story it blocks, never only on the epic: picking the next story
-  cannot see a blocker on a parent issue. A "relates to" link never
-  counts as a blocker.
+- **The backlog is the GitHub Project linked to this repository.**
+  `lets-shape` sets kind, priority, size and readiness; `lets-build`
+  picks, claims and routes. Never set a Project field with `gh` outside
+  those skills. Every piece of work is an issue, and its pull request
+  says `Closes #<n>`. An epic is a parent issue with its stories as
+  sub-issues. Dependencies are "blocked by" links on the story they
+  block. Put a blocker on each story it blocks, never only on the epic:
+  picking the next story cannot see a blocker on a parent issue. A
+  "relates to" link never counts as a blocker.
 - **The user owns the merge.** Never merge a pull request unless the
   user asks. Stacks merge bottom-up.
 - **Change requests reopen an archived change.** If a ready pull request
@@ -36,7 +36,7 @@ These rules come from lets-spec, and apply to every agent.
   deleted.
 - **Never edit what lets-spec puts in the project:** this section,
   between its markers, the skills in `.agents/skills/` and the schema
-  folder in `openspec/schemas/`. `lets-sync` rewrites this section, and
+  folders in `openspec/schemas/`. `lets-sync` rewrites this section, and
   the skills and the schema are read-only links into the Nix store that
   git ignores. Change lets-spec instead. Never run `openspec init` or
   `openspec update`; they write skills of their own.
@@ -46,8 +46,9 @@ These rules come from lets-spec, and apply to every agent.
 | Request | Start with |
 |---|---|
 | A large idea, or work that needs splitting or prioritizing | The `lets-shape` skill |
+| A bug, a chore or a single story with no issue yet, or an issue with no packet | The `lets-shape` skill |
 | Start the next story, or move the current branch's change on | The `lets-build` skill |
-| A tooling or dependency change that changes no behavior | An ordinary branch and pull request, with no OpenSpec change |
+| Set up or check this repository's backlog | The `lets-setup-backlog` skill |
 
 ### Writing
 
