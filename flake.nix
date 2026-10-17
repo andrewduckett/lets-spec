@@ -110,6 +110,31 @@
           '';
         };
 
+        # The T3 and herdr resolver, for a user's profile. Never in a dev
+        # shell: it answers for the machine, not the project. It runs git and
+        # t3 from PATH, because t3 is the user's own install.
+        lets-delegate-resolver = pkgs.stdenv.mkDerivation {
+          pname = "lets-delegate-resolver";
+          version = "0.0.0";
+          src = workspaceSource;
+          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
+          inherit pnpmDeps;
+          dontPatchShebangs = true;
+          buildPhase = ''
+            runHook preBuild
+            pnpm --filter lets-delegate-resolver build
+            runHook postBuild
+          '';
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 contrib/lets-delegate-resolver/dist/lets-delegate-resolver $out/libexec/lets-delegate-resolver
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets-delegate-resolver \
+              --add-flags $out/libexec/lets-delegate-resolver
+            runHook postInstall
+          '';
+          meta.mainProgram = "lets-delegate-resolver";
+        };
+
         # lets, bound to one release.
         lets = flow:
           pkgs.runCommand "lets"
@@ -120,11 +145,13 @@
                 --prefix PATH : ${lib.makeBinPath [ pkgs.git ]}
             '';
 
-        # The folder the release tarball is made from: the lets bundle, and
-        # one release for every flow. CI sets the real version.
+        # The folder the release tarball is made from: the lets bundle, one
+        # release for every flow, and the contrib resolver outside bin/, so
+        # mise never puts it on a project's PATH. CI sets the real version.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
-          mkdir -p $out/bin $out/releases
+          mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
+          cp ${lets-delegate-resolver}/libexec/lets-delegate-resolver $out/contrib/lets-delegate-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
             version = "0.0.0-dev";
@@ -140,7 +167,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-resolver dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
@@ -236,6 +263,10 @@
             [ -x ${dist}/bin/lets ]
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
+            # The resolver is per user, so it is never on a project's PATH.
+            [ "$(ls ${dist}/contrib)" = lets-delegate-resolver ]
+            [ -x ${dist}/contrib/lets-delegate-resolver ]
+            [ "$(head -n 1 ${dist}/contrib/lets-delegate-resolver)" = '#!/usr/bin/env node' ]
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
             mkdir project
@@ -249,6 +280,10 @@
             grep -q 'schema: lets-minimal' openspec/config.yaml
             git add -A
             node ${dist}/bin/lets sync --check
+            # Outside T3 and herdr the resolver declines, with no node_modules.
+            status=0
+            echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/lets-delegate-resolver probe || status=$?
+            [ "$status" -eq 75 ]
             touch "$out"
           '';
 
