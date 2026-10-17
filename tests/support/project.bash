@@ -30,11 +30,11 @@ store_release() {
   echo "$dir"
 }
 
-# Run lets-sync from lets-sync/bin/, with WORKFLOW_RELEASE pointing at
+# Run lets sync from lets/bin/, with WORKFLOW_RELEASE pointing at
 # $release, as the Nix wrapper does. A test can name another release by
 # setting WORKFLOW_RELEASE for one call.
 sync_project() {
-  WORKFLOW_RELEASE="${WORKFLOW_RELEASE:-$release}" node "$repo/lets-sync/bin/lets-sync" "$@"
+  WORKFLOW_RELEASE="${WORKFLOW_RELEASE:-$release}" node "$repo/lets/bin/lets" sync "$@"
 }
 
 # Run lets-sync once and check that it succeeded, so the project has its

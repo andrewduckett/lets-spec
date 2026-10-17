@@ -104,5 +104,5 @@ export function syncSkills({ release, schemaName: _schemaName, root, io, stdout 
 export function checkSkills({ release, schemaName: _schemaName, root, io }: { release: string; schemaName: string; root: string; io: Io }) {
   const paths = releasePaths({ release, io });
   return [...paths.flatMap((path) => staleFiles(path, root, io)), ...unshipped(paths, root, io)]
-    .map((path) => `lets-spec: ${path} is out of date. Run lets-sync, then commit it.`);
+    .map((path) => `lets-spec: ${path} is out of date. Run lets sync, then commit it.`);
 }

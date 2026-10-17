@@ -122,9 +122,9 @@ test('a managed path the release does not ship but is not ours by name is kept',
 test('checkSkills names each stale, missing or extra file', () => {
   const io = release();
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
-    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-build/scripts/backlog.sh is out of date. Run lets-sync, then commit it.',
-    `lets-spec: openspec/schemas/${SCHEMA}/schema.yaml is out of date. Run lets-sync, then commit it.`,
+    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/scripts/backlog.sh is out of date. Run lets sync, then commit it.',
+    `lets-spec: openspec/schemas/${SCHEMA}/schema.yaml is out of date. Run lets sync, then commit it.`,
   ]);
   sync(io);
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), []);
@@ -132,9 +132,9 @@ test('checkSkills names each stale, missing or extra file', () => {
   io.writeFile('/p/.agents/skills/lets-build/extra.md', 'x');
   io.writeFile('/p/.agents/skills/lets-old/SKILL.md', 'x');
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
-    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-build/extra.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-old is out of date. Run lets-sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/extra.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-old is out of date. Run lets sync, then commit it.',
   ]);
 });
 

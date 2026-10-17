@@ -103,18 +103,20 @@ load support/project
 @test "sync prints its usage" {
   run sync_project --help
   [ "$status" -eq 0 ]
-  [[ "$output" == "lets-sync: set up a project"* ]]
-  [[ "$output" == *"Usage: lets-sync [--check]"* ]]
+  [[ "$output" == "Usage: lets sync [--check]"* ]]
+  [[ "$output" == *"Set up a project for lets-spec, and keep it set up."* ]]
+  [[ "$output" == *"LETS_SPEC_SKILLS=ignored"* ]]
+  [[ "$output" == *"The Nix wrapper sets WORKFLOW_RELEASE." ]]
 }
 
 @test "sync refuses an unknown option" {
   run sync_project --force
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"unknown option --force"* ]]
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unknown option '--force'"* ]]
 }
 
 @test "sync refuses to run without a release" {
-  run env -u WORKFLOW_RELEASE node "$repo/lets-sync/bin/lets-sync"
+  run env -u WORKFLOW_RELEASE node "$repo/lets/bin/lets" sync
   [ "$status" -eq 1 ]
   [[ "$output" == *"there is no release for flow"* ]]
 }

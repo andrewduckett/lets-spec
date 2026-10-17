@@ -24,7 +24,7 @@ export function releasePaths({ release, io }: { release: string; io: Io }) {
     paths.push({ dst: `${SCHEMAS_DST}/${schema}`, src: join(release, 'overlay', SCHEMAS_DST, schema) });
   }
   for (const { dst } of paths) {
-    if (!isManaged(dst)) throw new UsageError(`${release} ships ${dst}, which lets-sync does not own.`);
+    if (!isManaged(dst)) throw new UsageError(`${release} ships ${dst}, which lets sync does not own.`);
   }
   return paths;
 }
