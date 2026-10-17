@@ -11,7 +11,9 @@
         "lets-test-first",
         "lets-review-plan",
         "lets-review-code",
-        "lets-spawn"
+        "lets-spawn",
+        "lets-shape",
+        "lets-setup-backlog"
       ]
     },
     "minimal": {
@@ -22,12 +24,14 @@
         "lets-write-specs",
         "lets-write-tasks",
         "lets-test-first",
-        "lets-spawn"
+        "lets-spawn",
+        "lets-shape",
+        "lets-setup-backlog"
       ]
     }
   },
   "backlogs": {
-    "github-labels": { "mode": "labels", "skills": ["lets-shape"] },
-    "github-fields": { "mode": "fields", "skills": ["lets-shape"] }
+    "github-labels": { "mode": "labels", "skills": [] },
+    "github-fields": { "mode": "fields", "skills": [] }
   }
 }
