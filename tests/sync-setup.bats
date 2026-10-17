@@ -126,16 +126,17 @@ load support/project
   [[ "$output" == *"is not a release of lets-spec"* ]]
 }
 
-# release_with_schemas <n>: a release like $release with n schemas, and print
-# its path.
+# release_with_schemas <n>: a copy of $release that ships n schemas: none,
+# or lets-standard plus n-1 copies named lets-extra<i>. Prints its path.
+# lets-sync owns only schemas named lets-*, so the copies are too.
 release_with_schemas() {
   local dir="$BATS_TEST_TMPDIR/store/n-lets-spec-release" i
   mkdir -p "$BATS_TEST_TMPDIR/store"
   cp -R "$release" "$dir"
   chmod -R u+w "$dir"
-  rm -r "$dir/overlay/openspec/schemas/lets-standard"
-  for ((i = 0; i < $1; i++)); do
-    cp -R "$release/overlay/openspec/schemas/lets-standard" "$dir/overlay/openspec/schemas/s$i"
+  if [ "$1" -eq 0 ]; then rm -r "$dir/overlay/openspec/schemas/lets-standard"; fi
+  for ((i = 1; i < $1; i++)); do
+    cp -R "$release/overlay/openspec/schemas/lets-standard" "$dir/overlay/openspec/schemas/lets-extra$i"
   done
   echo "$dir"
 }
@@ -143,13 +144,23 @@ release_with_schemas() {
 @test "sync refuses a release that holds no schema" {
   WORKFLOW_RELEASE="$(release_with_schemas 0)" run sync_project
   [ "$status" -eq 1 ]
-  [[ "$output" == *"holds 0 schemas"* ]]
+  [[ "$output" == *"holds no schema"* ]]
   [ ! -e AGENTS.md ]
 }
 
-@test "sync refuses a release that holds more than one schema" {
+@test "sync copies every schema a release holds" {
   WORKFLOW_RELEASE="$(release_with_schemas 2)" run sync_project
+  [ "$status" -eq 0 ]
+  [ -f openspec/schemas/lets-standard/schema.yaml ]
+  [ -f openspec/schemas/lets-extra1/schema.yaml ]
+}
+
+@test "sync refuses a release whose config names a schema it does not ship" {
+  local dir
+  dir="$(release_with_schemas 2)"
+  rm -r "$dir/overlay/openspec/schemas/lets-standard"
+  WORKFLOW_RELEASE="$dir" run sync_project
   [ "$status" -eq 1 ]
-  [[ "$output" == *"holds 2 schemas"* ]]
+  [[ "$output" == *"names 'lets-standard', which the release does not ship"* ]]
   [ ! -e AGENTS.md ]
 }

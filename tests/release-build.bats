@@ -14,11 +14,11 @@ build_from() {
   node "$repo/build/build-release.mjs" "$repo" "$1" "$out" "${@:2}"
 }
 
-@test "the release links exactly the schema and the skills it is given" {
-  build "$out" lets-standard labels lets-test-first lets-build
+@test "the release links exactly the schemas and the skills it is given" {
+  build "$out" lets-standard,lets-minimal labels lets-test-first lets-build
   [ "$(cd "$out/overlay" && ls -A | tr '\n' ' ')" = ".agents openspec " ]
   [ "$(ls -A "$out/overlay/openspec")" = schemas ]
-  [ "$(ls "$out/overlay/openspec/schemas")" = lets-standard ]
+  [ "$(ls "$out/overlay/openspec/schemas" | tr '\n' ' ')" = "lets-minimal lets-standard " ]
   [ "$(ls "$out/overlay/.agents/skills" | tr '\n' ' ')" = "lets-build lets-test-first openspec-propose " ]
 }
 
@@ -33,15 +33,13 @@ build_from() {
   [ ! -e "$out/init/AGENTS.md" ]
 }
 
-@test "the release's config is the flow's own, and names the flow's schema" {
-  local schema
-  for schema in lets-standard lets-minimal; do
-    rm -rf "$out"
-    build "$out" "$schema" labels lets-test-first
-    diff "$repo/overlays/openspec/config.d/$schema.yaml" "$out/init/openspec/config.yaml"
-    [ "$(yq -r .schema "$out/init/openspec/config.yaml")" = "$schema" ]
-    [ ! -e "$out/init/openspec/config.d" ] || { echo "$schema has config.d"; false; }
-  done
+@test "the release's config is the first schema's own, and names it" {
+  build "$out" lets-standard,lets-minimal labels lets-test-first
+  diff "$repo/overlays/openspec/config.d/lets-standard.yaml" "$out/init/openspec/config.yaml"
+  rm -rf "$out"
+  build "$out" lets-minimal labels lets-test-first
+  [ "$(yq -r .schema "$out/init/openspec/config.yaml")" = lets-minimal ]
+  [ ! -e "$out/init/openspec/config.d" ]
 }
 
 @test "the standard release's config holds the code review as archive guidance, and the minimal release's holds none" {
@@ -98,11 +96,11 @@ build_from() {
 @test "the build fails with too few arguments, and prints its usage" {
   run node "$repo/build/build-release.mjs" "$repo" "$BATS_TEST_TMPDIR" "$out" lets-standard
   [ "$status" -eq 1 ]
-  [[ "$output" == *"usage: build-release.mjs <source> <generated> <out> <schema> <mode> [skill...]"* ]]
+  [[ "$output" == *"usage: build-release.mjs <source> <generated> <out> <schemas> <mode> [skill...]"* ]]
 }
 
-@test "the build fails on an unknown schema" {
-  run build "$out" nosuch labels lets-test-first
+@test "the build fails on an unknown schema in the list" {
+  run build "$out" lets-standard,nosuch labels lets-test-first
   [ "$status" -eq 1 ]
   [[ "$output" == *"there is no schema named nosuch"* ]]
 }

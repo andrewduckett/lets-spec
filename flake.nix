@@ -62,7 +62,7 @@
         release = flow: backlog: let recipe = flows.${flow}; in
           pkgs.runCommand "lets-spec-release" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
             node ${./build/build-release.mjs} ${releaseSource} ${openspec-skills} $out \
-              ${recipe.schema} ${backlogs.${backlog}.mode} \
+              ${lib.concatStringsSep "," recipe.schemas} ${backlogs.${backlog}.mode} \
               ${lib.escapeShellArgs (recipe.skills ++ backlogs.${backlog}.skills)}
           '';
 
@@ -151,6 +151,9 @@
               cat stderr >&2
               exit 1
             fi
+            # A standard project also gets lets-minimal, for chores and
+            # small stories.
+            [ -f openspec/schemas/lets-minimal/schema.yaml ]
             # Each entry point runs its own backlog script, and lets-shape's
             # copy carries the backlog's mode.
             node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
@@ -168,6 +171,7 @@
             if [ -s warnings ]; then cat warnings >&2; exit 1; fi
             [ "$(yq -r .schema openspec/config.yaml)" = lets-minimal ]
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
+            [ ! -e openspec/schemas/lets-standard ]
             [ -f .agents/skills/lets-test-first/SKILL.md ]
             [ ! -e .agents/skills/lets-review-plan ]
             openspec new change small </dev/null >/dev/null 2>&1

@@ -54,11 +54,26 @@ test('a folder that is not a release is refused', async () => {
   assert.ok(t.stderr().includes(`${RELEASE} is not a release of lets-spec`));
 });
 
-test('a release with two schemas is refused', async () => {
+test('a release with two schemas is accepted', async () => {
   const files = { ...releaseFiles, [`${RELEASE}/overlay/openspec/schemas/lets-minimal/schema.yaml`]: 'x' };
+  const t = setup({ files, toplevel: '/project' });
+  assert.equal(await run([], t.deps), 0);
+  assert.equal(t.stderr(), '');
+});
+
+test('a release with no schema is refused', async () => {
+  const files = { ...releaseFiles };
+  delete files[`${RELEASE}/overlay/openspec/schemas/lets-standard/schema.yaml`];
   const t = setup({ files });
   assert.equal(await run([], t.deps), 1);
-  assert.ok(t.stderr().includes('holds 2 schemas'));
+  assert.ok(t.stderr().includes('holds no schema'));
+});
+
+test('a release whose config names a schema it does not ship is refused', async () => {
+  const files = { ...releaseFiles, [`${RELEASE}/init/openspec/config.yaml`]: 'schema: lets-minimal\n' };
+  const t = setup({ files });
+  assert.equal(await run([], t.deps), 1);
+  assert.ok(t.stderr().includes("names 'lets-minimal', which the release does not ship"));
 });
 
 test('outside a git repo nothing is written', async () => {

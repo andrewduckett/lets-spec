@@ -12,12 +12,13 @@ generated_skills() {
   echo "$1"
 }
 
-# build <out> <schema> <mode> [skill...]: run the release build on this repo.
+# build <out> <schemas> <mode> [skill...]: run the release build on this
+# repo. <schemas> is comma-separated; the first is the default.
 build() {
-  local out="$1" schema="$2" mode="$3"
+  local out="$1" schemas="$2" mode="$3"
   shift 3
   node "$repo/build/build-release.mjs" "$repo" "$(generated_skills "$out.generated")" \
-    "$out" "$schema" "$mode" "$@"
+    "$out" "$schemas" "$mode" "$@"
 }
 
 # make_release <dir> [extra skill...]: build a read-only release of the

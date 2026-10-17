@@ -64,9 +64,12 @@ named_skills() {
 }
 
 # flow_texts <flow>: the files lets-spec gives a flow's agent besides its
-# skills: the schema, and the flow's config.
+# skills: each schema the flow ships, and the flow's config.
 flow_texts() {
-  echo "$repo/schemas/lets-$1/schema.yaml"
+  local schema
+  for schema in $(jq -r --arg flow "$1" '.flows[$flow].schemas[]' "$repo/flows.json"); do
+    echo "$repo/schemas/$schema/schema.yaml"
+  done
   echo "$repo/overlays/openspec/config.d/lets-$1.yaml"
 }
 

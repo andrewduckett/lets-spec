@@ -1,7 +1,7 @@
 {
   "flows": {
     "standard": {
-      "schema": "lets-standard",
+      "schemas": ["lets-standard", "lets-minimal"],
       "skills": [
         "lets-build",
         "lets-brainstorm",
@@ -17,7 +17,7 @@
       ]
     },
     "minimal": {
-      "schema": "lets-minimal",
+      "schemas": ["lets-minimal"],
       "skills": [
         "lets-build",
         "lets-brainstorm",

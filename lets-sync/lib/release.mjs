@@ -1,10 +1,14 @@
 // Find and validate the release: the folder of files lets-sync copies from.
 import { join } from 'node:path';
+import { schemaOf } from './config.mjs';
 import { UsageError } from './main.mjs';
 
 export const SKILLS_DST = '.agents/skills';
 export const SCHEMAS_DST = 'openspec/schemas';
 export const AGENTS = 'AGENTS.md';
+
+// The config the release creates in a project, in its init/ folder.
+const CONFIG = 'init/openspec/config.yaml';
 
 // Where the release is: WORKFLOW_RELEASE when set, else the release this
 // package ships for the flow and backlog.
@@ -48,12 +52,21 @@ export function requireRelease(release, io) {
   }
 }
 
-// The name of the one schema folder the release holds.
-export function releaseSchema(release, io) {
+// The schema folders the release holds, sorted. A release holds at least one.
+export function releaseSchemas(release, io) {
   const dir = join(release, 'overlay', SCHEMAS_DST);
-  const names = io.isDir(dir) ? io.listDirs(dir) : [];
-  if (names.length !== 1) {
-    throw new UsageError(`${release} holds ${names.length} schemas in overlay/${SCHEMAS_DST}/; a release holds one.`);
+  const names = io.isDir(dir) ? [...io.listDirs(dir)].sort() : [];
+  if (names.length === 0) throw new UsageError(`${release} holds no schema in overlay/${SCHEMAS_DST}/.`);
+  return names;
+}
+
+// The schema the release's own config names: the default for a project.
+// It must be one the release ships.
+export function defaultSchema(release, io) {
+  const name = schemaOf(io.readFile(join(release, CONFIG)) ?? '');
+  if (name === null) throw new UsageError(`${release}'s ${CONFIG} names no schema.`);
+  if (!releaseSchemas(release, io).includes(name)) {
+    throw new UsageError(`${release}'s ${CONFIG} names '${name}', which the release does not ship.`);
   }
-  return names[0];
+  return name;
 }

@@ -3,18 +3,19 @@
 // links into a project and creates in it. The flake runs it once for each
 // pair of a recipe in flows.json and a backlog, with the skills of both.
 //
-// Usage: build-release.mjs <source> <generated> <out> <schema> <mode> [skill...]
+// Usage: build-release.mjs <source> <generated> <out> <schemas> <mode> [skill...]
 //   source     this repo, or a copy of its schemas/, skills/ and overlays/
 //              folders
 //   generated  a folder that holds the generated openspec-* skills
 //   out        the release folder to create
-//   schema     the folder in schemas/ to ship
+//   schemas    the folders in schemas/ to ship, comma-separated. The first
+//              is the default, and names the config
 //   mode       labels or fields: how the backlog records kind and priority
 //   skill      each folder in skills/ to ship
 //
 // The release has three folders:
 //   overlay/    files lets-sync links into a project, at the same
-//               paths: the skills and the schema
+//               paths: the skills and the schemas
 //   init/       files lets-sync creates in a project when they are
 //               missing
 //   fragments/  text lets-sync keeps in a marked block of the project's
@@ -24,7 +25,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 
-const USAGE = 'usage: build-release.mjs <source> <generated> <out> <schema> <mode> [skill...]';
+const USAGE = 'usage: build-release.mjs <source> <generated> <out> <schemas> <mode> [skill...]';
 
 function die(message) {
   process.stderr.write(`error: ${message}\n`);
@@ -63,9 +64,12 @@ if (args[0] === '-h' || args[0] === '--help') {
   process.exit(0);
 }
 if (args.length < 5) die(USAGE);
-const [source, generated, out, schema, mode, ...skillNames] = args;
+const [source, generated, out, schemaList, mode, ...skillNames] = args;
+const schemas = schemaList.split(',');
 
-if (!isDir(join(source, 'schemas', schema))) die(`there is no schema named ${schema} in schemas/.`);
+for (const schema of schemas) {
+  if (!isDir(join(source, 'schemas', schema))) die(`there is no schema named ${schema} in schemas/.`);
+}
 if (mode !== 'labels' && mode !== 'fields') die(`the backlog mode must be labels or fields, got '${mode}'.`);
 if (!isDir(generated)) die(`there is no folder of generated skills at ${generated}.`);
 for (const skill of skillNames) {
@@ -75,7 +79,9 @@ for (const skill of skillNames) {
 const overlay = join(out, 'overlay');
 const skills = join(overlay, '.agents/skills');
 for (const dir of [join(overlay, 'openspec/schemas'), skills, join(out, 'fragments')]) mkdirSync(dir, { recursive: true });
-cpSync(join(source, 'schemas', schema), join(overlay, 'openspec/schemas', schema), { recursive: true });
+for (const schema of schemas) {
+  cpSync(join(source, 'schemas', schema), join(overlay, 'openspec/schemas', schema), { recursive: true });
+}
 // overlays/ holds the files a project gets, at their paths in the project.
 // AGENTS.md is a fragment, and lets-sync creates each other file.
 cpSync(join(source, 'overlays'), join(out, 'init'), { recursive: true });
@@ -85,10 +91,11 @@ renameSync(join(out, 'init/AGENTS.md'), join(out, 'fragments/AGENTS.md'));
 // Each flow has its own config in openspec/config.d/<schema>.yaml: the
 // whole file lets-sync creates, naming the flow's schema and holding what
 // its projects start with, such as the standard flow's archive guidance.
-// The release ships it as the config, and no project gets the folder.
+// The release ships the default schema's as the config, and no project
+// gets the folder.
 const configs = join(out, 'init/openspec/config.d');
-const flowConfig = join(configs, `${schema}.yaml`);
-if (!existsSync(flowConfig)) die(`there is no config for ${schema} in overlays/openspec/config.d/.`);
+const flowConfig = join(configs, `${schemas[0]}.yaml`);
+if (!existsSync(flowConfig)) die(`there is no config for ${schemas[0]} in overlays/openspec/config.d/.`);
 renameSync(flowConfig, join(out, 'init/openspec/config.yaml'));
 rmSync(configs, { recursive: true, force: true });
 
