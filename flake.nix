@@ -152,6 +152,7 @@
           mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
           cp ${lets-delegate-resolver}/libexec/lets-delegate-resolver $out/contrib/lets-delegate-resolver
+          install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
             version = "0.0.0-dev";
@@ -264,9 +265,11 @@
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
             # The resolver is per user, so it is never on a project's PATH.
-            [ "$(ls ${dist}/contrib)" = lets-delegate-resolver ]
+            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-resolver " ]
             [ -x ${dist}/contrib/lets-delegate-resolver ]
+            [ -x ${dist}/contrib/headless-resolver ]
             [ "$(head -n 1 ${dist}/contrib/lets-delegate-resolver)" = '#!/usr/bin/env node' ]
+            [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
             mkdir project
@@ -292,7 +295,8 @@
         # run here.
         node-tests = pkgs.runCommand "node-tests"
           {
-            nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.git ];
+            # jq is the one tool the shell example needs.
+            nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.git pkgs.jq ];
             pnpmDeps = pnpmDepsFor pkgs;
           }
           ''
@@ -301,14 +305,14 @@
             cd repo
             export HOME="$TMPDIR"
             pnpmConfigHook
-            # The test fixtures and the resolver's dev entry run as programs,
-            # and the sandbox has no /usr/bin/env.
-            patchShebangs tests contrib/lets-delegate-resolver/bin
+            # The test fixtures and the resolvers run as programs, and the
+            # sandbox has no /usr/bin/env or /bin/sh.
+            patchShebangs tests contrib/lets-delegate-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
             node --test "tests/lets/**/*.test.ts" "tests/lets-delegate-resolver/*.test.ts"
             pnpm check
-            # The built-in default and the contrib resolver keep the shape of
-            # the contract. Neither starts a session here.
+            # The built-in default, the contrib resolver and the shell example
+            # keep the shape of the contract. None starts a session here.
             pnpm conformance
             touch "$out"
           '';
