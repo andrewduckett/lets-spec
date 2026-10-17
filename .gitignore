@@ -14,3 +14,7 @@ result-*
 *.swp
 *~
 .DS_Store
+
+# pnpm and the lets build
+node_modules/
+dist/

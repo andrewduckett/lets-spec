@@ -1,17 +1,18 @@
 // Copy the release's skills and schema into the project, and say which
 // files are out of date.
 import { dirname, join } from 'node:path';
-import { projectPaths, releasePaths } from './managed.mjs';
+import type { Io } from '../io.ts';
+import { projectPaths, releasePaths } from './managed.ts';
 
 // The sorted files under a folder, or none when it is not a folder.
-function filesUnder(dir, io) {
+function filesUnder(dir: string, io: Io) {
   return io.isDir(dir) && !io.isSymlink(dir) ? io.listFiles(dir) : [];
 }
 
 // The first folder between dstDir and the file that is a link or a plain
 // file, or null. The source has a folder there, so it must be replaced, and
 // nothing may be written through it.
-function blockedAncestor(dstDir, file, io) {
+function blockedAncestor(dstDir: string, file: string, io: Io) {
   const parts = file.split('/').slice(0, -1);
   let path = dstDir;
   for (const part of parts) {
@@ -22,28 +23,28 @@ function blockedAncestor(dstDir, file, io) {
 }
 
 // True when a mode has any execute bit. Git tracks only this bit, so it is
-// the only part of a mode lets-sync compares.
-function executable(mode) {
+// the only part of a mode lets sync compares.
+function executable(mode: number) {
   return (mode & 0o111) !== 0;
 }
 
 // The mode of a copy: 0755 when the source is executable, else 0644. The
 // Nix store is read-only, and a copy must not be.
-function copyMode(src, io) {
+function copyMode(src: string, io: Io) {
   return executable(io.stat(src).mode) ? 0o755 : 0o644;
 }
 
 // True when the project's copy differs from the release's file in bytes or
 // in its execute bit, or is a link or a folder.
-function differs(src, dst, io) {
+function differs(src: string, dst: string, io: Io) {
   if (io.isSymlink(dst) || io.isDir(dst)) return true;
   const have = io.readBytes(dst);
-  if (have === null || !have.equals(io.readBytes(src))) return true;
+  if (have === null || !have.equals(io.readBytes(src)!)) return true;
   return executable(io.stat(dst).mode) !== executable(io.stat(src).mode);
 }
 
 // Every file that is wrong under one managed path, as project-relative paths.
-function staleFiles({ dst, src }, root, io) {
+function staleFiles({ dst, src }: { dst: string; src: string }, root: string, io: Io) {
   const dstDir = join(root, dst);
   if (io.isSymlink(dstDir) || (io.exists(dstDir) && !io.isDir(dstDir))) return [dst];
   const wanted = filesUnder(src, io);
@@ -53,14 +54,14 @@ function staleFiles({ dst, src }, root, io) {
 }
 
 // Managed project paths that the release does not ship.
-function unshipped(paths, root, io) {
+function unshipped(paths: { dst: string }[], root: string, io: Io) {
   const shipped = new Set(paths.map((path) => path.dst));
   return projectPaths({ root, io }).filter((path) => !shipped.has(path));
 }
 
 // Make the project's managed paths match the release. Returns how many
 // files it wrote and which paths it removed.
-export function syncSkills({ release, schemaName: _schemaName, root, io, stdout }) {
+export function syncSkills({ release, schemaName: _schemaName, root, io, stdout }: { release: string; schemaName: string; root: string; io: Io; stdout: (text: string) => void }) {
   const paths = releasePaths({ release, io });
   let written = 0;
 
@@ -100,8 +101,8 @@ export function syncSkills({ release, schemaName: _schemaName, root, io, stdout 
 }
 
 // One line per managed file that differs, is missing or is extra.
-export function checkSkills({ release, schemaName: _schemaName, root, io }) {
+export function checkSkills({ release, schemaName: _schemaName, root, io }: { release: string; schemaName: string; root: string; io: Io }) {
   const paths = releasePaths({ release, io });
   return [...paths.flatMap((path) => staleFiles(path, root, io)), ...unshipped(paths, root, io)]
-    .map((path) => `lets-spec: ${path} is out of date. Run lets-sync, then commit it.`);
+    .map((path) => `lets-spec: ${path} is out of date. Run lets sync, then commit it.`);
 }

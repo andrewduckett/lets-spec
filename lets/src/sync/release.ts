@@ -1,7 +1,8 @@
-// Find and validate the release: the folder of files lets-sync copies from.
+// Find and validate the release: the folder of files lets sync copies from.
 import { join } from 'node:path';
-import { schemaOf } from './config.mjs';
-import { UsageError } from './main.mjs';
+import type { Deps, Io } from '../io.ts';
+import { schemaOf } from './config.ts';
+import { UsageError } from './main.ts';
 
 export const SKILLS_DST = '.agents/skills';
 export const SCHEMAS_DST = 'openspec/schemas';
@@ -12,8 +13,8 @@ const CONFIG = 'init/openspec/config.yaml';
 
 // Where the release is: WORKFLOW_RELEASE when set, else the release this
 // package ships for the flow.
-export function findRelease(env, packageRoot, io) {
-  if ((env.WORKFLOW_RELEASE ?? '') !== '') return env.WORKFLOW_RELEASE;
+export function findRelease(env: Deps['env'], packageRoot: string, io: Io) {
+  if ((env.WORKFLOW_RELEASE ?? '') !== '') return env.WORKFLOW_RELEASE!;
   const flow = env.LETS_SPEC_FLOW || 'standard';
   const release = join(packageRoot, 'releases', flow);
   if (!io.isDir(release)) {
@@ -26,7 +27,7 @@ const VERSION = /\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/;
 
 // A warning when the OpenSpec CLI on PATH differs from the one that generated
 // the release's openspec-* skills. Null when either version is unknown.
-export async function openspecVersionWarning({ release, io }) {
+export async function openspecVersionWarning({ release, io }: { release: string; io: Io }) {
   const text = io.readFile(join(release, '..', '..', 'release.json'));
   if (text === null) return null;
   let pinned;
@@ -44,7 +45,7 @@ export async function openspecVersionWarning({ release, io }) {
 }
 
 // Fail unless the folder holds a release of lets-spec.
-export function requireRelease(release, io) {
+export function requireRelease(release: string, io: Io) {
   if (!io.isDir(join(release, 'overlay', SKILLS_DST)) || !io.isDir(join(release, 'init')) ||
     io.readFile(join(release, 'fragments', AGENTS)) === null) {
     throw new UsageError(`${release} is not a release of lets-spec: it lacks overlay/${SKILLS_DST}/, init/ or fragments/${AGENTS}.`);
@@ -52,7 +53,7 @@ export function requireRelease(release, io) {
 }
 
 // The schema folders the release holds, sorted. A release holds at least one.
-export function releaseSchemas(release, io) {
+export function releaseSchemas(release: string, io: Io) {
   const dir = join(release, 'overlay', SCHEMAS_DST);
   const names = io.isDir(dir) ? [...io.listDirs(dir)].sort() : [];
   if (names.length === 0) throw new UsageError(`${release} holds no schema in overlay/${SCHEMAS_DST}/.`);
@@ -61,7 +62,7 @@ export function releaseSchemas(release, io) {
 
 // The schema the release's own config names: the default for a project.
 // It must be one the release ships.
-export function defaultSchema(release, io) {
+export function defaultSchema(release: string, io: Io) {
   const name = schemaOf(io.readFile(join(release, CONFIG)) ?? '');
   if (name === null) throw new UsageError(`${release}'s ${CONFIG} names no schema.`);
   if (!releaseSchemas(release, io).includes(name)) {

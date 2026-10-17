@@ -1,14 +1,16 @@
 // A marked block in a text file. Pure: text in, text out.
 // Works on arrays of lines, so a body is never read as a regex replacement.
 
-export const RULES = {
+export type Markers = { begin: string; end: string; beginPattern: RegExp; endPattern: RegExp };
+
+export const RULES: Markers = {
   begin: '<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->',
   end: '<!-- END lets-spec rules -->',
   beginPattern: /^<!-- BEGIN lets-spec rules/,
   endPattern: /^<!-- END lets-spec rules -->$/,
 };
 
-export const SKILLS = {
+export const SKILLS: Markers = {
   begin: '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.',
   end: '# END lets-spec skills',
   beginPattern: /^# BEGIN lets-spec skills/,
@@ -16,7 +18,7 @@ export const SKILLS = {
 };
 
 // The section older releases kept in .git/info/exclude.
-export const LEGACY_LINKS = {
+export const LEGACY_LINKS: Markers = {
   begin: '# BEGIN lets-spec links. lets-sync rewrites this section.',
   end: '# END lets-spec links',
   beginPattern: /^# BEGIN lets-spec links/,
@@ -26,25 +28,25 @@ export const LEGACY_LINKS = {
 export const SKILLS_BODY = '/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n';
 
 // The block as written to a file: begin, body, end, each ending in a newline.
-export function renderBlock(markers, body) {
+export function renderBlock(markers: Markers, body: string) {
   const text = body === '' || body.endsWith('\n') ? body : `${body}\n`;
   return `${markers.begin}\n${text}${markers.end}\n`;
 }
 
 // The lines of a text, without the empty piece after a final newline.
-function linesOf(text) {
+function linesOf(text: string) {
   const lines = text.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
   return lines;
 }
 
-function joinLines(lines) {
+function joinLines(lines: string[]) {
   return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
 
 // The marker lines in order: [{ index, kind: 'b' | 'e' }].
-function markerLines(markers, lines) {
-  const found = [];
+function markerLines(markers: Markers, lines: string[]) {
+  const found: { index: number; kind: 'b' | 'e' }[] = [];
   lines.forEach((line, index) => {
     if (markers.beginPattern.test(line)) found.push({ index, kind: 'b' });
     if (markers.endPattern.test(line)) found.push({ index, kind: 'e' });
@@ -52,8 +54,10 @@ function markerLines(markers, lines) {
   return found;
 }
 
+type Located = { kind: 'none' } | { kind: 'unpaired' } | { kind: 'pair'; from: number; to: number };
+
 // Where the block is: none, a pair with its { from, to } line indexes, or unpaired.
-function locate(markers, lines) {
+function locate(markers: Markers, lines: string[]): Located {
   const found = markerLines(markers, lines);
   if (found.length === 0) return { kind: 'none' };
   if (found.length === 2 && found[0].kind === 'b' && found[1].kind === 'e') {
@@ -64,7 +68,7 @@ function locate(markers, lines) {
 
 // absent: no text. missing: no markers. unpaired: markers other than one
 // begin then one end. Otherwise current or stale.
-export function blockState(markers, text, block) {
+export function blockState(markers: Markers, text: string | null, block: string) {
   if (text === null) return 'absent';
   const lines = linesOf(text);
   const at = locate(markers, lines);
@@ -77,18 +81,18 @@ export function blockState(markers, text, block) {
 }
 
 // The state, and the text once the block is applied.
-export function applyBlock(markers, text, block) {
+export function applyBlock(markers: Markers, text: string | null, block: string) {
   const state = blockState(markers, text, block);
   switch (state) {
     case 'absent':
       return { state, text: block };
     case 'missing': {
-      const ended = text === '' || text.endsWith('\n') ? text : `${text}\n`;
+      const ended = text === '' || text!.endsWith('\n') ? text : `${text}\n`;
       return { state, text: `${ended}\n${block}` };
     }
     case 'stale': {
-      const lines = linesOf(text);
-      const at = locate(markers, lines);
+      const lines = linesOf(text!);
+      const at = locate(markers, lines) as { from: number; to: number };
       const next = [...lines.slice(0, at.from), ...linesOf(block), ...lines.slice(at.to + 1)];
       return { state, text: joinLines(next) };
     }
@@ -98,7 +102,7 @@ export function applyBlock(markers, text, block) {
 }
 
 // The lines between a pair of markers, or null when there is no pair.
-export function blockLines(markers, text) {
+export function blockLines(markers: Markers, text: string | null) {
   if (text === null) return null;
   const lines = linesOf(text);
   const at = locate(markers, lines);
@@ -107,7 +111,7 @@ export function blockLines(markers, text) {
 
 // The text without the block, and without the one blank line before it that
 // applyBlock adds. text is null when nothing else was there.
-export function removeBlock(markers, text) {
+export function removeBlock(markers: Markers, text: string | null) {
   if (text === null) return { removed: false, text: null };
   const lines = linesOf(text);
   const at = locate(markers, lines);

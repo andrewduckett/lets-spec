@@ -4,9 +4,10 @@ import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sta
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { realIo } from '../../lets-sync/lib/io.mjs';
-import { checkSkills, syncSkills } from '../../lets-sync/lib/skills.mjs';
-import { fakeIo } from './fixtures/fake-io.mjs';
+import { realIo } from '../../../lets/src/io.ts';
+import { checkSkills, syncSkills } from '../../../lets/src/sync/skills.ts';
+import type { FakeIo } from './fixtures/fake-io.ts';
+import { fakeIo } from './fixtures/fake-io.ts';
 
 const SCHEMA = 'lets-standard';
 const SRC = '/rel/overlay/.agents/skills/lets-build';
@@ -24,8 +25,8 @@ function release(extra = {}) {
   return io;
 }
 
-function sync(io) {
-  const out = [];
+function sync(io: FakeIo) {
+  const out: string[] = [];
   const result = syncSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io, stdout: (t) => out.push(t) });
   return { result, out: out.join('') };
 }
@@ -121,9 +122,9 @@ test('a managed path the release does not ship but is not ours by name is kept',
 test('checkSkills names each stale, missing or extra file', () => {
   const io = release();
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
-    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-build/scripts/backlog.sh is out of date. Run lets-sync, then commit it.',
-    `lets-spec: openspec/schemas/${SCHEMA}/schema.yaml is out of date. Run lets-sync, then commit it.`,
+    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/scripts/backlog.sh is out of date. Run lets sync, then commit it.',
+    `lets-spec: openspec/schemas/${SCHEMA}/schema.yaml is out of date. Run lets sync, then commit it.`,
   ]);
   sync(io);
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), []);
@@ -131,14 +132,14 @@ test('checkSkills names each stale, missing or extra file', () => {
   io.writeFile('/p/.agents/skills/lets-build/extra.md', 'x');
   io.writeFile('/p/.agents/skills/lets-old/SKILL.md', 'x');
   assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
-    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-build/extra.md is out of date. Run lets-sync, then commit it.',
-    'lets-spec: .agents/skills/lets-old is out of date. Run lets-sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-build/extra.md is out of date. Run lets sync, then commit it.',
+    'lets-spec: .agents/skills/lets-old is out of date. Run lets sync, then commit it.',
   ]);
 });
 
 test('on disk, a read-only script is copied 755 and runs, a read-only file 644, and a copy can be updated', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const src = join(dir, 'rel/overlay/.agents/skills/lets-build');
     mkdirSync(join(src, 'scripts'), { recursive: true });
@@ -171,7 +172,7 @@ test('on disk, a read-only script is copied 755 and runs, a read-only file 644, 
 });
 
 // A release with one skill whose script sits in a subfolder, and a project.
-function onDisk(dir) {
+function onDisk(dir: string) {
   const src = join(dir, 'rel/overlay/.agents/skills/lets-build');
   mkdirSync(join(src, 'scripts'), { recursive: true });
   mkdirSync(join(dir, 'rel/overlay/openspec/schemas', SCHEMA), { recursive: true });
@@ -184,7 +185,7 @@ function onDisk(dir) {
 }
 
 test('on disk, a folder link inside a managed path is replaced, and its target is left alone', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     mkdirSync(join(dir, 'outside'));
@@ -205,7 +206,7 @@ test('on disk, a folder link inside a managed path is replaced, and its target i
 });
 
 test('on disk, a dangling folder link inside a managed path is replaced', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     symlinkSync('/nonexistent/gone', join(root, '.agents/skills/lets-build/scripts'));
@@ -219,7 +220,7 @@ test('on disk, a dangling folder link inside a managed path is replaced', () => 
 });
 
 test('on disk, a folder where the release has a file is out of date, then replaced by the file', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'lets-sync-skills-'));
+  const dir = mkdtempSync(join(tmpdir(), 'lets-skills-'));
   try {
     const { root, args } = onDisk(dir);
     mkdirSync(join(root, '.agents/skills/lets-build/scripts/backlog.sh'), { recursive: true });

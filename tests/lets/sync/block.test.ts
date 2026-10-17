@@ -9,7 +9,7 @@ import {
   blockState,
   removeBlock,
   renderBlock,
-} from '../../lets-sync/lib/block.mjs';
+} from '../../../lets/src/sync/block.ts';
 
 const BODY = 'one\ntwo\n';
 const BLOCK = renderBlock(RULES, BODY);

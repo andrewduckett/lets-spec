@@ -2,7 +2,7 @@ load support/common
 load support/release
 load support/project
 
-# lets-sync keeps the release's rules in a marked block of the project's
+# lets sync keeps the release's rules in a marked block of the project's
 # AGENTS.md. The project owns the rest of the file. --check reports on the
 # block and changes nothing.
 
