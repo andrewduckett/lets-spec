@@ -52,24 +52,6 @@ build_from() {
   [ "$(yq -o json -I0 . "$out/init/openspec/config.yaml")" = '{"schema":"lets-minimal"}' ]
 }
 
-@test "the build writes the backlog mode into lets-shape's script, and keeps it executable" {
-  local mode script
-  for mode in labels fields; do
-    rm -rf "$out"
-    build "$out" lets-standard "$mode" lets-shape
-    script="$out/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
-    grep -qxF "const MODE = '$mode';" "$script"
-    [ -x "$script" ]
-    run grep -rqF @backlog-mode@ "$out/overlay"
-    [ "$status" -eq 1 ]
-  done
-}
-
-@test "the build leaves the source's scripts unchanged" {
-  build "$out" lets-standard fields lets-shape
-  grep -qxF "const MODE = '@backlog-mode@';" "$repo/skills/lets-shape/scripts/backlog.mjs"
-}
-
 @test "the build works from a read-only source, as in the Nix store" {
   local source="$BATS_TEST_TMPDIR/source"
   mkdir -p "$source"
@@ -77,7 +59,7 @@ build_from() {
   chmod -R a-w "$source"
   run node "$repo/build/build-release.mjs" "$source" "$(generated_skills "$BATS_TEST_TMPDIR/generated")" "$out" lets-standard fields lets-shape
   [ "$status" -eq 0 ]
-  grep -qxF "const MODE = 'fields';" "$out/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
+  [ -f "$out/overlay/.agents/skills/lets-shape/SKILL.md" ]
 }
 
 @test "the build works when there are no generated skills" {

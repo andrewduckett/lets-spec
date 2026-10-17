@@ -1,11 +1,11 @@
 ---
 name: lets-shape
-description: Break a large product requirements document (PRD), vision, issue, or product idea into a release plan for an OpenSpec project — personas, journey map, MoSCoW priorities, and thin vertical stories filed as GitHub issues that lets-build picks up one story at a time. Use when a feature or PRD is too big for one OpenSpec change, when the user asks to split or prioritize work, when a new request must be fitted into an existing backlog, or to resume or revise a discovery.
+description: Break a large product requirements document (PRD), vision, issue, or product idea into a release plan for an OpenSpec project — personas, journey map, MoSCoW priorities, and thin vertical stories filed as GitHub issues on the repository's Project, which lets-build picks up one at a time. Use when a feature or PRD is too big for one OpenSpec change, when the user asks to split or prioritize work, when a new request must be fitted into an existing backlog, to shape a single bug, chore or story into a complete issue, or to resume or revise a discovery.
 ---
 
 # Let's shape
 
-Shape a large idea into a backlog. This is discovery: personas, a journey map, MoSCoW priorities (Must, Should, Could, Won't) and thin vertical stories. Run every command below from the repo root.
+Shape a large idea into a backlog. This is discovery: personas, a journey map, MoSCoW priorities (Must, Should, Could, Won't) and thin vertical stories. It also shapes one bug, chore or story on its own: see [Shape one issue](#shape-one-issue). Run every command below from the repo root.
 
 **Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes two things, and nothing else: no roadmap, release plan or changelog.
 
@@ -18,7 +18,31 @@ Changes are created later, one at a time, by `lets-build`.
 
 **This is a stance with a light structure.** The phases below give the conversation a shape. They are not a script. Revisit an earlier phase when new information arrives, and confirm with the user before you move to the next.
 
-Set an issue's kind and priority only with `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> <Epic|Story>` and `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could|Wont>`. The script knows whether this repo records them as labels or as issue fields.
+## The Project
+
+Kind, Priority, Size and Status are fields on the GitHub Project linked to this repository. Set them only with the `gh project item-edit` commands below. Kind is Epic, Story, Bug or Chore. Priority is Must, Should, Could or Wont. Size is XS, S, M, L or XL.
+
+Find the Project first:
+
+```bash
+gh repo view --json nameWithOwner,projectsV2 \
+  --jq '{repo: .nameWithOwner, projects: [.projectsV2.Nodes[] | select(.closed | not) | {number, title, url, owner: (.resourcePath | split("/")[2])}]}'
+```
+
+- **One Project:** use its `number` as `<n>`, its `owner` as `<owner>` and its `title` as `<project title>` in every command below. `repo` is the repository, as `owner/name`.
+- **None:** say to run the `lets-setup-backlog` skill, and stop.
+- **Two or more:** list each one's title and URL, ask the user to unlink the extras, and stop. Never pick one yourself.
+
+Every issue joins the Project when you create it with `--project "<project title>"`. `gh issue create` prints the issue's URL, `<url>`; for an existing issue, get it with `gh issue view <i> --json url --jq .url`. Set the fields one at a time:
+
+```bash
+gh project item-edit <n> --owner <owner> --url <url> --field Kind --value Story
+gh project item-edit <n> --owner <owner> --url <url> --field Priority --value Must
+gh project item-edit <n> --owner <owner> --url <url> --field Size --value S
+gh project item-edit <n> --owner <owner> --url <url> --field Status --value Todo
+```
+
+An issue is shaped when Kind, Priority and Size are set. Status Todo says nobody has taken it. Set Todo once, right after the other three, whenever you create or reshape a story, bug or chore; the Project's workflows and `lets-build` move it on from there. An epic gets a Kind and nothing else.
 
 ## The stance
 
@@ -50,8 +74,9 @@ At the start:
 
 1. Run `openspec list --json` and take the OpenSpec root from `root.path`. It must be this repository's root, or a directory inside it: `openspec list` answers with the nearest root, which can be a parent of the repository. If it is outside, stop and say the project has no OpenSpec root. Use the resolved root everywhere below, never a bare `./openspec/`.
 2. Read `<root.path>/openspec/config.yaml` (or `config.yml`) if it exists. Its `context` and `rules` are constraints for you to follow, not content to reproduce.
-3. Run `gh repo view --json nameWithOwner,url`. The map's links need the owner and the name.
+3. Find the Project, as in [The Project](#the-project). The map's links need the owner and the name from its `repo`.
 4. Pick the mode, first match wins:
+   - **The user brings one bug, chore or small story, or names one issue to shape on its own**: [Shape one issue](#shape-one-issue). An issue that holds a large idea is the input to a discovery run instead. If you cannot tell which the user means, ask.
    - **An open parent issue says `Discovery status: in-progress`** (`gh issue list --state open --search '"Discovery status: in-progress" in:body' --json number,title,body`): [Resume mode](#resume-mode). If more than one does, list them and ask the user which to resume, or whether to start a new run. Never pick one yourself.
    - **`<root.path>/openspec/discovery.md` does not exist**: run every phase.
    - **Otherwise**: [Revision mode](#revision-mode).
@@ -74,7 +99,7 @@ Take in the input — a file path, an issue (`gh issue view <n>`), pasted text, 
 - Surface goals and non-goals
 - List open questions as they emerge (they land in the parent issue)
 
-**Checkpoint:** The parent issue is public, so confirm its text first. Write it from the parent template in [templates/issue-template.md](templates/issue-template.md): the status line, the input reference, the confirmed scope and any open questions so far. Title it `Epic: <capability>`, create it with `gh issue create`, then run `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Epic`. Phase 5 may turn it into a single story.
+**Checkpoint:** The parent issue is public, so confirm its text first. Write it from the parent template in [templates/issue-template.md](templates/issue-template.md): the status line, the input reference, the confirmed scope and any open questions so far. Title it `Epic: <capability>`, create it with `gh issue create --title "Epic: <capability>" --body-file <file> --project "<project title>"`, then set its Kind to `Epic` with `item-edit`. Phase 5 may turn it into a single story.
 
 ### Phase 2: Personas
 
@@ -127,6 +152,7 @@ Cut the Must (then Should) work into stories:
 - **Each story is one OpenSpec change.** Its future proposal's what and why fits in about 200 words. If the story packet already strains that budget, the story is too big: split it.
 - **The first story is the walking skeleton:** the thinnest path through the whole journey.
 - **Order by dependency first, then value.**
+- **Size each story XS, S, M, L or XL.** L and XL are too big: split them.
 - **Read the backlog before you cut:** `gh issue list --state all --limit 500 --json number,title,state,body,assignees`. Work that fits an open, unassigned story updates that issue instead of duplicating it.
 
 Each story gets a **story packet**: the story template in [templates/issue-template.md](templates/issue-template.md). Every field is required, because the `lets-build` run that plans the story starts with none of this conversation.
@@ -135,22 +161,24 @@ Each story gets a **story packet**: the story template in [templates/issue-templ
 
 **One story or many:**
 
-- **The whole run fits one story.** The parent issue becomes that story. Retitle it `<kebab-story-name> — <one-line outcome>`, run `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story`, set its priority as below, and replace its body with the story template. Keep the status line and the input reference. Won't calls go in its Scope `out`.
+- **The whole run fits one story.** The parent issue becomes that story. Retitle it `<kebab-story-name> — <one-line outcome>` and replace its body with the story template. Then set Kind `Story`, its Priority, its Size and Status `Todo`, with four `item-edit` commands. Keep the status line and the input reference. Won't calls go in its Scope `out`.
 - **More than one story.** The stories are sub-issues of the parent.
 
-**Checkpoint:** Issues are public, so show the new and changed issues as a table (title, blocked by, MoSCoW) and confirm. Put each blocker on the story it blocks, never only on the parent, because `lets-build` cannot see a blocker on a parent issue when it picks the next story. When something blocks every story under the parent, give each story its own `--blocked-by` link. Then create them in dependency order, blockers first:
+**Checkpoint:** Issues are public, so show the new and changed issues as a table (title, blocked by, MoSCoW, size) and confirm. Put each blocker on the story it blocks, never only on the parent, because `lets-build` cannot see a blocker on a parent issue when it picks the next story. When something blocks every story under the parent, give each story its own `--blocked-by` link. Then create them in dependency order, blockers first:
 
 ```bash
-gh issue create --title "<title>" --body-file <file> --parent <parent#> [--blocked-by <n>,<n>]
+gh issue create --title "<title>" --body-file <file> --project "<project title>" --parent <parent#> [--blocked-by <n>,<n>]
 ```
 
 For each issue:
 
-1. The command prints the issue URL. The number is its last segment.
-2. Run `node .agents/skills/lets-shape/scripts/backlog.mjs set-kind <n> Story`.
-3. Run `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority <n> <Must|Should|Could>` with the story's MoSCoW value.
-4. Stop at the first error, including a failed kind or priority update.
-5. Before you retry, search for the title with `gh issue list --state all --search "<title> in:title"`, so you never create a duplicate. If the issue exists but its kind or priority is unset, set it on that issue. Do not create the issue again.
+1. The command prints the issue URL, `<url>`. The number is its last segment.
+2. Set Kind `Story` with `item-edit`.
+3. Set Priority to the story's MoSCoW value: `Must`, `Should` or `Could`.
+4. Set Size to the story's size.
+5. Set Status `Todo`.
+6. Stop at the first error, including a failed field update.
+7. Before you retry, search for the title with `gh issue list --state all --search "<title> in:title"`, so you never create a duplicate. If the issue exists but a field is unset, set it on that issue. Do not create the issue again.
 
 ### Phase 6: Finalize
 
@@ -159,6 +187,19 @@ Remove the status line from the parent issue. Keep the `Input:` line, so the run
 Then hand off:
 
 > The stories are GitHub issues under #<parent>. To start building, run `lets-build` on the default branch: it picks the next story, claims it and plans it. Run this skill again at any time to revise the plan.
+
+## Shape one issue
+
+Use this when the user brings one bug, chore or small story, or names an open issue that has no packet. It shapes that one issue. It never touches `discovery.md` and never starts a discovery run. Another skill can send work here too, such as `lets-brainstorm` when it splits a story; it gives you the issue's parent and what blocks it.
+
+1. **Find or create the issue.** When the user named one, read it with `gh issue view <i> --json title,body,url,parent`. Otherwise search for one first: `gh issue list --state open --search "<words> in:title" --json number,title`. If one matches, ask whether it is the same work. If none does, you create it in step 6. An existing issue that is not on the Project yet joins it with `gh project item-add <n> --owner <owner> --url <url>`.
+2. **Pick the Kind, and confirm it.** A Bug is something that should work and does not. A Chore is work no persona sees, such as a dependency bump, a CI fix or a tidy-up. A Story is something a persona can do once it ships.
+3. **Read the code the issue names**, and search for more. **Relevant code** lists what you find, or `new` when the story builds on nothing that exists.
+4. **Interview for the Kind's template** in [templates/issue-template.md](templates/issue-template.md), one question at a time: the story template for a Story, the bug template for a Bug. A Chore has no template. It needs only its one-line outcome, and a title in the template's shape. When `discovery.md` exists, use its persona and journey names, but do not edit it.
+5. **Size it** XS, S, M, L or XL. L or XL is too big for one change: say so, offer a discovery run on it instead, and stop.
+6. **Confirm, then write.** The issue is public, so show the user its title, body, Kind, Priority and Size, and get a yes. Write the packet. For an existing issue, use `gh issue edit <i> --title "<title>" --body-file <file>`. For a new one, use `gh issue create --title "<title>" --body-file <file> --project "<project title>" [--parent <p>] [--blocked-by <i>,<i>]`. Then set Kind, Priority, Size and Status `Todo`, in that order, with `item-edit`. A Chore and a Bug get a Priority and a Size too.
+
+Then say that `lets-build` can take it: on the default branch, it picks the next issue, or the user can name this one.
 
 ## Resume mode
 
@@ -174,14 +215,21 @@ When `discovery.md` exists and no run is in progress:
 
 1. **Read it**, then reconcile the map against reality:
    - `gh issue list --state all --limit 500 --json number,title,state,stateReason,parent` lists shipped and open stories
-   - Run `node .agents/skills/lets-shape/scripts/stale-links.mjs <root.path>/openspec/discovery.md`. It prints each link to a closed issue. Re-check each one's stage against the code, then do one of:
+   - Find the map's links to closed issues. This prints the number of each closed issue the map still links:
+
+     ```bash
+     grep -oE 'issues/[0-9]+' <root.path>/openspec/discovery.md | cut -d/ -f2 | sort -u \
+       | grep -xFf <(gh issue list --state closed --limit 500 --json number --jq '.[].number')
+     ```
+
+     No output means no link is stale. Re-check each one's stage against the code, then do one of:
      - the stage now works: upgrade it and drop the link;
      - an open issue now closes the gap: link that one instead;
      - nothing open does: drop the link and leave the stage an unplanned `gap`.
    - Re-annotate every journey stage against the code; stages move to `supported` as their stories ship
    - Update the freshness line to today
 2. **Take in what the user brings** — a new PRD, new requirements, changed priorities, learnings from shipped stories. New work is a new run with its own parent issue: Ingest, then MoSCoW and Stories. Revisit Personas and the Journey Map only when the input changes who the product serves or how they use it.
-3. **Priorities of existing stories are revisable too:** update the story's MoSCoW line, with its reason, and run `node .agents/skills/lets-shape/scripts/backlog.mjs set-priority` in the same step.
+3. **Priorities of existing stories are revisable too:** update the story's MoSCoW line, with its reason, and set its Priority with `item-edit` in the same step.
 4. **Never silently delete a story.** Close a superseded story as not planned with a one-line reason, so the plan's history stays legible: `gh issue close <n> --reason "not planned" --comment "Superseded by #<m>: <reason>"`.
 
 ## Handing off to lets-build

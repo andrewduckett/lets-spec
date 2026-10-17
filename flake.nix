@@ -154,11 +154,8 @@
             # A standard project also gets lets-minimal, for chores and
             # small stories.
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
-            # Each entry point runs its own backlog script, and lets-shape's
-            # copy carries the backlog's mode.
+            # lets-build runs its own backlog script.
             node .agents/skills/lets-build/scripts/backlog.mjs --help >/dev/null
-            node .agents/skills/lets-shape/scripts/backlog.mjs --help >/dev/null
-            grep -qxF "const MODE = 'labels';" .agents/skills/lets-shape/scripts/backlog.mjs
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -202,7 +199,6 @@
             node ${dist}/bin/lets-sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml
-            grep -qxF "const MODE = 'fields';" .agents/skills/lets-shape/scripts/backlog.mjs
             git add -A
             node ${dist}/bin/lets-sync --check
             touch "$out"
@@ -216,7 +212,7 @@
           cd repo
           export HOME="$TMPDIR"
           # Node's runner expands the glob itself. It does not take a folder.
-          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs" "tests/lets-shape/*.test.mjs"
+          node --test "tests/lets-spawn/*.test.mjs" "tests/lets-sync/*.test.mjs" "tests/lets-build/*.test.mjs"
           touch "$out"
         '';
 
@@ -246,13 +242,6 @@
           if ! grep -q "LETS_SPEC_SKILLS.*ignored" "$lets_sync"; then
             echo "The shell hook's lets-sync does not set LETS_SPEC_SKILLS=ignored." >&2
             cat ${hook} "$lets_sync" >&2
-            exit 1
-          fi
-          # The wrapped lets-sync names its release in WORKFLOW_RELEASE.
-          release="$(grep -oh '/nix/store/[^ "'"'"']*-lets-spec-release' "$lets_sync" "$(dirname "$lets_sync")"/.lets-sync-wrapped | head -n 1)"
-          script="$release/overlay/.agents/skills/lets-shape/scripts/backlog.mjs"
-          if ! grep -qxF "const MODE = 'fields';" "$script"; then
-            echo "The github-fields backlog did not write MODE = 'fields' into $script." >&2
             exit 1
           fi
           # In CI the hook syncs nothing, so lets-sync --check sees the
