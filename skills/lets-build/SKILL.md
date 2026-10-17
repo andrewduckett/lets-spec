@@ -184,10 +184,21 @@ builds. When it stops, read `state` once more with
 
 - `ready` means the plan is finished. Offer the handoff: ask the user
   whether to build it in a fresh session named `<name>` with the prompt
-  `Run lets-build on branch <name>`, or to stop here. On yes, run the
-  `lets-spawn` skill's `handoff` command with that name and prompt, show
-  the user its output, then stop. On no, say that running `lets-build`
-  on this branch builds the plan.
+  `Run lets-build on branch <name>`, or to stop here. On no, say that
+  running `lets-build` on this branch builds the plan. On yes:
+  1. Write the prompt to `.workspace/<name>-handoff-prompt.md`.
+  2. Run this from the repo root. It prints one JSON line.
+
+     ```bash
+     lets delegate handoff --name <name> --prompt-file .workspace/<name>-handoff-prompt.md
+     ```
+
+  3. When its `handle` is `null`, no session was started. Show the user
+     its `instructions`, which say what to run. Otherwise tell the user
+     the session started, and name its `resolver` and `handle`.
+  4. If it exits non-zero, show the user its stderr.
+
+  Then stop.
 - Anything else means propose stopped early, for example to ask the user
   a question. Say so, and stop.
 

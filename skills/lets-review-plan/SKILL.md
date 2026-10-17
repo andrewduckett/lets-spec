@@ -5,7 +5,7 @@ description: Use when someone asks for an independent review of a plan, design, 
 
 # Peer Plan Review
 
-Have a different model family attack a plan before anyone builds on it. A reviewer from the author's family shares the author's blind spots. This skill writes the prompt, runs a reviewer from another family read-only with a fixed method, and checks what comes back.
+Have a different model family attack a plan before anyone builds on it. A reviewer from the author's family shares the author's blind spots. This skill writes the prompt, runs it read-only in a fresh session with a fixed method, and checks what comes back.
 
 ## When to apply
 
@@ -25,13 +25,33 @@ Find who wrote the plan. First answer wins:
 ## Run the review
 
 1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
-2. Run the `lets-spawn` skill's `critique` command from the repo root. Give it the name `<change>-plan-review`, the author's family, effort `<tier>`, and the prompt file. Save its stdout to `.workspace/<change>-review-raw.md` and its stderr to `.workspace/<change>-review-meta.txt`.
-3. Exit 0: the findings are in the raw file. The meta file holds one JSON line that names the harness, the family, the model, and whether the review was independent. Copy those four into `review.md`.
-4. Any other exit: stop. Show the user the meta file's text and the exit code. Do not run the command again until something has changed.
+2. Run this from the repo root. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
+
+   ```bash
+   lets delegate review --name <change>-plan-review \
+     --prompt-file .workspace/<change>-review-prompt.md \
+     --source-family <family> --effort <tier> \
+     > .workspace/<change>-review-raw.md 2> .workspace/<change>-review-meta.txt
+   ```
+
+3. Act on its exit code:
+   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family that answered, and whether the review was independent.
+   - **3**: no fresh session can run here. Take the [subagent step](#review-in-a-subagent).
+   - **Anything else**: stop. Show the user the meta file and the exit code. Do not run the command again until something has changed.
+
+`lets delegate review` runs the prompt read-only in a fresh session, from another family when one is available. When only the author's family is available, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.
 
 Note the commit you reviewed: `git rev-parse --short HEAD`. Record it in `review.md`, so a later session can tell whether the plan changed after the verdict.
 
-The `lets-spawn` skill says how to run the command and what each exit code means. It picks the reviewer's family and model, and starts it read-only in a fresh session. When only the author's family is available, it still runs the review and reports `"independent": false`. Never review in the author's own session.
+Record how the review ran in `review.md`, as **Reviewer context**:
+
+- `fresh context, other family` when the meta line says `"independent": true`;
+- `fresh context, same family` when it says `"independent": false`;
+- `subagent, same family` after the subagent step.
+
+### Review in a subagent
+
+Take this step only when `lets delegate review` exits 3. Run the prompt in a read-only subagent: one that starts with no context from this session and cannot write files. Save its output to `.workspace/<change>-review-raw.md`. Run `git status --porcelain` before and after, and stop if they differ. Record the family that answered, and `independent: no` unless the subagent was another family and the tool's own output names it. Do not run the review in this session.
 
 Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 
@@ -100,4 +120,4 @@ Each full review replaces the previous one and increments the round counter. Car
 
 ## Report
 
-For the `review` artifact, record the findings in `review.md` as the schema's `review` instruction says. Otherwise, list every finding with its check, most severe first. Name the reviewer, and say whether the review was independent.
+For the `review` artifact, record the findings in `review.md` as the schema's `review` instruction says. Otherwise, list every finding with its check, most severe first. Name the family that reviewed, how the review ran, and whether it was independent.

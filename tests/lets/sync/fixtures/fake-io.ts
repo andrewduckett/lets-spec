@@ -95,6 +95,10 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
       }
       return { stdout: '', stderr: 'fatal: not a git repository', code: 128 };
     },
+    commandExists: () => false,
+    isExecutable: () => false,
+    now: () => 0,
+    sleep: async () => {},
   };
   return io;
 }

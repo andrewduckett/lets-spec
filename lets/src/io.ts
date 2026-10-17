@@ -2,14 +2,27 @@
 // Tests pass a fake with the same methods.
 import { execFile as nodeExecFile } from 'node:child_process';
 import {
-  chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
+  accessSync, chmodSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
   readlinkSync, rmSync, statSync, symlinkSync, writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 
 // What a command printed, and its exit code. code is null when the command
 // cannot start.
 export type ExecResult = { stdout: string; stderr: string; code: number | null };
+
+// The running command, for a caller that may need to kill it.
+export type Child = { pid?: number; kill(): void };
+
+// env replaces the whole environment. input is written to stdin, which is
+// closed either way. started receives the child as soon as it exists.
+export type ExecOptions = {
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+  input?: string;
+  started?: (child: Child) => void;
+};
 
 export type Io = {
   readFile(path: string): string | null;
@@ -28,7 +41,13 @@ export type Io = {
   listDirs(path: string): string[];
   listNames(path: string): string[];
   listFiles(path: string): string[];
-  execFile(cmd: string, args: string[], options?: { cwd?: string }): Promise<ExecResult>;
+  execFile(cmd: string, args: string[], options?: ExecOptions): Promise<ExecResult>;
+  commandExists(cmd: string): boolean;
+  // A file this process may run.
+  isExecutable(path: string): boolean;
+  now(): number;
+  // Rejects when signal aborts, so a caller can cancel a long wait.
+  sleep(ms: number, signal?: AbortSignal): Promise<void>;
 };
 
 // Everything a command needs from the real world.
@@ -92,15 +111,37 @@ export function realIo(): Io {
     listFiles: (path) => walk(path).sort(),
 
     // Resolves on any exit code. code is null when the command cannot start.
-    execFile(cmd, args, { cwd } = {}) {
+    execFile(cmd, args, { cwd, env, input, started } = {}) {
       return new Promise((resolve) => {
-        const child = nodeExecFile(cmd, args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
+        const child = nodeExecFile(cmd, args, { cwd, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
           if (error && typeof error.code === 'string') return resolve({ stdout: '', stderr: error.message, code: null });
           resolve({ stdout, stderr, code: error ? ((error.code as number | undefined) ?? 1) : 0 });
         });
+        started?.(child);
+        // A command may exit without reading its input. Its exit code says
+        // what happened, so a broken pipe here is not an error.
         child.stdin!.on('error', () => {});
-        child.stdin!.end();
+        child.stdin!.end(input);
       });
     },
+
+    commandExists: (cmd) => (process.env.PATH ?? '').split(delimiter).some((dir) => {
+      try {
+        accessSync(join(dir, cmd), constants.X_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+    isExecutable(path) {
+      try {
+        accessSync(path, constants.X_OK);
+        return statSync(path).isFile();
+      } catch {
+        return false;
+      }
+    },
+    now: () => Date.now(),
+    sleep: (ms, signal) => setTimeout(ms, undefined, { signal }),
   };
 }
