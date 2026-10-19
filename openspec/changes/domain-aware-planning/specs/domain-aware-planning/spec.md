@@ -6,7 +6,7 @@ Help agents plan against relevant project and shared behavior specs using one ro
 
 ### Requirement: Read affected behavior before planning
 
-Both Let's Spec flows SHALL instruct agents to identify affected capabilities and read their existing specs before settling the brainstorm or writing spec deltas, using the resolved OpenSpec planning home.
+Both Let's Spec flows SHALL instruct agents to identify affected capabilities and read their existing specs before settling the brainstorm or writing spec deltas. Existing specs are resolved from `planningHome.root`.
 
 #### Scenario: Backend work depends on shared authentication
 - **WHEN** a backend change affects behavior described by backend and shared authentication specs
@@ -14,7 +14,7 @@ Both Let's Spec flows SHALL instruct agents to identify affected capabilities an
 
 #### Scenario: Clear scope needs no extra selection step
 - **WHEN** the request and existing specs identify the affected area without ambiguity
-- **THEN** the guidance permits planning to proceed without a separate domain-selection confirmation
+- **THEN** the brainstorm instructions add no separate step requiring domain confirmation
 
 ### Requirement: Preserve the existing spec organization
 
@@ -29,6 +29,11 @@ Planning guidance SHALL direct agents to reuse existing capability paths and fol
 - **WHEN** an existing capability lives at `openspec/specs/identity/user-auth/spec.md`
 - **THEN** a delta for that capability uses the full `specs/identity/user-auth/spec.md` path inside the change
 
+#### Scenario: Confirm an existing capability before changing it
+- **WHEN** an agent prepares a MODIFIED, REMOVED or RENAMED delta for an existing capability
+- **THEN** the guidance directs it to confirm the full capability ID in `openspec list --specs` before writing the delta
+- **THEN** a strict validation pass alone is not treated as proof of a matching path
+
 ### Requirement: Keep changes across domains together
 
 Planning guidance SHALL allow one change to carry deltas for every affected capability, including capabilities in different domains, and SHALL distinguish reading a relevant spec from changing its requirements.
@@ -39,7 +44,7 @@ Planning guidance SHALL allow one change to carry deltas for every affected capa
 
 #### Scenario: Shared behavior is relevant but unchanged
 - **WHEN** an agent reads a shared authentication spec for context and its requirements remain unchanged
-- **THEN** the guidance does not require a delta for that spec
+- **THEN** the change contains no delta file for that capability
 
 ### Requirement: Verify matching archive destinations
 
@@ -56,9 +61,16 @@ Changes produced by either Let's Spec flow SHALL retain the full capability path
 - **THEN** capabilities with the same leaf name under different prefixes remain distinct
 - **THEN** an unrelated main spec is byte-for-byte unchanged
 
+#### Scenario: Archive refuses a shortened capability path
+- **WHEN** a MODIFIED delta targets `user-auth` but the existing capabilities are `identity/user-auth` and `billing/user-auth`
+- **THEN** archive reports that the target spec does not exist
+- **THEN** every main spec remains byte-for-byte unchanged
+
 ### Requirement: Explain the shared project layout
 
 The README SHALL explain one root OpenSpec project with shared skills, how domains group specs for applications, services or features, and how a change can affect multiple domains.
+
+A domain is a logical grouping of behavior specs. A capability path identifies one spec relative to `openspec/specs/`, such as `user-auth` or `identity/user-auth`. A domain can use an optional path prefix; existing flat paths remain valid.
 
 #### Scenario: Maintainer organizes a monorepo
 - **WHEN** a maintainer reads the domain guidance
