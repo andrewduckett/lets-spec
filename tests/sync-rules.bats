@@ -21,11 +21,14 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
   for mode in committed ignored; do
     rm -f AGENTS.md
     LETS_SPEC_SKILLS="$mode" sync_project
+    rules_in AGENTS.md >"rules-$mode"
     rules_in AGENTS.md | tr '\n' ' ' | tr -s ' ' >rules
+    ! grep -q 'git ignores' rules
     grep -qF 'the `lets-*` and `openspec-*` skills in `.agents/skills/` and the `lets-*` schema folders in `openspec/schemas/`. `lets sync` rewrites all of these, so an edit there is lost' rules
     ! grep -q 'read-only links' rules
     ! grep -q 'Nix store' rules
   done
+  cmp -s rules-committed rules-ignored
 }
 
 @test "sync appends the rules after a blank line, and keeps the project's text" {
