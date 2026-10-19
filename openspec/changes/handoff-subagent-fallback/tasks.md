@@ -1,7 +1,7 @@
 ## 1. The default resolver
 
 - [x] 1.1 [medium] With no resolver installed, `lets delegate review` exits 3, prints nothing on stdout, and starts no process, even with `codex`, `claude` and `agy` on `PATH` (verify: node --test tests/lets/delegate/review.test.ts) (✓ node --test tests/lets/delegate/review.test.ts passed)
-- [ ] 1.2 [easy] The default's review answer says on stderr that no resolver started a session and to run the review in a subagent, and never says "installed" (verify: node --test tests/lets/delegate/review.test.ts)
+- [x] 1.2 [easy] The default's review answer says on stderr that no resolver started a session and to run the review in a subagent, and never says "installed" (verify: node --test tests/lets/delegate/review.test.ts) (✓ node --test tests/lets/delegate/review.test.ts passed)
 - [ ] 1.3 [medium] With no resolver installed, `lets delegate handoff` exits 0 with `"resolver":"default"`, `"handle":null`, and instructions holding the prompt text and `.workspace/lets-delegate/<name>.prompt.md`, where the prompt is saved (verify: node --test tests/lets/delegate/handoff.test.ts)
 - [ ] 1.4 [easy] The default's handoff instructions are the same with or without `claude`, `codex` and `agy` on `PATH`, and name none of them (verify: node --test tests/lets/delegate/handoff.test.ts)
 - [ ] 1.5 [easy] The default's `finish` answers `null` for any handle and removes no file (verify: node --test tests/lets/delegate/default-resolver.test.ts)

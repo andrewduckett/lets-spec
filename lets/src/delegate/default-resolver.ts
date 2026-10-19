@@ -67,7 +67,7 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
   // The default starts no review session. Exit 3 sends the review skills
   // to their subagent step.
   function run(): never {
-    throw new NoFamilyError('the default resolver runs no review');
+    throw new NoFamilyError('no resolver started a session here, so no fresh session can run. Run the review in a subagent.');
   }
 
   function start({ cwd, name, prompt }: StartRequest): Responses['start'] {

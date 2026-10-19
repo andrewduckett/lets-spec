@@ -128,3 +128,11 @@ test('with no resolver, the review is exit 3, prints nothing, and starts no proc
   assert.equal(t.stdout(), '');
   assert.deepEqual(t.io.calls.filter(([cmd]) => cmd !== 'git'), []);
 });
+
+test('with no resolver, stderr says no resolver started a session, and to use a subagent', async () => {
+  const t = commandDeps({ resolver: false });
+  assert.equal(await run(options(), t.deps), 3);
+  assert.match(t.stderr(), /no resolver/);
+  assert.match(t.stderr(), /subagent/);
+  assert.doesNotMatch(t.stderr(), /installed/);
+});
