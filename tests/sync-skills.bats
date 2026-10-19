@@ -320,6 +320,23 @@ edit_copy() {
   [[ "$output" != *"git still tracks"* ]]
 }
 
+@test "the untrack command from the problem untracks every managed path when a pattern matches nothing" {
+  init_project
+  git add -- .agents/skills/lets-* openspec/schemas
+  git commit --quiet -m committed
+  [ -z "$(git ls-files -- '.agents/skills/openspec-*')" ]
+  LETS_SPEC_SKILLS=ignored run sync_project
+  [ "$status" -eq 0 ]
+  local command="${output#*Run: git rm }"
+  command="git rm ${command%%, then commit.*}"
+  [ "$command" = "$untrack" ]
+  run bash -c "$command"
+  [ "$status" -eq 0 ]
+  [ -z "$(git ls-files -- '.agents/skills/lets-*' '.agents/skills/openspec-*' 'openspec/schemas/lets-*')" ]
+  [ -f .agents/skills/lets-build/SKILL.md ]
+  [ -f openspec/schemas/lets-standard/schema.yaml ]
+}
+
 @test "--check fails on a stale file and names it" {
   init_project
   edit_copy .agents/skills/lets-build/SKILL.md
