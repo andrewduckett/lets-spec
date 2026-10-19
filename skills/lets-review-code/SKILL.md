@@ -49,7 +49,7 @@ Commit or stash first. The review covers commits, not the working tree.
 
 3. Act on its exit code:
    - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family that answered, and whether the review was independent. Use them in the report.
-   - **3**: no fresh session can run here. Take the [subagent step](#review-in-a-subagent).
+   - **3**: no fresh session can run here, for example because no resolver started one, or none of its families is available. Take the [subagent step](#review-in-a-subagent).
    - **Anything else**: stop. Show the user the meta file and the exit code. Do not run the command again until something has changed.
 
 `lets delegate review` runs the prompt read-only in a fresh session, from another family when one is available. When only the author's family is available, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.

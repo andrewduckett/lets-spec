@@ -139,3 +139,14 @@ flow_texts() {
   diff "$repo/contrib/headless-resolver" \
     <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$readme")
 }
+
+@test "the review skills say exit 3 also means no resolver started a session" {
+  for skill in lets-review-code lets-review-plan; do
+    grep -q '\*\*3\*\*: no fresh session can run here, for example because no resolver started one' \
+      "$repo/skills/$skill/SKILL.md" || { echo "$skill"; false; }
+  done
+}
+
+@test "lets-build says a handoff's instructions hold the prompt to carry on by hand" {
+  grep -q 'hold the prompt to carry on by hand' "$repo/skills/lets-build/SKILL.md"
+}
