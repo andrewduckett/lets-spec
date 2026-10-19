@@ -12,8 +12,8 @@ Says what `lets delegate` does when no resolver is installed or configured and t
 - **THEN** `lets delegate review` prints that message and exits 0, and the default is not asked
 
 #### Scenario: Nothing is installed
-- **WHEN** `LETS_SPEC_RESOLVER` is unset and no `lets-delegate-resolver` is on `PATH`
-- **THEN** the default answers the request
+- **WHEN** `LETS_SPEC_RESOLVER` is unset, no `lets-delegate-resolver` is on `PATH`, and the user runs `lets delegate handoff`
+- **THEN** `lets delegate handoff` prints a JSON line with `"resolver":"default"`
 
 ### Requirement: The default runs no review
 When the default answers a review, `lets delegate review` SHALL exit 3, print nothing on stdout, and start no process.
@@ -27,11 +27,11 @@ When the default answers a review, `lets delegate review` SHALL exit 3, print no
 - **THEN** the command exits 3, and none of them is run
 
 ### Requirement: The default's review answer says what to do
-When the default answers a review, `lets delegate review` SHALL say on stderr that no resolver is installed and that the review runs in a subagent.
+When the default answers a review, `lets delegate review` SHALL say on stderr that no resolver started a session and that the review runs in a subagent. It SHALL NOT say that no resolver is installed, because the default also answers when an installed resolver declines.
 
 #### Scenario: Reading stderr after exit 3
 - **WHEN** the default answers a review
-- **THEN** stderr's text contains "no resolver" and "subagent"
+- **THEN** stderr's text contains "no resolver" and "subagent", and does not contain "installed"
 
 ### Requirement: The default's handoff hands the prompt back
 When the default answers a handoff, `lets delegate handoff` SHALL exit 0 and print one JSON line with `resolver` `default`, `handle` `null`, and `instructions` that contain the prompt text and the path of the file the prompt is saved in.
