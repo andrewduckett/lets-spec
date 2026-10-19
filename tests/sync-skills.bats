@@ -6,7 +6,7 @@ load support/project
 # project. LETS_SPEC_SKILLS decides whether git tracks the copies:
 # committed, the default, or ignored through a marked block in .gitignore.
 
-skills_block=$'# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.\n/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n# END lets-spec skills\n'
+skills_block=$'# BEGIN lets-spec skills. lets sync rewrites this block: change lets-spec, not this text.\n/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n# END lets-spec skills\n'
 
 # managed_paths: every path lets sync should write in this project.
 managed_paths() {
@@ -196,6 +196,18 @@ edit_copy() {
   LETS_SPEC_SKILLS=ignored run sync_project
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "ignored mode rewrites a 0.4.0 skills block once" {
+  printf '%s\n/old\n%s\n' \
+    '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.' \
+    '# END lets-spec skills' >.gitignore
+  LETS_SPEC_SKILLS=ignored run sync_project
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^# BEGIN lets-spec skills' .gitignore)" -eq 1 ]
+  printf '%s' "$skills_block" | cmp - .gitignore
+  LETS_SPEC_SKILLS=ignored run sync_project --check
+  [ "$status" -eq 0 ]
 }
 
 @test "ignored mode keeps every byte of the project's own gitignore" {
