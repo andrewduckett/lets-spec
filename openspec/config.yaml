@@ -1,0 +1,47 @@
+schema: lets-standard
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+
+# The code review rule. lets-spec put it here, and your project owns it:
+# delete it to stop code reviews, or edit it to change when they run.
+# OpenSpec keeps a project's rules for finishing a change under
+# operations.archive. lets-build follows them once every task is done,
+# before it runs verify.
+operations:
+  archive:
+    guidance:
+      - >-
+        Every change gets one code review before it is verified. If the
+        pull request description has no **Code review** section, run the
+        `lets-review-code` skill now. Otherwise check the section as that
+        skill's *Check an earlier review* section says, and run the skill
+        again only when it tells you to.
