@@ -187,7 +187,10 @@ edit_copy() {
 @test "ignored mode writes the gitignore block and git ignores every managed path" {
   LETS_SPEC_SKILLS=ignored run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"lets-spec: added the lets-spec skills block to .gitignore. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit."* ]]
+  [[ "$output" == *"lets-spec: added the lets-spec skills block to .gitignore. Commit it."* ]]
+  [[ "$output" == *"lets-spec: wrote $(release_files | wc -l) files. Git ignores them."* ]]
+  [[ "$output" != *"Commit them."* ]]
+  [[ "$output" != *"git rm"* ]]
   printf '%s' "$skills_block" | cmp - .gitignore
   local path
   for path in $(managed_paths); do

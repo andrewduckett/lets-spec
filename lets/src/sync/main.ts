@@ -98,7 +98,7 @@ async function steps(check: boolean, deps: Deps) {
     const ignored = applyBlock(SKILLS, io.readFile(gitignorePath), skillsBlock);
     if (ignored.state === 'absent' || ignored.state === 'missing') {
       io.writeFile(gitignorePath, ignored.text!);
-      say(`lets-spec: added the lets-spec skills block to ${GITIGNORE}. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit.\n`);
+      say(`lets-spec: added the lets-spec skills block to ${GITIGNORE}. Commit it.\n`);
     }
     if (ignored.state === 'stale') {
       io.writeFile(gitignorePath, ignored.text!);
