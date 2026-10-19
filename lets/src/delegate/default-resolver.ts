@@ -1,14 +1,10 @@
-// The built-in default resolver: run a family's CLI headless and read-only.
-// It is the last candidate in the lookup, so it never declines. It never
-// starts an interactive session; start answers with the command to run.
+// The built-in default resolver. It is the last candidate in the lookup, so
+// it never declines, and it starts no session: a review is exit 3, for the
+// review skills' subagent step, and a handoff hands the prompt back.
 import { join } from 'node:path';
-import type { Child, Io } from '../io.ts';
-import { scrubbedEnv } from './env.ts';
-import type { Env } from './env.ts';
+import type { Io } from '../io.ts';
 import { exitCodeOf, NoFamilyError } from './errors.ts';
-import { familiesFromExecutors, HEADLESS_EXECUTOR, pickFamily } from './families.ts';
-import type { Effort, Family, Requests, Responses, RunRequest, StartRequest, Verb } from './protocol.ts';
-import { withTimeout } from './wait.ts';
+import type { Requests, Responses, StartRequest, Verb } from './protocol.ts';
 
 const RESOLVER = 'default';
 // Relative to the repo root. The instructions name it this way.
@@ -22,39 +18,12 @@ export type DefaultResolver = {
   handle<V extends Verb>(verb: V, request: Requests[V]): Promise<Outcome<V>>;
 };
 
-type RunCommandInput = { family: Family; effort: Effort; prompt: string; lastMessagePath: string; timeoutMinutes: number };
-
-// The command for a read-only run, what goes on its stdin, and where its
-// final message comes from: stdout, or a file.
-export function runCommand({ family, effort, prompt, lastMessagePath, timeoutMinutes }: RunCommandInput) {
-  const cmd = HEADLESS_EXECUTOR[family];
-  if (family === 'gpt') {
-    return {
-      cmd,
-      args: ['exec', '-s', 'read-only', '-c', `model_reasoning_effort="${effort}"`, '-o', lastMessagePath, '-'],
-      input: prompt,
-      readResultFrom: lastMessagePath,
-    };
-  }
-  if (family === 'claude') {
-    return { cmd, args: ['-p', '--permission-mode', 'plan', '--effort', effort], input: prompt, readResultFrom: 'stdout' };
-  }
-  return {
-    cmd,
-    args: ['--mode', 'plan', '--effort', effort, '--print-timeout', `${timeoutMinutes}m`, '-p', prompt],
-    input: undefined,
-    readResultFrom: 'stdout',
-  };
-}
-
-// env is the environment to run an executor in, before the session markers
-// are taken out.
-export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
+export function createDefaultResolver(io: Io): DefaultResolver {
   const promptFile = (name: string) => `${SCRATCH}/${name}.prompt.md`;
   const promptPath = (cwd: string, name: string) => join(cwd, promptFile(name));
 
-  // The prompt travels on stdin or in argv. This copy is for a person to
-  // read after a failure, or to paste for start; finish removes it.
+  // The user's copy of a handoff's prompt. Nothing removes it: .workspace/
+  // is scratch that git ignores.
   function writePrompt(cwd: string, name: string, prompt: string) {
     io.mkdirp(join(cwd, SCRATCH));
     io.writeFile(promptPath(cwd, name), prompt);

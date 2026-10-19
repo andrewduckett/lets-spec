@@ -122,7 +122,7 @@ export function parseResponse<V extends Verb>(verb: V, text: string): Responses[
 // a contract problem for lets, so it, a decline that reached here, and any
 // other code are 4.
 export function exitFor(resolverExit: number | null): number {
-  const passedOn: number[] = [EXIT.ok, EXIT.noFamily, EXIT.spawn, EXIT.session, EXIT.timeout];
+  const passedOn: number[] = [EXIT.ok, EXIT.noSession, EXIT.spawn, EXIT.session, EXIT.timeout];
   return resolverExit !== null && passedOn.includes(resolverExit) ? resolverExit : EXIT.spawn;
 }
 

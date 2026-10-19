@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createDefaultResolver, runCommand } from '../../../lets/src/delegate/default-resolver.ts';
-import { SESSION_MARKERS } from '../../../lets/src/delegate/env.ts';
+import { createDefaultResolver } from '../../../lets/src/delegate/default-resolver.ts';
 import { buildRequest } from '../../../lets/src/delegate/protocol.ts';
 import type { Family } from '../../../lets/src/delegate/protocol.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
@@ -9,39 +8,11 @@ import type { FakeIo } from './fixtures/fake-io.ts';
 
 const TRICKY = 'Say "hi".\nIt\'s fine.';
 const DIR = '/r/.workspace/lets-delegate';
-const LAST = `${DIR}/x.last-message.md`;
-const base = { effort: 'high', prompt: 'PROMPT', lastMessagePath: LAST, timeoutMinutes: 45 } as const;
-
-// An env with every session marker set.
-const markedEnv = () => Object.fromEntries([['PATH', '/bin'], ...SESSION_MARKERS.map((name) => [name, 'x'])]);
 
 const runRequest = (sourceFamily: Family = 'claude', prompt = 'PROMPT') =>
   buildRequest('run', { cwd: '/r', name: 'x', prompt, sourceFamily, effort: 'high' });
 const startRequest = () => buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: TRICKY });
-const resolver = (io: FakeIo) => createDefaultResolver(io, markedEnv());
-
-test('gpt runs codex exec read-only, prompt on stdin, result from the last-message file', () => {
-  assert.deepEqual(runCommand({ ...base, family: 'gpt' }), {
-    cmd: 'codex',
-    args: ['exec', '-s', 'read-only', '-c', 'model_reasoning_effort="high"', '-o', LAST, '-'],
-    input: 'PROMPT',
-    readResultFrom: LAST,
-  });
-});
-
-test('claude runs claude -p in plan mode, prompt on stdin', () => {
-  assert.deepEqual(runCommand({ ...base, family: 'claude', effort: 'low' }),
-    { cmd: 'claude', args: ['-p', '--permission-mode', 'plan', '--effort', 'low'], input: 'PROMPT', readResultFrom: 'stdout' });
-});
-
-test('gemini runs agy in plan mode with the prompt as an argument', () => {
-  assert.deepEqual(runCommand({ ...base, family: 'gemini', effort: 'medium', timeoutMinutes: 15 }), {
-    cmd: 'agy',
-    args: ['--mode', 'plan', '--effort', 'medium', '--print-timeout', '15m', '-p', 'PROMPT'],
-    input: undefined,
-    readResultFrom: 'stdout',
-  });
-});
+const resolver = (io: FakeIo) => createDefaultResolver(io);
 
 test('probe answers default', async () => {
   assert.deepEqual(await resolver(fakeIo()).handle('probe', { protocol: 1, cwd: '/r' }),
