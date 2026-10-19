@@ -56,25 +56,17 @@ test('run exits 3, answers nothing, and starts nothing, even with every executor
   assert.deepEqual(io.calls, []);
 });
 
-test('start writes the prompt file and returns instructions naming the first of claude, codex, agy', async () => {
-  const io = fakeIo({ commands: ['agy', 'codex'] });
+test('start writes the prompt file and hands it back with where it is saved', async () => {
+  const io = fakeIo();
   const { code, response } = await resolver(io).handle('start', startRequest());
   assert.equal(code, 0);
   assert.deepEqual(response, {
     resolver: 'default',
     handle: null,
-    instructions: 'Open a terminal in /r and run: codex "$(cat .workspace/lets-delegate/fix-login.prompt.md)"',
+    instructions: `Start any agent in /r and give it this prompt, which is also saved in .workspace/lets-delegate/fix-login.prompt.md:\n\n${TRICKY}`,
   });
   assert.equal(io.files.get(`${DIR}/fix-login.prompt.md`), TRICKY);
   assert.deepEqual(io.calls, []);
-});
-
-test('start with no executor on PATH says to install one', async () => {
-  const { code, response } = await resolver(fakeIo()).handle('start', startRequest());
-  assert.equal(code, 0);
-  assert.equal(response?.handle, null);
-  assert.match((response as { instructions: string }).instructions, /^Install claude, codex or agy/);
-  assert.match((response as { instructions: string }).instructions, /\.workspace\/lets-delegate\/fix-login\.prompt\.md/);
 });
 
 test('finish removes the scratch files when ok, and keeps them when not', async () => {

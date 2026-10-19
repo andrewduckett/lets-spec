@@ -20,15 +20,15 @@ test('the start request has readOnly false and interactive true', async () => {
   }]]);
 });
 
-test('with no resolver, the default answers with instructions and no handle', async () => {
-  const t = commandDeps({ resolver: false, commands: ['claude'] });
-  assert.equal(await run(options, t.deps), 0);
-  assert.deepEqual(JSON.parse(t.stdout()), {
-    resolver: 'default',
-    handle: null,
-    instructions: 'Open a terminal in /repo and run: claude "$(cat .workspace/lets-delegate/fix-login.prompt.md)"',
-  });
-  assert.equal(t.io.files.get('/repo/.workspace/lets-delegate/fix-login.prompt.md'), 'PROMPT TEXT');
+test('with no resolver, the default hands back the prompt and where it is saved', async () => {
+  const t = commandDeps({ resolver: false, files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
+  assert.equal(await run({ name: 'build-x', promptFile: 'p.md' }, t.deps), 0);
+  const { resolver, handle, instructions } = JSON.parse(t.stdout());
+  assert.equal(resolver, 'default');
+  assert.equal(handle, null);
+  assert.match(instructions, /Run lets-build on branch build-x/);
+  assert.match(instructions, /\.workspace\/lets-delegate\/build-x\.prompt\.md/);
+  assert.equal(t.io.files.get('/repo/.workspace/lets-delegate/build-x.prompt.md'), 'Run lets-build on branch build-x');
 });
 
 test('a null handle with no instructions is exit 4', async () => {

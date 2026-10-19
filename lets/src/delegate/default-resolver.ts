@@ -14,8 +14,6 @@ import { withTimeout } from './wait.ts';
 const RESOLVER = 'default';
 // Relative to the repo root. The instructions name it this way.
 const SCRATCH = '.workspace/lets-delegate';
-// The executors start offers, in order.
-const INTERACTIVE_EXECUTORS = ['claude', 'codex', 'agy'];
 
 // What a verb came to: the exit code a resolver process would give, the
 // response it would print, if any, and what it would say on stderr.
@@ -70,12 +68,11 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
     throw new NoFamilyError('no resolver started a session here, so no fresh session can run. Run the review in a subagent.');
   }
 
+  // The default starts no session either. It hands the prompt back for the
+  // user to give to any agent, and names none.
   function start({ cwd, name, prompt }: StartRequest): Responses['start'] {
     writePrompt(cwd, name, prompt);
-    const executor = INTERACTIVE_EXECUTORS.find((cmd) => io.commandExists(cmd));
-    const instructions = executor
-      ? `Open a terminal in ${cwd} and run: ${executor} "$(cat ${promptFile(name)})"`
-      : `Install claude, codex or agy, then open a terminal in ${cwd} and start it with the prompt in ${promptFile(name)}.`;
+    const instructions = `Start any agent in ${cwd} and give it this prompt, which is also saved in ${promptFile(name)}:\n\n${prompt}`;
     return { resolver: RESOLVER, handle: null, instructions };
   }
 
