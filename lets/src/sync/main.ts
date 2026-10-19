@@ -92,7 +92,7 @@ async function steps(check: boolean, deps: Deps) {
   const exclude = await excludePath(root, io);
   if (exclude !== null) warnings.push(...removeLegacyLinks({ root, exclude, io, stdout: say }));
 
-  syncSkills({ release, schemaName, root, io, stdout: say });
+  syncSkills({ release, schemaName, root, mode, io, stdout: say });
 
   if (mode === 'ignored') {
     const ignored = applyBlock(SKILLS, io.readFile(gitignorePath), skillsBlock);
