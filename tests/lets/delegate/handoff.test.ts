@@ -31,6 +31,17 @@ test('with no resolver, the default hands back the prompt and where it is saved'
   assert.equal(t.io.files.get('/repo/.workspace/lets-delegate/build-x.prompt.md'), 'Run lets-build on branch build-x');
 });
 
+test('the default\'s handoff instructions are the same whichever CLIs are on PATH, and name none', async () => {
+  const answer = async (commands: string[]) => {
+    const t = commandDeps({ resolver: false, commands });
+    assert.equal(await run(options, t.deps), 0);
+    return JSON.parse(t.stdout()).instructions as string;
+  };
+  const withClis = await answer(['claude', 'codex', 'agy']);
+  assert.equal(withClis, await answer([]));
+  assert.doesNotMatch(withClis, /\b(claude|codex|agy)\b/);
+});
+
 test('a null handle with no instructions is exit 4', async () => {
   const t = commandDeps({ settings: { FAKE_RESOLVER_STDOUT_START: '{"resolver":"fake","handle":null}' } });
   assert.equal(await run(options, t.deps), 4);
