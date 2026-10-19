@@ -7,8 +7,7 @@ import { scrubbedEnv } from './env.ts';
 import type { Env } from './env.ts';
 import { exitCodeOf, NoFamilyError } from './errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, pickFamily } from './families.ts';
-import { normalizeName } from './protocol.ts';
-import type { Effort, Family, Handle, Requests, Responses, RunRequest, StartRequest, Verb } from './protocol.ts';
+import type { Effort, Family, Requests, Responses, RunRequest, StartRequest, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
 const RESOLVER = 'default';
@@ -53,7 +52,6 @@ export function runCommand({ family, effort, prompt, lastMessagePath, timeoutMin
 export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
   const promptFile = (name: string) => `${SCRATCH}/${name}.prompt.md`;
   const promptPath = (cwd: string, name: string) => join(cwd, promptFile(name));
-  const lastMessagePath = (cwd: string, name: string) => join(cwd, SCRATCH, `${name}.last-message.md`);
 
   // The prompt travels on stdin or in argv. This copy is for a person to
   // read after a failure, or to paste for start; finish removes it.
@@ -76,26 +74,17 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
     return { resolver: RESOLVER, handle: null, instructions };
   }
 
-  // A handle run issued: a process with a name that is safe in a path.
-  const issued = (handle: Handle): handle is Handle & { name: string } =>
-    handle.kind === 'process' && typeof handle.name === 'string' && handle.name !== '' && normalizeName(handle.name) === handle.name;
-
-  // Removes the scratch files on ok. Answers nothing for a handle it never issued.
-  function finish({ cwd, handle, ok }: Requests['finish']): Responses['finish'] | null {
-    if (!issued(handle)) return null;
-    if (ok) {
-      for (const path of [promptPath(cwd, handle.name), lastMessagePath(cwd, handle.name)]) {
-        if (io.exists(path)) io.remove(path);
-      }
-    }
-    return {};
+  // The default issues no handle, so it has nothing to finish. The protocol
+  // still asks every resolver to answer the verb.
+  function finish(): Responses['finish'] | null {
+    return null;
   }
 
   async function answer(verb: Verb, request: Requests[Verb]) {
     if (verb === 'probe') return { resolver: RESOLVER };
     if (verb === 'run') return run();
     if (verb === 'start') return start(request as StartRequest);
-    return finish(request as Requests['finish']);
+    return finish();
   }
 
   return {

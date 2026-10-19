@@ -69,24 +69,15 @@ test('start writes the prompt file and hands it back with where it is saved', as
   assert.deepEqual(io.calls, []);
 });
 
-test('finish removes the scratch files when ok, and keeps them when not', async () => {
+test('finish answers nothing for any handle, and removes no file', async () => {
   const files = { [`${DIR}/x.prompt.md`]: 'P', [`${DIR}/x.last-message.md`]: 'M' };
-  const handle = { kind: 'process', id: '4242', name: 'x' };
-  const kept = fakeIo({ files });
-  assert.deepEqual(await resolver(kept).handle('finish', buildRequest('finish', { cwd: '/r', handle, ok: false })),
-    { code: 0, response: {}, stderr: '' });
-  assert.deepEqual(kept.removed, []);
-  const io = fakeIo({ files });
-  assert.deepEqual(await resolver(io).handle('finish', buildRequest('finish', { cwd: '/r', handle, ok: true })),
-    { code: 0, response: {}, stderr: '' });
-  assert.deepEqual(io.removed.sort(), [`${DIR}/x.last-message.md`, `${DIR}/x.prompt.md`]);
-});
-
-test('finish with a handle the default never issued does nothing and answers nothing', async () => {
-  for (const handle of [{ kind: 'thread', id: 't' }, { kind: 'process', id: '1' }, { kind: 'process', id: '1', name: '../../etc' }]) {
-    const io = fakeIo();
-    assert.deepEqual(await resolver(io).handle('finish', buildRequest('finish', { cwd: '/r', handle, ok: true })),
-      { code: 0, response: null, stderr: '' });
-    assert.deepEqual(io.removed, []);
+  const handles = [{ kind: 'process', id: '4242', name: 'x' }, { kind: 'thread', id: 't' }, { kind: 'process', id: '1', name: '../../etc' }];
+  for (const handle of handles) {
+    for (const ok of [true, false]) {
+      const io = fakeIo({ files });
+      assert.deepEqual(await resolver(io).handle('finish', buildRequest('finish', { cwd: '/r', handle, ok })),
+        { code: 0, response: null, stderr: '' });
+      assert.deepEqual(io.removed, []);
+    }
   }
 });
