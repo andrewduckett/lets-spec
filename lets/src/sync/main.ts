@@ -13,6 +13,11 @@ const CONFIG = 'openspec/config.yaml';
 const GITIGNORE = '.gitignore';
 const SKILLS_UNPAIRED = `${GITIGNORE} has a lets-spec skills marker without its pair, so its block was not updated. Delete the marker, and the lines between the markers, then run lets sync again.`;
 
+// The managed paths as git pathspecs. Quoted in the command a user pastes,
+// so the shell passes them to git unexpanded.
+const MANAGED_PATTERNS = ['.agents/skills/lets-*', '.agents/skills/openspec-*', 'openspec/schemas/lets-*'];
+const TRACKED_COPIES = `git still tracks lets-spec copies that ${GITIGNORE} ignores. Run: git rm -r --cached --ignore-unmatch -- ${MANAGED_PATTERNS.map((pattern) => `'${pattern}'`).join(' ')}, then commit.`;
+
 export class UsageError extends Error {}
 
 // check: change nothing, and exit 1 if the project is out of date.
@@ -92,13 +97,13 @@ async function steps(check: boolean, deps: Deps) {
   const exclude = await excludePath(root, io);
   if (exclude !== null) warnings.push(...removeLegacyLinks({ root, exclude, io, stdout: say }));
 
-  syncSkills({ release, schemaName, root, io, stdout: say });
+  syncSkills({ release, schemaName, root, mode, io, stdout: say });
 
   if (mode === 'ignored') {
     const ignored = applyBlock(SKILLS, io.readFile(gitignorePath), skillsBlock);
     if (ignored.state === 'absent' || ignored.state === 'missing') {
       io.writeFile(gitignorePath, ignored.text!);
-      say(`lets-spec: added the lets-spec skills block to ${GITIGNORE}. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit.\n`);
+      say(`lets-spec: added the lets-spec skills block to ${GITIGNORE}. Commit it.\n`);
     }
     if (ignored.state === 'stale') {
       io.writeFile(gitignorePath, ignored.text!);
@@ -107,6 +112,7 @@ async function steps(check: boolean, deps: Deps) {
     if (ignored.state === 'unpaired') {
       warnings.push(SKILLS_UNPAIRED);
     }
+    if (await tracksCopies(root, io)) warnings.push(TRACKED_COPIES);
   } else {
     const gitignore = io.readFile(gitignorePath);
     const kept = removeBlock(SKILLS, gitignore);
@@ -172,6 +178,13 @@ function removeLegacyLinks({ root, exclude, io, stdout }: { root: string; exclud
   }
   io.writeFile(exclude, removeBlock(LEGACY_LINKS, text).text ?? '');
   return [];
+}
+
+// True when git tracks any managed path. When git cannot say, nothing
+// counts as tracked.
+async function tracksCopies(root: string, io: Io) {
+  const result = await io.execFile('git', ['ls-files', '--', ...MANAGED_PATTERNS], { cwd: root });
+  return result.code === 0 && result.stdout.trim() !== '';
 }
 
 // Where git keeps the project's exclude file, or null when git cannot say.

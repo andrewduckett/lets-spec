@@ -92,3 +92,32 @@ test('a CLI version that differs from release.json is a warning in the footer', 
 test('an empty LETS_SPEC_SKILLS means the default, committed', () => {
   assert.equal(skillsMode({ LETS_SPEC_SKILLS: '' }), 'committed');
 });
+
+const LS_FILES = "git ls-files -- .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*";
+const TRACKED = "git still tracks lets-spec copies that .gitignore ignores. Run: git rm -r --cached --ignore-unmatch -- '.agents/skills/lets-*' '.agents/skills/openspec-*' 'openspec/schemas/lets-*', then commit.";
+
+// An ignored-mode project where git ls-files answers with result.
+function ignoredWithLsFiles(result: { stdout: string; stderr: string; code: number | null }) {
+  const t = setup({ env: { WORKFLOW_RELEASE: RELEASE, LETS_SPEC_SKILLS: 'ignored' }, toplevel: '/project' });
+  const original = t.io.execFile;
+  t.io.execFile = async (cmd, args, opts) => (`${cmd} ${args.join(' ')}` === LS_FILES ? result : original(cmd, args, opts));
+  return t;
+}
+
+test('in the ignored mode, tracked copies are a problem to fix', async () => {
+  const t = ignoredWithLsFiles({ stdout: '.agents/skills/lets-build/SKILL.md\n', stderr: '', code: 0 });
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(t.stderr().includes(`problem(s) to fix:\n- ${TRACKED}\n`));
+});
+
+test('in the ignored mode, no tracked copies is no tracked-copies problem', async () => {
+  const t = ignoredWithLsFiles({ stdout: '', stderr: '', code: 0 });
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(!t.stderr().includes('git still tracks'));
+});
+
+test('in the ignored mode, a failed git ls-files counts as nothing tracked', async () => {
+  const t = ignoredWithLsFiles({ stdout: '.agents/skills/lets-build/SKILL.md\n', stderr: 'fatal: boom', code: 128 });
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(!t.stderr().includes('git still tracks'));
+});

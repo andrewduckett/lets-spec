@@ -25,9 +25,9 @@ function release(extra = {}) {
   return io;
 }
 
-function sync(io: FakeIo) {
+function sync(io: FakeIo, mode: 'committed' | 'ignored' = 'committed') {
   const out: string[] = [];
-  const result = syncSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io, stdout: (t) => out.push(t) });
+  const result = syncSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', mode, io, stdout: (t) => out.push(t) });
   return { result, out: out.join('') };
 }
 
@@ -40,6 +40,11 @@ test('a missing managed file is written 0755 when the source is executable, else
   assert.equal(io.readFile(`/p/openspec/schemas/${SCHEMA}/schema.yaml`), 'schema');
   assert.equal(result.written, 3);
   assert.equal(out, 'lets-spec: wrote 3 files. Commit them.\n');
+});
+
+test('in the ignored mode, written files are reported as ignored by git', () => {
+  const { out } = sync(release(), 'ignored');
+  assert.equal(out, 'lets-spec: wrote 3 files. Git ignores them.\n');
 });
 
 test('a differing managed file is rewritten and counted', () => {
