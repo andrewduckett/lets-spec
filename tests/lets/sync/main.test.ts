@@ -109,3 +109,15 @@ test('in the ignored mode, tracked copies are a problem to fix', async () => {
   assert.equal(await run({ check: false }, t.deps), 0);
   assert.ok(t.stderr().includes(`problem(s) to fix:\n- ${TRACKED}\n`));
 });
+
+test('in the ignored mode, no tracked copies is no tracked-copies problem', async () => {
+  const t = ignoredWithLsFiles({ stdout: '', stderr: '', code: 0 });
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(!t.stderr().includes('git still tracks'));
+});
+
+test('in the ignored mode, a failed git ls-files counts as nothing tracked', async () => {
+  const t = ignoredWithLsFiles({ stdout: '.agents/skills/lets-build/SKILL.md\n', stderr: 'fatal: boom', code: 128 });
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(!t.stderr().includes('git still tracks'));
+});
