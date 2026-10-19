@@ -22,7 +22,7 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
     rm -f AGENTS.md
     LETS_SPEC_SKILLS="$mode" sync_project
     rules_in AGENTS.md | tr '\n' ' ' | tr -s ' ' >rules
-    grep -qF '`lets sync` rewrites this section, the skills in `.agents/skills/` and the schemas in `openspec/schemas/` on every run' rules
+    grep -qF 'the `lets-*` and `openspec-*` skills in `.agents/skills/` and the `lets-*` schema folders in `openspec/schemas/`. `lets sync` rewrites all of these, so an edit there is lost' rules
     ! grep -q 'read-only links' rules
     ! grep -q 'Nix store' rules
   done

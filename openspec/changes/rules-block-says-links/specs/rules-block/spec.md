@@ -5,11 +5,11 @@ The rules block is the section `lets sync` keeps in a project's `AGENTS.md`, and
 ## ADDED Requirements
 
 ### Requirement: The rules block describes the copies truthfully in both modes
-The rules block SHALL say that `lets sync` rewrites the block, the skills in `.agents/skills/` and the schemas in `openspec/schemas/` on every run, and SHALL NOT describe them as links, as read-only, as living in the Nix store, or as ignored by git.
+The rules block SHALL say that `lets sync` rewrites the block, the `lets-*` and `openspec-*` skills in `.agents/skills/` and the `lets-*` schema folders in `openspec/schemas/`, and SHALL NOT describe them as links, as read-only, as living in the Nix store, or as ignored by git. It SHALL NOT claim other files in those folders.
 
 #### Scenario: Fresh sync in committed mode
 - **WHEN** `lets sync` runs in a project with no `AGENTS.md` and `LETS_SPEC_SKILLS` unset
-- **THEN** the rules block in `AGENTS.md` contains "rewrites this section, the skills in `.agents/skills/` and the schemas in `openspec/schemas/`" and contains neither "read-only links" nor "Nix store"
+- **THEN** the rules block in `AGENTS.md` names the `lets-*` and `openspec-*` skills and the `lets-*` schema folders, says `lets sync` rewrites all of these, and contains neither "read-only links" nor "Nix store"
 
 #### Scenario: Fresh sync in ignored mode
 - **WHEN** `lets sync` runs in a project with no `AGENTS.md` and `LETS_SPEC_SKILLS=ignored`
