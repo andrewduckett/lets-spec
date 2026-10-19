@@ -1,6 +1,6 @@
 ## 1. Plan against the relevant domains
 
-- [ ] 1.1 [easy] Add explicit guidance to read shared-domain dependencies before brainstorming, without a domain-selection prompt when scope is clear (verify: direct review against Backend work depends on shared authentication and Clear scope needs no extra selection step; `deli -- bats tests/skill-interfaces.bats`).
+- [x] 1.1 [easy] Add explicit guidance to read shared-domain dependencies before brainstorming, without a domain-selection prompt when scope is clear (✓ direct review against Backend work depends on shared authentication and Clear scope needs no extra selection step; structural checks run with integration verification).
 - [ ] 1.2 [easy] Require full existing capability IDs before writing deltas; distinguish specs read for context from requirements changed in the standard proposal template (verify: direct review against Existing flat specs, Existing grouped specs and Shared behavior is relevant but unchanged; `deli -- bats tests/skill-interfaces.bats`).
 - [ ] 1.3 [medium] Extend `tests/openspec-compat.bats` to validate and archive a change modifying two existing flat capabilities under each schema, asserting updated requirements, preserved unaffected requirements, and an unrelated spec unchanged byte-for-byte (verify: `deli -- bats tests/openspec-compat.bats`).
 - [ ] 1.4 [medium] Verify grouped capability discovery, schema artifact completion, exact archive destinations and refusal of a wrong leaf path without changing main specs (verify: `deli -- bats tests/openspec-compat.bats`).
