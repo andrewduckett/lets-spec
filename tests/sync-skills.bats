@@ -8,6 +8,9 @@ load support/project
 
 skills_block=$'# BEGIN lets-spec skills. lets sync rewrites this block: change lets-spec, not this text.\n/.agents/skills/lets-*\n/.agents/skills/openspec-*\n/openspec/schemas/lets-*\n# END lets-spec skills\n'
 
+# The untrack command the tracked-copies problem gives.
+untrack="git rm -r --cached --ignore-unmatch -- '.agents/skills/lets-*' '.agents/skills/openspec-*' 'openspec/schemas/lets-*'"
+
 # managed_paths: every path lets sync should write in this project.
 managed_paths() {
   local skill
@@ -297,12 +300,24 @@ edit_copy() {
   [[ "$output" == *"lets-spec: .gitignore still has the lets-spec skills block. Run lets sync, then commit .gitignore."* ]]
 }
 
-@test "switching to ignored says what to untrack" {
+@test "switching to ignored says what to untrack until the copies are untracked" {
   init_project
+  git add -A
+  git commit --quiet -m committed
+  local problem="- git still tracks lets-spec copies that .gitignore ignores. Run: $untrack, then commit."
   LETS_SPEC_SKILLS=ignored run sync_project
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit."* ]]
-  git check-ignore -q .agents/skills/lets-build
+  [[ "$output" == *"problem(s) to fix"*"$problem"* ]]
+  git check-ignore -q --no-index .agents/skills/lets-build
+  LETS_SPEC_SKILLS=ignored run sync_project
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"problem(s) to fix"*"$problem"* ]]
+  LETS_SPEC_SKILLS=ignored run sync_project --check
+  [ "$status" -eq 0 ]
+  git rm -r --cached --quiet -- .agents/skills openspec/schemas
+  LETS_SPEC_SKILLS=ignored run sync_project
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"git still tracks"* ]]
 }
 
 @test "--check fails on a stale file and names it" {
