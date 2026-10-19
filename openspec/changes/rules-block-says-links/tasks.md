@@ -5,4 +5,4 @@
 - [x] 1.3 [easy] An `AGENTS.md` holding the 0.4.0 rules block is rewritten once with "updated the lets-spec rules in AGENTS.md", holds one block after, and `lets sync --check` then exits 0 (verify: bats tests/sync-rules.bats) (✓ bats tests/sync-rules.bats passed)
 - [x] 1.4 [easy] In ignored mode, a `.gitignore` holding the 0.4.0 skills block is rewritten once to the new BEGIN line, holds one block after, and `lets sync --check` then exits 0 (verify: bats tests/sync-skills.bats) (✓ bats tests/sync-skills.bats passed)
 - [x] 1.5 [easy] The README's skills block example shows the new BEGIN line, and the paragraph saying the marker keeps the old name, and the *From 0.1* sentence about the marker, are gone (verify: ! grep -q 'lets-sync rewrites' README.md) (✓ ! grep -q 'lets-sync rewrites' README.md passed)
-- [ ] 1.6 [easy] Every check passes with the markers the tests pin updated (verify: pnpm test)
+- [x] 1.6 [easy] Every check passes with the markers the tests pin updated (verify: pnpm test) (✓ pnpm test passed: 205 node, 93 bats)
