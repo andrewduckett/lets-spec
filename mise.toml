@@ -6,6 +6,17 @@ gh = "2.102.0"
 jq = "1.8.2"
 yq = "4.54.1"
 "npm:@fission-ai/openspec" = "1.13.2"
+# This repository uses Let's Spec on itself, from the last published release,
+# never the working tree. Bump it after each release; see README, Releases.
+"github:andrewduckett/lets-spec" = "0.4.0"
+
+[env]
+LETS_SPEC_FLOW = "standard"
+# skills/ and schemas/ are the source. The copies lets sync writes stay out of git.
+LETS_SPEC_SKILLS = "ignored"
+
+[hooks]
+enter = "lets sync"
 
 [tasks]
 test = "pnpm test"

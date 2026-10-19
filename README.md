@@ -774,6 +774,11 @@ release workflow builds the folder, sets its version from the tag, and
 publishes `lets-spec-<version>.tar.gz` as a GitHub release. The release
 notes name the OpenSpec CLI version.
 
+This repository uses Let's Spec on itself, pinned to the last published
+release in its `mise.toml`. After you push a tag, open a pull request that
+bumps that pin, runs `mise install` and `lets sync`, and commits what
+`lets sync` wrote.
+
 ### Testing
 
 ```sh
