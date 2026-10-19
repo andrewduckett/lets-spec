@@ -16,6 +16,18 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
   [[ "$output" == *"created AGENTS.md"* ]]
 }
 
+@test "the rules say lets sync rewrites the copies, in both skills modes" {
+  local mode
+  for mode in committed ignored; do
+    rm -f AGENTS.md
+    LETS_SPEC_SKILLS="$mode" sync_project
+    rules_in AGENTS.md | tr '\n' ' ' | tr -s ' ' >rules
+    grep -qF '`lets sync` rewrites this section, the skills in `.agents/skills/` and the schemas in `openspec/schemas/` on every run' rules
+    ! grep -q 'read-only links' rules
+    ! grep -q 'Nix store' rules
+  done
+}
+
 @test "sync appends the rules after a blank line, and keeps the project's text" {
   printf '# My project\n' >AGENTS.md
   run sync_project
