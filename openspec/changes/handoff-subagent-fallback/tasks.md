@@ -10,7 +10,7 @@
 
 ## 2. Docs and skills [depends-on: 1]
 
-- [ ] 2.1 [parallel] [easy] The README's *lets delegate*, *What a review gets* and *Resolvers* sections say the default runs no review session and hands back the prompt for a handoff, and the review rungs drop the headless CLIs (verify: ! grep -nE "runs .codex., .claude. or .agy.|headless CLI of" README.md)
+- [x] 2.1 [parallel] [easy] The README's *lets delegate*, *What a review gets* and *Resolvers* sections say the default runs no review session and hands back the prompt for a handoff, and the review rungs drop the headless CLIs (verify: ! grep -nE "runs .codex., .claude. or .agy.|headless CLI of" README.md) (✓ ! grep -nE "runs .codex., .claude. or .agy.|headless CLI of" README.md passed)
 - [ ] 2.2 [parallel] [easy] `lets-review-code` and `lets-review-plan` say exit 3 also means no resolver started a session, and `lets-build`'s handoff step says the default's instructions hold the prompt to carry on by hand (verify: bats tests/skill-interfaces.bats)
 
 ## 3. Integration [depends-on: 2]
@@ -19,3 +19,4 @@
 
 ## Deviations Ledger
 - 1.4: its test passed on the first run, because 1.3's fixed text already named no CLI. Run against the resolver before 1.3, it fails.
+- 2.1: the README's prerequisites row for `codex`, `claude` or `agy` also said `lets delegate` runs reviews through them. It now names an optional resolver instead.

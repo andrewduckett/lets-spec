@@ -70,7 +70,7 @@ mise. You can choose to have git ignore the copies instead. See
 | GitHub CLI (`gh`) | 2.102.0 or later | The skills set Project fields by name with `gh project item-edit`, and create sub-issues and "blocked by" links. The flake supplies it. With mise, you pin it. |
 | OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. The flake supplies the matching version. With mise, you pin it. See [With mise](#with-mise). |
 | Node | 26 or later | `lets` runs on it. The flake supplies it. With mise, you pin it. |
-| At least one of `codex`, `claude` or `agy` | any | `lets delegate` runs reviews through one of these, in a fresh session. Install one from a model family other than the one that writes your code, or the reviews are not independent. With none, the review skills run a subagent instead, and the reviews are not independent. |
+| A resolver, optional | any | `lets delegate` runs reviews in a fresh session through a [resolver](#resolvers). Install one that can reach a model family other than the one that writes your code, or the reviews are not independent. With none, the review skills run a subagent instead, and the reviews are not independent. |
 
 ### 1. Choose a flow and a skills mode
 
@@ -471,8 +471,9 @@ installed. It ships with the standard flow only.
 ## 🧵 Fresh sessions
 
 Some steps run in a new agent session instead of the current one. A plan
-or code review runs in a fresh session, from another model family when one
-is available, so the reviewer shares no context with the author. After
+or code review runs in a fresh session when a resolver can start one, from
+another model family when it can, so the reviewer shares no context with
+the author. After
 `lets-build` plans a change, it offers to start the build in a fresh
 session too.
 
@@ -481,21 +482,20 @@ The skills ask for a session with `lets delegate`:
 | Command | What it does |
 |---|---|
 | `lets delegate review` | Runs a prompt read-only in a fresh session, waits, and prints the final message. A JSON line on stderr names the family that answered, and whether the review was independent. |
-| `lets delegate handoff` | Starts an interactive session with a prompt, and returns at once. When it cannot, it prints the command for you to run instead. |
+| `lets delegate handoff` | Starts an interactive session with a prompt, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
 
 Run `lets delegate review --help` for the options and the exit codes.
 
 ### What a review gets
 
 A review gets the best of these that your machine offers. `lets` tries
-rungs 1 to 3. The review skill takes rung 4 when `lets` finds none.
+rung 1. The review skill takes rung 2 when no resolver starts a session,
+and `lets delegate review` exits 3.
 
 | Rung | What runs | Fresh context | Independent | Needs |
 |---|---|---|---|---|
-| 1 | A resolver for your harness | yes | usually | a resolver you installed |
-| 2 | The headless CLI of another family | yes | yes | a second CLI on your `PATH` |
-| 3 | The headless CLI of the author's family | yes | no | that CLI on your `PATH` |
-| 4 | A read-only subagent in your current harness | yes | no | nothing |
+| 1 | A session a resolver starts | yes | when the resolver picks another family | a resolver you installed |
+| 2 | A read-only subagent in your current harness | yes | no | nothing |
 
 `review.md` records how the review ran: `fresh context, other family`,
 `fresh context, same family` or `subagent, same family`.
@@ -509,11 +509,11 @@ A resolver is the program that turns a request into a real session.
 2. `lets-delegate-resolver` on your `PATH`.
 3. The built-in default, which never declines.
 
-For a review, the built-in default runs `codex`, `claude` or `agy`
-headless and read-only. It tries the families in the order gpt, claude,
-gemini, skips the author's, and uses the author's own only when no other
-is on your `PATH`. For a handoff, it starts nothing. It writes the prompt
-to `.workspace/lets-delegate/` and prints the command for you to run.
+The built-in default starts no session, and picks no model family. For a
+review, it runs nothing: `lets delegate review` exits 3, and the review
+skill runs a subagent. For a handoff, it writes the prompt to
+`.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
+and that path for you to start any agent in the repository with.
 
 When a session fails, `lets` stops and says why. It never retries, and it
 never falls back to another resolver or family. It leaves the failed
