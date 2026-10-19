@@ -27,10 +27,10 @@ gh repo view --json nameWithOwner,projectsV2 \
 First find the owner and the title:
 
 ```bash
-gh repo view --json name,isInOrganization,owner
+gh repo view --json name,owner
 ```
 
-The title is the repository's `name`. When `isInOrganization` is true, `<owner>` is `owner.login`. Otherwise `<owner>` is `@me`, and the repository must be the user's own: a Project can only link to a repository with the same owner. If it belongs to someone else, stop and say that its owner has to run this skill.
+The title is the repository's `name`, and `<owner>` is `owner.login`, for a user and an organization alike. Never use `@me`: `gh project link` rejects it when `--repo` names the owner. A Project can only link to a repository with the same owner, so for a user's repository that user must be you. If it belongs to someone else, stop and say that its owner has to run this skill.
 
 Then create the Project, add the three fields and link it:
 
