@@ -12,9 +12,23 @@ The backlog is the one open GitHub Project linked to this repository. `lets-shap
 ## Find the Project
 
 ```bash
-gh repo view --json nameWithOwner,projectsV2 \
-  --jq '{repo: .nameWithOwner, projects: [.projectsV2.Nodes[] | select(.closed | not) | {number, title, url, owner: (.resourcePath | split("/")[2])}]}'
+gh api graphql -F owner='{owner}' -F name='{repo}' -f query='
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    nameWithOwner
+    projectsV2(first: 100) { nodes { number title url closed owner { ... on User { login } ... on Organization { login } } } }
+  }
+  repositoryOwner(login: $owner) {
+    ... on ProjectV2Owner {
+      projectsV2(first: 100) { nodes { number title url closed owner { ... on User { login } ... on Organization { login } } repositories(first: 100) { nodes { nameWithOwner } } } }
+    }
+  }
+}' --jq '.data.repository.nameWithOwner as $repo
+  | {repo: $repo, projects: ([.data.repository.projectsV2.nodes[], (.data.repositoryOwner.projectsV2.nodes[] | select(any(.repositories.nodes[]; .nameWithOwner == $repo)))]
+      | map(select(.closed | not) | {number, title, url, owner: .owner.login}) | unique_by(.owner, .number))}'
 ```
+
+The query lists the Projects linked to the repository, and the owner's Projects that link back to it. A user-owned Project can be missing from the repository's own listing for a while after it is linked, so neither list alone is enough.
 
 `repo` is the repository, as `owner/name`. Each project has the `number` and `owner` that every `gh project` command below takes.
 

@@ -31,6 +31,12 @@ mentions() {
   local group command found=0
   while read -r group command; do
     found=1
+    # gh api takes an endpoint, not a command. Its help names graphql.
+    if [ "$group" = api ]; then
+      gh api --help 2>&1 | grep -qE "^  \\\$ gh api $command( |$)" ||
+        { echo "gh api has no endpoint: $command"; false; }
+      continue
+    fi
     gh "$group" "$command" --help 2>&1 | grep -qE "^  gh $group $command( |$)" ||
       { echo "gh has no command: gh $group $command"; false; }
   done < <(mentions '(^ *|`)gh [a-z]+ [a-z-]+' | sed -E 's/^[ `]*gh //' | sort -u)
