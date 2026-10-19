@@ -21,6 +21,26 @@ Be a thinking partner, not a form to fill in.
 
 ## Questioning
 
+### Read the relevant specs first
+
+Run `openspec list --specs` to find existing capability IDs. Read the affected
+specs with `openspec show <spec-id> --type spec`, using each full ID, such as
+`identity/user-auth`. Use the planning home OpenSpec resolves, including a
+selected store, rather than assuming the specs live beside the code.
+
+A domain groups related behavior specs. It can describe an application,
+service or feature, with flat capability paths or optional grouping such as
+`identity/user-auth`. Follow the existing layout. Use the request, project
+context and code to identify the affected capabilities; domain names do not
+automatically map to source directories.
+
+Read shared behavior the story depends on too, such as authentication used by
+both an API and a frontend. A shared spec is context unless its requirements
+change. One story can affect several domains. When the affected area is clear,
+continue without asking the user to select or confirm a domain.
+
+### Settle the story
+
 - Ask one question at a time, with your recommended answer and why it matters: the decision it settles.
 - Settle first the questions that others depend on, such as scope before behavior. If an answer changes an earlier one, go back to it.
 - Skip a question whose answer would not change the plan.

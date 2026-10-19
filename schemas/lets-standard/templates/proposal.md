@@ -17,6 +17,9 @@
 ### Modified Capabilities
 <!-- Existing capabilities whose REQUIREMENTS are changing (not just implementation).
      Only list here if spec-level behavior changes. Each needs a delta spec file.
+     Read relevant shared specs too; omit those read only for context.
+     Confirm each full capability ID with openspec list --specs; never shorten
+     a grouped path to its leaf name. One change can affect several domains.
      Use the exact existing path under openspec/specs/. Leave empty if no requirement
      changes. A change with no capabilities at all sets `skip_specs`; the proposal
      instruction says when. -->

@@ -19,6 +19,9 @@ artifacts:
       2. Read the story packet: the issue body. Then read the code, tests and
          specs it touches. `openspec list --specs` lists the project's
          capabilities, and `openspec show <spec-id> --type spec` prints one.
+         Use full capability IDs and read relevant shared behavior too.
+         The brainstorm skill explains how to find affected domains without
+         adding a selection step when the scope is clear.
       3. Question the user as the skill says, until you share one
          understanding of scope, behavior and acceptance. This flow has no
          design step, so settle as much of the how as the tasks will need.
@@ -53,10 +56,16 @@ artifacts:
         when the project's specs are flat.
       - A modified capability: `specs/<capability-path>/spec.md`, at the exact
         path of the existing spec. Do not move or rename the capability.
+        Confirm its full ID with `openspec list --specs` before writing the
+        delta. Strict validation alone does not prove the path matches.
       - The existing specs live under `<planningHome.root>/openspec/specs/`.
         Take `planningHome.root` from the `openspec instructions ... --json`
         output. It is the repository, or the store when the change lives in
         one.
+
+      Read relevant shared specs, but write deltas only for capabilities whose
+      requirements change. One change can include several domains. The spec
+      writing skill explains how to preserve full paths for every delta type.
 
       There must be at least one spec file, unless no behavior changes. Then
       set `skip_specs: true` in the change's `.openspec.yaml`, or

@@ -140,6 +140,167 @@ expected_statuses() {
   done
 }
 
+# Complete the other artifacts without introducing an unrelated greeting delta.
+finish_without_specs() {
+  local id
+  for id in $(artifact_ids "$1"); do
+    [ "$id" = specs ] || write_artifact "$1" "$id"
+  done
+  sed -i 's/- \[ \]/- [x]/' "$change/tasks.md"
+}
+
+# Specs use distinct responses so a merge into the wrong capability is visible.
+write_main_spec() {
+  mkdir -p "openspec/specs/$1"
+  cat >"openspec/specs/$1/spec.md" <<EOF
+# $1 Specification
+
+## Purpose
+
+Describe the observable request handling behavior of this service for its callers.
+
+## Requirements
+
+### Requirement: Respond to a request
+The service SHALL return "$2" for an authenticated request.
+
+#### Scenario: Authenticated request
+- **WHEN** an authenticated caller sends a request
+- **THEN** the service returns "$2"
+
+### Requirement: Reject unauthenticated requests
+The service SHALL reject unauthenticated requests.
+
+#### Scenario: Unauthenticated request
+- **WHEN** an unauthenticated caller sends a request
+- **THEN** the service responds with status 401
+EOF
+}
+
+write_modified_spec() {
+  mkdir -p "$change/specs/$1"
+  cat >"$change/specs/$1/spec.md" <<EOF
+## MODIFIED Requirements
+
+### Requirement: Respond to a request
+The service SHALL return "$2" for an authenticated request.
+
+#### Scenario: Authenticated request
+- **WHEN** an authenticated caller sends a request
+- **THEN** the service returns "$2"
+EOF
+}
+
+@test "archive updates existing flat capabilities at their original paths" {
+  local schema path
+  for schema in "${schemas[@]}"; do
+    new_change "$schema"
+    finish_without_specs "$schema"
+    write_main_spec backend-api backend-old
+    write_main_spec frontend-checkout frontend-old
+    write_main_spec shared-auth shared-old
+    cp openspec/specs/shared-auth/spec.md "$BATS_TEST_TMPDIR/shared-before.md"
+    write_modified_spec backend-api backend-new
+    write_modified_spec frontend-checkout frontend-new
+
+    run openspec validate demo --strict </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    run openspec archive demo --yes </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+
+    grep -Fq 'The service SHALL return "backend-new"' openspec/specs/backend-api/spec.md
+    grep -Fq 'The service SHALL return "frontend-new"' openspec/specs/frontend-checkout/spec.md
+    for path in backend-api frontend-checkout; do
+      grep -Fq 'The service SHALL reject unauthenticated requests.' "openspec/specs/$path/spec.md"
+      run grep -Fq -- '-old"' "openspec/specs/$path/spec.md"
+      [ "$status" -eq 1 ]
+    done
+    cmp "$BATS_TEST_TMPDIR/shared-before.md" openspec/specs/shared-auth/spec.md
+    [ ! -e "$change" ]
+  done
+}
+
+new_grouped_change() {
+  new_change "$1"
+  finish_without_specs "$1"
+  write_main_spec identity/user-auth identity-old
+  write_main_spec billing/user-auth billing-old
+  write_main_spec shared/auth shared-old
+}
+
+@test "grouped capabilities keep distinct full IDs" {
+  local schema
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    openspec list --specs --json </dev/null >"$BATS_TEST_TMPDIR/specs.json" 2>/dev/null
+    [ "$(jq -r '.specs | map(.id) | sort[]' "$BATS_TEST_TMPDIR/specs.json")" = $'billing/user-auth\nidentity/user-auth\nshared/auth' ]
+    run openspec show identity/user-auth --type spec </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    [[ "$output" == *'return "identity-old"'* ]]
+    run openspec show billing/user-auth --type spec </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    [[ "$output" == *'return "billing-old"'* ]]
+  done
+}
+
+@test "each schema recognizes grouped delta files as completed specs" {
+  local schema expected actual
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    write_modified_spec identity/user-auth identity-new
+    write_modified_spec billing/user-auth billing-new
+    status_json >"$BATS_TEST_TMPDIR/grouped-status.json"
+    jq -e '.artifacts[] | select(.id == "specs") | .status == "done"' "$BATS_TEST_TMPDIR/grouped-status.json"
+    expected="$(printf '%s\n' "$PWD/$change/specs/billing/user-auth/spec.md" "$PWD/$change/specs/identity/user-auth/spec.md")"
+    actual="$(jq -r '.artifactPaths.specs.existingOutputPaths | sort[]' "$BATS_TEST_TMPDIR/grouped-status.json")"
+    [ "$actual" = "$expected" ] || { echo "$schema: $actual"; false; }
+  done
+}
+
+@test "archive keeps grouped capabilities at their full paths" {
+  local schema path
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    cp openspec/specs/shared/auth/spec.md "$BATS_TEST_TMPDIR/shared-before.md"
+    write_modified_spec identity/user-auth identity-new
+    write_modified_spec billing/user-auth billing-new
+    run openspec validate demo --strict </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    run openspec archive demo --yes </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+
+    grep -Fq 'The service SHALL return "identity-new"' openspec/specs/identity/user-auth/spec.md
+    grep -Fq 'The service SHALL return "billing-new"' openspec/specs/billing/user-auth/spec.md
+    for path in identity/user-auth billing/user-auth; do
+      grep -Fq 'The service SHALL reject unauthenticated requests.' "openspec/specs/$path/spec.md"
+      run grep -Fq -- '-old"' "openspec/specs/$path/spec.md"
+      [ "$status" -eq 1 ]
+    done
+    cmp "$BATS_TEST_TMPDIR/shared-before.md" openspec/specs/shared/auth/spec.md
+    [ ! -e openspec/specs/user-auth ]
+    [ ! -e "$change" ]
+  done
+}
+
+@test "archive refuses a shortened existing capability path without changing main specs" {
+  local schema
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    cp -R openspec/specs "$BATS_TEST_TMPDIR/$schema-before"
+    # A valid delta sorts before the bad path, exposing a partial merge too.
+    write_modified_spec billing/user-auth billing-new
+    write_modified_spec user-auth identity-new
+    run openspec validate demo --strict </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    # Archive can report refusal without a nonzero exit: check its outcome.
+    run openspec archive demo --yes </dev/null
+    [[ "$output" == *'target spec does not exist'* ]] || { echo "$schema: $output"; false; }
+    [[ "$output" == *'No files were changed'* ]] || { echo "$schema: $output"; false; }
+    diff -r "$BATS_TEST_TMPDIR/$schema-before" openspec/specs
+    [ -d "$change" ]
+  done
+}
+
 # The standard flow's config carries the code review rule as archive
 # guidance, and lets-build reads it from the CLI. These tests pin that the
 # CLI returns it, from the config lets sync creates in a project.

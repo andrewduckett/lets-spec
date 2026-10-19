@@ -204,6 +204,65 @@ The next time `lets sync` runs, it prints nothing if all is well.
 > skills. The dev shell, from Nix or mise, supplies the tools the skills
 > call: the OpenSpec CLI, `gh` and `lets`.
 
+## Specs in a monorepo
+
+Keep one set of skills and one `openspec/` directory at the repository root.
+This follows [OpenSpec's monorepo recommendation](https://github.com/Fission-AI/OpenSpec/blob/main/docs/existing-projects.md#monorepos-and-work-that-spans-repos).
+Group specs by application, service or feature as the project needs:
+
+```text
+.agents/skills/                        # shared skills
+AGENTS.md                              # shared workflow rules
+openspec/
+  config.yaml                          # shared schema and project context
+  specs/
+    backend/checkout/spec.md
+    frontend/checkout/spec.md
+    shared/user-auth/spec.md
+  changes/
+```
+
+A **domain** is a logical grouping of behavior specs. A **capability path**
+identifies one spec relative to `openspec/specs/`, such as `user-auth` or
+`backend/checkout`. Domain grouping is optional: existing flat paths such as
+`openspec/specs/user-auth/spec.md` continue to work without migration or new
+configuration.
+
+Before planning, the agent lists existing capabilities and reads the affected
+specs, including shared behavior the change depends on:
+
+```sh
+openspec list --specs
+openspec show backend/checkout --type spec
+openspec show shared/user-auth --type spec
+```
+
+Use full capability IDs from the list. `backend/checkout` and
+`frontend/checkout` are different capabilities, even though their last path
+segment is the same. Strict validation alone does not prove that a delta
+targets an existing capability.
+
+Domain names do not automatically map to source directories. Describe useful
+mappings in the existing `openspec/config.yaml` context, for example:
+
+```yaml
+context: |
+  Backend capabilities describe apps/api; frontend capabilities describe apps/web.
+  Shared authentication behavior is implemented in packages/auth.
+```
+
+The agent uses this context, the request and the code to find relevant specs.
+When the scope is clear, it proceeds without a separate domain-selection
+prompt.
+
+One change can update several domains. For a checkout story, put deltas at
+`openspec/changes/add-checkout/specs/backend/checkout/spec.md` and
+`openspec/changes/add-checkout/specs/frontend/checkout/spec.md`. Each full
+capability path matches its main spec under `openspec/specs/` during
+sync/archive. Read shared authentication for context, but include its delta
+only if its requirements change. Skills, Git branches and pull requests stay
+shared across the repository.
+
 ## 📋 The backlog
 
 The backlog is the GitHub Project linked to your repository. Every piece
