@@ -48,6 +48,27 @@ one: the missing input, the denied request, the timeout.
 
 ## Changing an existing requirement
 
+### Choose the capability paths
+
+Use `planningHome.root` from `openspec instructions ... --json` to locate the
+main specs under `openspec/specs/`. A capability path is the directory relative
+to that spec folder, such as `user-auth` or `identity/user-auth`. Preserve the
+full path in the change's `specs/<capability-path>/spec.md`.
+
+Before writing a delta for an existing capability, confirm its full ID with
+`openspec list --specs` and read it with `openspec show <spec-id> --type spec`.
+This includes MODIFIED, REMOVED and RENAMED requirements. Do not shorten an ID
+to its leaf name: strict validation can pass a wrong path that archive later
+refuses. For new capabilities, follow the project's existing layout and check
+that the behavior is not already covered under another path.
+
+Read shared specs the change depends on, but write a delta only when their
+requirements change. One change can carry deltas for several domains. Leave
+specs read only for context out of the change's delta files. Keep flat paths
+flat; grouping by domain is optional and needs no migration or registry.
+
+### Preserve the requirement
+
 Archive replaces the whole requirement with what the delta holds. So:
 
 - **MODIFIED** carries the entire requirement, from its `### Requirement:` heading through every scenario, with the edits made. Partial content loses the rest at archive.

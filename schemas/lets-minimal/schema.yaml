@@ -56,10 +56,16 @@ artifacts:
         when the project's specs are flat.
       - A modified capability: `specs/<capability-path>/spec.md`, at the exact
         path of the existing spec. Do not move or rename the capability.
+        Confirm its full ID with `openspec list --specs` before writing the
+        delta. Strict validation alone does not prove the path matches.
       - The existing specs live under `<planningHome.root>/openspec/specs/`.
         Take `planningHome.root` from the `openspec instructions ... --json`
         output. It is the repository, or the store when the change lives in
         one.
+
+      Read relevant shared specs, but write deltas only for capabilities whose
+      requirements change. One change can include several domains. The spec
+      writing skill explains how to preserve full paths for every delta type.
 
       There must be at least one spec file, unless no behavior changes. Then
       set `skip_specs: true` in the change's `.openspec.yaml`, or

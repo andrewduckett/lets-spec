@@ -54,13 +54,15 @@ artifacts:
         removals. Mark a breaking change **BREAKING**.
       - Capabilities: the contract with the specs step. Run
         `openspec list --specs` and read the specs this change touches before
-        you fill it in.
+        you fill it in. Read relevant shared specs too; list them below only
+        when their requirements change. One change can affect several domains.
         - New Capabilities: each becomes `specs/<capability-path>/spec.md`.
           New path segments are kebab-case, such as `user-auth` or
           `identity/user-auth`, and follow the project's existing layout.
         - Modified Capabilities: only those whose requirements change, not
           their implementation. Use the exact existing path under
-          `openspec/specs/`. Leave it empty when no requirement changes.
+          `openspec/specs/`, confirmed by its full ID in `openspec list --specs`.
+          Leave it empty when no requirement changes.
       - Impact: affected code, APIs, dependencies and systems.
 
       A change declares at least one capability, or opts out of specs:
@@ -90,10 +92,16 @@ artifacts:
         layout; do not add a domain level when the project's specs are flat.
       - A modified capability: `specs/<capability-path>/spec.md`, at the exact
         path of the existing spec. Do not move or rename the capability.
+        Confirm its full ID with `openspec list --specs` before writing the
+        delta. Strict validation alone does not prove the path matches.
       - The existing specs live under `<planningHome.root>/openspec/specs/`.
         Take `planningHome.root` from the `openspec instructions ... --json`
         output. It is the repository, or the store when the change lives in
         one.
+
+      Read relevant shared specs, but write deltas only for capabilities whose
+      requirements change. One change can include several domains. The spec
+      writing skill explains how to preserve full paths for every delta type.
 
       There must be at least one spec file, unless the change sets
       `skip_specs: true` as the proposal step describes. If the proposal lists
