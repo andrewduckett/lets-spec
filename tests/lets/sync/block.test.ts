@@ -33,6 +33,14 @@ test('the begin marker matches as a prefix and the end marker as a whole line', 
   assert.equal(blockState(RULES, `${RULES.begin}\nx\n${RULES.end} \n`, BLOCK), 'unpaired');
 });
 
+test('a block with the 0.4.0 begin line reads as stale', () => {
+  const rules = '<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->';
+  const skills = '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.';
+  assert.equal(blockState(RULES, `${rules}\n${BODY}${RULES.end}\n`, BLOCK), 'stale');
+  const skillsBlock = renderBlock(SKILLS, SKILLS_BODY);
+  assert.equal(blockState(SKILLS, `${skills}\n${SKILLS_BODY}${SKILLS.end}\n`, skillsBlock), 'stale');
+});
+
 test('missing appends after a blank line and ends an unterminated last line', () => {
   assert.deepEqual(applyBlock(RULES, '# Project\n', BLOCK), {
     state: 'missing',
@@ -85,7 +93,7 @@ test('removeBlock leaves the project lines and nothing else', () => {
 });
 
 test('the skills block renders the three patterns', () => {
-  assert.equal(SKILLS.begin, '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.');
+  assert.equal(SKILLS.begin, '# BEGIN lets-spec skills. lets sync rewrites this block: change lets-spec, not this text.');
   assert.equal(SKILLS.end, '# END lets-spec skills');
   assert.equal(
     renderBlock(SKILLS, SKILLS_BODY),
@@ -94,7 +102,7 @@ test('the skills block renders the three patterns', () => {
 });
 
 test('the marker definitions match the bash script', () => {
-  assert.equal(RULES.begin, '<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->');
+  assert.equal(RULES.begin, '<!-- BEGIN lets-spec rules. lets sync rewrites this block: change lets-spec, not this text. -->');
   assert.equal(RULES.end, '<!-- END lets-spec rules -->');
   assert.equal(LEGACY_LINKS.begin, '# BEGIN lets-spec links. lets-sync rewrites this section.');
   assert.equal(LEGACY_LINKS.end, '# END lets-spec links');

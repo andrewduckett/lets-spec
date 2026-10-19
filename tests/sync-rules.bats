@@ -16,6 +16,21 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
   [[ "$output" == *"created AGENTS.md"* ]]
 }
 
+@test "the rules say lets sync rewrites the copies, in both skills modes" {
+  local mode
+  for mode in committed ignored; do
+    rm -f AGENTS.md
+    LETS_SPEC_SKILLS="$mode" sync_project
+    rules_in AGENTS.md >"rules-$mode"
+    rules_in AGENTS.md | tr '\n' ' ' | tr -s ' ' >rules
+    ! grep -q 'git ignores' rules
+    grep -qF 'the `lets-*` and `openspec-*` skills in `.agents/skills/` and the `lets-*` schema folders in `openspec/schemas/`. `lets sync` rewrites all of these, so an edit there is lost' rules
+    ! grep -q 'read-only links' rules
+    ! grep -q 'Nix store' rules
+  done
+  cmp -s rules-committed rules-ignored
+}
+
 @test "sync appends the rules after a blank line, and keeps the project's text" {
   printf '# My project\n' >AGENTS.md
   run sync_project
@@ -66,6 +81,18 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
       [[ "$output" == *"updated the lets-spec rules in AGENTS.md"* ]]
     done
   done
+}
+
+@test "sync rewrites a 0.4.0 rules block once" {
+  printf '%s\nold rules\n%s\n' \
+    '<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->' \
+    '<!-- END lets-spec rules -->' >AGENTS.md
+  run sync_project
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"updated the lets-spec rules in AGENTS.md"* ]]
+  [ "$(grep -c '^<!-- BEGIN lets-spec rules' AGENTS.md)" -eq 1 ]
+  run sync_project --check
+  [ "$status" -eq 0 ]
 }
 
 @test "sync leaves current rules unchanged" {

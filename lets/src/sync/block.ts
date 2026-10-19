@@ -4,14 +4,14 @@
 export type Markers = { begin: string; end: string; beginPattern: RegExp; endPattern: RegExp };
 
 export const RULES: Markers = {
-  begin: '<!-- BEGIN lets-spec rules. lets-sync rewrites this block: change lets-spec, not this text. -->',
+  begin: '<!-- BEGIN lets-spec rules. lets sync rewrites this block: change lets-spec, not this text. -->',
   end: '<!-- END lets-spec rules -->',
   beginPattern: /^<!-- BEGIN lets-spec rules/,
   endPattern: /^<!-- END lets-spec rules -->$/,
 };
 
 export const SKILLS: Markers = {
-  begin: '# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.',
+  begin: '# BEGIN lets-spec skills. lets sync rewrites this block: change lets-spec, not this text.',
   end: '# END lets-spec skills',
   beginPattern: /^# BEGIN lets-spec skills/,
   endPattern: /^# END lets-spec skills$/,

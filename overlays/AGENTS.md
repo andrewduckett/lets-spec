@@ -35,10 +35,10 @@ These rules come from lets-spec, and apply to every agent.
   mark it ready. A rejected pull request is closed and its branch
   deleted.
 - **Never edit what lets-spec puts in the project:** this section,
-  between its markers, the skills in `.agents/skills/` and the schema
-  folders in `openspec/schemas/`. `lets sync` rewrites this section, and
-  the skills and the schema are read-only links into the Nix store that
-  git ignores. Change lets-spec instead. Never run `openspec init` or
+  between its markers, the `lets-*` and `openspec-*` skills in
+  `.agents/skills/` and the `lets-*` schema folders in
+  `openspec/schemas/`. `lets sync` rewrites all of these, so an edit
+  there is lost. Change lets-spec instead. Never run `openspec init` or
   `openspec update`; they write skills of their own.
 
 ### Routing

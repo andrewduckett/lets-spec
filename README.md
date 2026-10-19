@@ -597,16 +597,12 @@ In the `ignored` mode, `lets sync` keeps this block in `.gitignore`. You
 own the rest of the file.
 
 ```gitignore
-# BEGIN lets-spec skills. lets-sync rewrites this block: change lets-spec, not this text.
+# BEGIN lets-spec skills. lets sync rewrites this block: change lets-spec, not this text.
 /.agents/skills/lets-*
 /.agents/skills/openspec-*
 /openspec/schemas/lets-*
 # END lets-spec skills
 ```
-
-The first line says `lets-sync`, the command's old name. It keeps that
-text so that blocks older versions wrote still match. The rules block in
-`AGENTS.md` does the same.
 
 When you switch modes, the next run tells you what to do:
 
