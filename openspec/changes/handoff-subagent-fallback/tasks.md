@@ -6,7 +6,7 @@
 - [x] 1.4 [easy] The default's handoff instructions are the same with or without `claude`, `codex` and `agy` on `PATH`, and name none of them (verify: node --test tests/lets/delegate/handoff.test.ts) (✓ node --test tests/lets/delegate/handoff.test.ts passed)
 - [x] 1.5 [easy] The default's `finish` answers `null` for any handle and removes no file (verify: node --test tests/lets/delegate/default-resolver.test.ts) (✓ node --test tests/lets/delegate/default-resolver.test.ts passed)
 - [x] 1.6 [medium] `lets` holds no headless runner: `runCommand`, `HEADLESS_EXECUTOR`, `familiesFromExecutors`, `pickFamily` and `scrubbedEnv` go with their tests, `env.ts` keeps `Env` and `SESSION_MARKERS`, and `EXIT.noFamily` becomes `EXIT.noSession` with the value 3 (verify: pnpm check) (✓ pnpm check passed)
-- [ ] 1.7 [easy] `lets delegate review --help` describes exit 3 as "no fresh session can run here: no resolver started one, or none of its families is available", and `lets delegate --help` and the `review` description no longer say the default runs codex, claude or agy (verify: node --test tests/lets/delegate/cli.test.ts)
+- [x] 1.7 [easy] `lets delegate review --help` describes exit 3 as "no fresh session can run here: no resolver started one, or none of its families is available", and `lets delegate --help` and the `review` description no longer say the default runs codex, claude or agy (verify: node --test tests/lets/delegate/cli.test.ts) (✓ node --test tests/lets/delegate/cli.test.ts passed)
 
 ## 2. Docs and skills [depends-on: 1]
 

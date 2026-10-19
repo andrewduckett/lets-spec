@@ -58,8 +58,9 @@ The Nix wrapper sets WORKFLOW_RELEASE.`;
 const DELEGATE_HELP = `
 A resolver turns each request into a real session. lets asks, in order:
 the executable LETS_SPEC_RESOLVER names, lets-delegate-resolver on PATH,
-then the built-in default, which runs codex, claude or agy headless. The
-first that does not decline answers.
+then the built-in default. The first that does not decline answers. The
+default starts no session: a review exits 3, and a handoff gives back the
+prompt to carry on by hand.
 
 Run lets delegate from the repo root.`;
 
@@ -72,7 +73,8 @@ answered is not the source family.
 Exit codes:
   0  the final message is on stdout
   2  usage error
-  3  no family is available, the source's included
+  3  no fresh session can run here: no resolver started one, or none of
+     its families is available
   4  the harness refused the session, or the resolver broke the contract
   5  the session failed: an error, it stopped to ask, or an empty message
   6  the session did not finish in time
@@ -144,7 +146,7 @@ const delegate = program
 delegate
   .command('review')
   .summary('run a prompt in a fresh, read-only session and wait for its answer')
-  .description('Run a prompt in a fresh, read-only session, from another model family when one is available, and wait for its final message.')
+  .description('Run a prompt in a fresh, read-only session, and wait for its final message. The resolver picks the model family.')
   .requiredOption('--name <name>', 'a label for the session, normalized to lowercase kebab-case')
   .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
   .addOption(new Option('--source-family <family>', 'the model family that wrote the work').choices(FAMILIES).makeOptionMandatory())
