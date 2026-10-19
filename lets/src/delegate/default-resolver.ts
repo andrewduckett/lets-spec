@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { Child, Io } from '../io.ts';
 import { scrubbedEnv } from './env.ts';
 import type { Env } from './env.ts';
-import { exitCodeOf, SessionFailed, SpawnError, TimeoutError } from './errors.ts';
+import { exitCodeOf, NoFamilyError } from './errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, pickFamily } from './families.ts';
 import { normalizeName } from './protocol.ts';
 import type { Effort, Family, Handle, Requests, Responses, RunRequest, StartRequest, Verb } from './protocol.ts';
@@ -64,26 +64,10 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
     io.writeFile(promptPath(cwd, name), prompt);
   }
 
-  async function run(request: RunRequest): Promise<Responses['run']> {
-    const { cwd, name, prompt, sourceFamily, effort, timeoutMinutes } = request;
-    const { family } = pickFamily({ sourceFamily, available: familiesFromExecutors(io.commandExists) });
-    writePrompt(cwd, name, prompt);
-    const { cmd, args, input, readResultFrom } = runCommand({ family, effort, prompt, timeoutMinutes, lastMessagePath: lastMessagePath(cwd, name) });
-
-    const started: { child?: Child } = {};
-    const finished = io.execFile(cmd, args, { cwd, env: scrubbedEnv(env), input, started: (child) => { started.child = child; } });
-    const result = await withTimeout(io, finished, timeoutMinutes * 60000);
-    if (result === null) {
-      // Do not leave the session running, and spending tokens, after we stop waiting.
-      started.child?.kill();
-      throw new TimeoutError(`${cmd} did not finish in ${timeoutMinutes} minutes`);
-    }
-    if (result.code === null) throw new SpawnError(`cannot run ${cmd}: ${result.stderr}`);
-    if (result.code !== 0) throw new SessionFailed(`${cmd} failed: exit ${result.code}: ${result.stderr.slice(-500)}`);
-
-    const text = (readResultFrom === 'stdout' ? result.stdout : io.readFile(readResultFrom)) ?? '';
-    if (text.trim() === '') throw new SessionFailed(`${cmd} gave an empty final message`);
-    return { resolver: RESOLVER, text, family, handle: { kind: 'process', id: String(started.child?.pid ?? ''), name } };
+  // The default starts no review session. Exit 3 sends the review skills
+  // to their subagent step.
+  function run(): never {
+    throw new NoFamilyError('the default resolver runs no review');
   }
 
   function start({ cwd, name, prompt }: StartRequest): Responses['start'] {
@@ -112,7 +96,7 @@ export function createDefaultResolver(io: Io, env: Env): DefaultResolver {
 
   async function answer(verb: Verb, request: Requests[Verb]) {
     if (verb === 'probe') return { resolver: RESOLVER };
-    if (verb === 'run') return run(request as RunRequest);
+    if (verb === 'run') return run();
     if (verb === 'start') return start(request as StartRequest);
     return finish(request as Requests['finish']);
   }

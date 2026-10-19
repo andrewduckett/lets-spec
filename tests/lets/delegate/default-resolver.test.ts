@@ -48,82 +48,12 @@ test('probe answers default', async () => {
     { code: 0, response: { resolver: 'default' }, stderr: '' });
 });
 
-test('run picks the first other family on PATH, scrubs the env, and reads the last-message file', async () => {
-  const io = fakeIo({
-    commands: ['claude', 'codex'],
-    results: [(cmd, args) => {
-      io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS');
-      return { stdout: 'noise', stderr: '', code: 0 };
-    }],
-  });
+test('run exits 3, answers nothing, and starts nothing, even with every executor on PATH', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
   const { code, response } = await resolver(io).handle('run', runRequest('claude'));
-  assert.equal(code, 0);
-  assert.deepEqual(response, { resolver: 'default', text: 'FINDINGS', family: 'gpt', handle: { kind: 'process', id: '4242', name: 'x' } });
-  assert.equal(io.files.get(`${DIR}/x.prompt.md`), 'PROMPT');
-  const [[cmd, , opts]] = io.calls;
-  assert.equal(cmd, 'codex');
-  assert.equal(opts.cwd, '/r');
-  assert.deepEqual(opts.env, { PATH: '/bin' });
-  assert.equal(opts.input, 'PROMPT');
-});
-
-test('run falls back to the source family when no other is on PATH', async () => {
-  const io = fakeIo({ commands: ['claude'], results: [{ stdout: 'FINDINGS', stderr: '', code: 0 }] });
-  const { code, response } = await resolver(io).handle('run', runRequest('claude'));
-  assert.equal(code, 0);
-  assert.equal(response?.family, 'claude');
-  assert.equal(io.calls[0][0], 'claude');
-});
-
-test('run with no executor on PATH exits 3 and starts nothing', async () => {
-  const io = fakeIo();
-  const { code, response, stderr } = await resolver(io).handle('run', runRequest('gpt'));
   assert.equal(code, 3);
   assert.equal(response, null);
-  assert.match(stderr, /no family is available/);
   assert.deepEqual(io.calls, []);
-});
-
-test('a prompt with quotes, an apostrophe and a newline arrives unchanged', async () => {
-  const agy = fakeIo({ commands: ['agy'], results: [{ stdout: 'ok', stderr: '', code: 0 }] });
-  await resolver(agy).handle('run', runRequest('claude', TRICKY));
-  const [[, agyArgs]] = agy.calls;
-  assert.equal(agyArgs[agyArgs.indexOf('-p') + 1], TRICKY);
-  const claude = fakeIo({ commands: ['claude'], results: [{ stdout: 'ok', stderr: '', code: 0 }] });
-  await resolver(claude).handle('run', runRequest('gpt', TRICKY));
-  assert.equal(claude.calls[0][2].input, TRICKY);
-});
-
-test('a non-zero executor is code 5 with the tail of stderr, and leaves the prompt file', async () => {
-  const io = fakeIo({ commands: ['claude'], results: [{ stdout: '', stderr: `${'x'.repeat(600)}model refused`, code: 1 }] });
-  const { code, stderr } = await resolver(io).handle('run', runRequest('gpt'));
-  assert.equal(code, 5);
-  assert.match(stderr, /exit 1: x+model refused/);
-  assert.ok(stderr.length < 600);
-  assert.ok(io.files.has(`${DIR}/x.prompt.md`));
-});
-
-test('an empty final message is code 5', async () => {
-  const io = fakeIo({ commands: ['claude'], results: [{ stdout: ' \n', stderr: '', code: 0 }] });
-  const { code, stderr } = await resolver(io).handle('run', runRequest('gpt'));
-  assert.equal(code, 5);
-  assert.match(stderr, /empty final message/);
-});
-
-test('an executor that cannot start is code 4', async () => {
-  const io = fakeIo({ commands: ['claude'], results: [{ stdout: '', stderr: 'spawn claude ENOENT', code: null }] });
-  const { code, stderr } = await resolver(io).handle('run', runRequest('gpt'));
-  assert.equal(code, 4);
-  assert.match(stderr, /ENOENT/);
-});
-
-test('past timeoutMinutes the child is killed and the code is 6', async () => {
-  const io = fakeIo({ commands: ['claude'], results: [new Promise(() => {})] });
-  const { code, stderr } = await resolver(io).handle('run', runRequest('gpt'));
-  assert.equal(code, 6);
-  assert.match(stderr, /45 minutes/);
-  assert.deepEqual(io.killed, [4242]);
-  assert.deepEqual(io.sleeps, [45 * 60000]);
 });
 
 test('start writes the prompt file and returns instructions naming the first of claude, codex, agy', async () => {

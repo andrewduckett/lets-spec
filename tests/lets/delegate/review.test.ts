@@ -122,20 +122,9 @@ test('LETS_SPEC_RESOLVER naming a missing file is exit 2, naming it', async () =
   assert.match(t.stderr(), /\/no\/such\/resolver/);
 });
 
-test('with no resolver, the default runs the first other family on PATH', async () => {
-  const t = commandDeps({ resolver: false, commands: ['claude'], results: [{ stdout: 'DEFAULT FINDINGS', stderr: '', code: 0 }] });
-  assert.equal(await run(options({ sourceFamily: 'gpt' }), t.deps), 0);
-  assert.equal(t.stdout(), 'DEFAULT FINDINGS\n');
-  const meta = JSON.parse(t.stderr());
-  assert.equal(meta.resolver, 'default');
-  assert.equal(meta.family, 'claude');
-  assert.equal(meta.independent, true);
-  assert.deepEqual(meta.handle, { kind: 'process', id: '4242', name: 'x-plan-review' });
-  assert.ok(t.io.removed.includes('/repo/.workspace/lets-delegate/x-plan-review.prompt.md'), 'finish removed the scratch prompt');
-});
-
-test('with no resolver and no executor, the review is exit 3', async () => {
-  const t = commandDeps({ resolver: false });
+test('with no resolver, the review is exit 3, prints nothing, and starts no process', async () => {
+  const t = commandDeps({ resolver: false, commands: ['codex', 'claude', 'agy'] });
   assert.equal(await run(options(), t.deps), 3);
-  assert.match(t.stderr(), /no family is available/);
+  assert.equal(t.stdout(), '');
+  assert.deepEqual(t.io.calls.filter(([cmd]) => cmd !== 'git'), []);
 });
