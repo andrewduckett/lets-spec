@@ -647,7 +647,7 @@ both modes.
 | Mode | What `lets sync` does | Who it suits |
 |---|---|---|
 | `committed` (default) | Writes the copies, and asks you to commit them. Removes its block from `.gitignore`, if one is there. | Every project. Every clone has the skills. |
-| `ignored` | Writes the same copies, and keeps a block in `.gitignore` that ignores them. | A project that wants no skill text in its history, and whose every user installs Let's Spec with Nix or mise. |
+| `ignored` | Writes the same copies, says that git ignores them, and keeps a block in `.gitignore` that ignores them. | A project that wants no skill text in its history, and whose every user installs Let's Spec with Nix or mise. |
 
 You set the mode with `letsSpec.skills` in the Nix module, or with the
 `LETS_SPEC_SKILLS` environment variable.
@@ -668,10 +668,15 @@ When you switch modes, the next run tells you what to do:
 | From | To | `lets sync` says |
 |---|---|---|
 | `ignored` | `committed` | `lets-spec: removed the lets-spec skills block from .gitignore. Run: git add .agents/skills openspec/schemas, then commit.` |
-| `committed` | `ignored` | `lets-spec: added the lets-spec skills block to .gitignore. Run: git rm -r --cached .agents/skills/lets-* .agents/skills/openspec-* openspec/schemas/lets-*, then commit.` |
+| `committed` | `ignored` | `lets-spec: added the lets-spec skills block to .gitignore. Commit it.` Then, under `problem(s) to fix`: `git still tracks lets-spec copies that .gitignore ignores. Run: git rm -r --cached --ignore-unmatch -- '.agents/skills/lets-*' '.agents/skills/openspec-*' 'openspec/schemas/lets-*', then commit.` |
 
 Git ignores only files it does not track yet. So after a switch to
-`ignored`, run the `git rm -r --cached` command it gives.
+`ignored`, run the `git rm -r --cached` command it gives, then commit. The
+command keeps the copies on disk, and works in bash and zsh even when one
+of its patterns matches nothing. Until you run it, every `lets sync` run
+lists the problem again. The run still exits 0, and `lets sync --check`
+does not fail on it. A project that never tracked the copies sees no
+such problem.
 
 ### What `--check` checks
 
