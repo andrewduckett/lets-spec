@@ -21,6 +21,7 @@
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { SessionFailed, SpawnError } from './errors.ts';
+import { withEffort, withoutEffort } from './families.ts';
 import type { Available } from './families.ts';
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
 import type { Db, Io } from './io.ts';
@@ -69,13 +70,13 @@ export function familiesFromT3Manifest(manifest: Manifest, effort: Effort): Avai
 // effort is added in its place.
 export function defaultModel(manifest: Manifest, family: Family): string | null {
   const model = manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
-  return family === 'gemini' && model !== null ? model.replace(/-(low|medium|high)$/, '') : model;
+  return family === 'gemini' && model !== null ? withoutEffort(model) : model;
 }
 
 // A gemini model takes the effort as a suffix, unless it already has one.
 export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort }): ModelSelection {
   const option = T3_EFFORT_OPTION[family];
-  const id = family === 'gemini' && model !== null && !/-(low|medium|high)$/.test(model) ? `${model}-${effort}` : model;
+  const id = family === 'gemini' && model !== null ? withEffort(model, effort) : model;
   return { instanceId: T3_INSTANCE[family], model: id, options: option ? [{ id: option, value: effort }] : [] };
 }
 

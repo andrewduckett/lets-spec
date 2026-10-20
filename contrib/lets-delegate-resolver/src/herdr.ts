@@ -20,7 +20,7 @@
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
 import { scrubbedEnv } from './env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from './errors.ts';
-import { familiesFromExecutors, HEADLESS_EXECUTOR } from './families.ts';
+import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from './families.ts';
 import type { ExecResult, Io } from './io.ts';
 import type { Family } from './protocol.ts';
 
@@ -30,15 +30,13 @@ const READ_LINES = '2000';
 export const HERDR_KIND: Record<Family, string> = { gpt: 'codex', claude: 'claude', gemini: 'agy' };
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
-// agy lists each gemini model once per effort, so its id carries the effort.
-const geminiModel = (model: string | null, effort: string) => (model && !/-(low|medium|high)$/.test(model) ? `${model}-${effort}` : model);
 
 // The argv after `--` in `herdr agent start`.
 export function agentArgs({ kind, family, model, effort, prompt, name }: Omit<SpawnRequest, 'cwd' | 'readOnly'>): string[] {
   if (kind === 'start') return ['--remote-control', name, ...modelArgs('--model', model), prompt];
   if (family === 'gpt') return ['-s', 'read-only', ...modelArgs('-m', model)];
   if (family === 'claude') return ['--permission-mode', 'plan', '--effort', effort!, ...modelArgs('--model', model)];
-  return ['--mode', 'plan', '--effort', effort!, ...modelArgs('--model', geminiModel(model, effort!))];
+  return ['--mode', 'plan', '--effort', effort!, ...modelArgs('--model', model && withEffort(model, effort!))];
 }
 
 // The error code in a failed herdr command's JSON, or null.

@@ -7,10 +7,17 @@
 // available, skipping the source; the source's own family when no other is.
 import { NoFamilyError } from './errors.ts';
 import { FAMILIES } from './protocol.ts';
-import type { Family, Reviewer } from './protocol.ts';
+import type { Effort, Family, Reviewer } from './protocol.ts';
 
 // The command that runs each family headless.
 export const HEADLESS_EXECUTOR: Record<Family, string> = { gpt: 'codex', claude: 'claude', gemini: 'agy' };
+
+// gemini model ids carry the effort, as gemini-<version>-<effort>, because
+// agy and t3 list each model once per effort.
+const EFFORT_SUFFIX = /-(low|medium|high)$/;
+export const withoutEffort = (model: string) => model.replace(EFFORT_SUFFIX, '');
+// The model with effort added, unless it already names one.
+export const withEffort = (model: string, effort: Effort) => (EFFORT_SUFFIX.test(model) ? model : `${model}-${effort}`);
 
 // Model ids per family, best first. An empty list means the family is not
 // available; [null] means "the executor's default model".
