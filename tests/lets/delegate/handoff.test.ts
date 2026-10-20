@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/handoff.ts';
-import { commandDeps } from './fixtures/command-deps.ts';
+import { commandDeps, PROMPT_FILE } from './fixtures/command-deps.ts';
 
 const options = { name: 'Fix Login', promptFile: 'p.md' };
 
@@ -18,6 +18,13 @@ test('the start request has readOnly false and interactive true', async () => {
   assert.deepEqual(t.resolverCalls(), [['start', {
     protocol: 1, cwd: '/repo', name: 'fix-login', prompt: 'PROMPT TEXT', readOnly: false, interactive: true,
   }]]);
+});
+
+test('the start request has no reviewers, whatever the config holds', async () => {
+  const config = { version: 1, resolver: null, reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }] };
+  const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': JSON.stringify(config) } });
+  await run(options, t.deps);
+  assert.equal('reviewers' in t.resolverCalls()[0][1], false);
 });
 
 test('with no resolver, the default hands back the prompt and where it is saved', async () => {

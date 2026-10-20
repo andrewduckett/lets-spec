@@ -3,13 +3,15 @@
 // clean up, and reports which family answered. No process access here;
 // everything comes through deps.
 import type { Deps } from '../io.ts';
+import { configPath, readConfig } from './config.ts';
+import type { Config } from './config.ts';
 import { EXIT, exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { callResolver, resolve, timeoutFor } from './lookup.ts';
 import type { Candidate } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
 import { buildRequest, normalizeName } from './protocol.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
+import type { Effort, Family, Handle, Reviewer } from './protocol.ts';
 
 export type ReviewOptions = { name: string; promptFile: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number };
 
@@ -29,13 +31,18 @@ export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
 async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }: ReviewOptions, deps: Deps) {
   const { io } = deps;
   const started = io.now();
+  const config = readConfig(deps);
   const prompt = readPromptFile(promptFile, deps);
   const cwd = await repoRoot(deps.cwd, io);
   // What is already uncommitted is the user's, not the session's.
   const before = await treeStatus(cwd, io);
 
-  const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes });
-  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd });
+  const reviewers = config === null ? undefined : reviewersFor(config, effort);
+  if (reviewers !== undefined && reviewers.length === 0) {
+    deps.stderr(`lets delegate: no reviewer in ${configPath(deps)} serves effort ${effort}\n`);
+  }
+  const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, reviewers });
+  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd, config });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
     return outcome.code;
@@ -69,6 +76,14 @@ async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }
   const independent = family !== sourceFamily;
   deps.stderr(`${JSON.stringify({ resolver, family, model, independent, handle, gitClean: true, durationSeconds })}\n`);
   return EXIT.ok;
+}
+
+// The config's reviewers that serve effort, in order, as the request holds
+// them: a reviewer without efforts serves every effort.
+function reviewersFor(config: Config, effort: Effort): Reviewer[] {
+  return config.reviewers
+    .filter(({ efforts }) => efforts === undefined || efforts.includes(effort))
+    .map(({ family, model }) => ({ family, model }));
 }
 
 // Tell the resolver that made the session that lets is done with it. ok

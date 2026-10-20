@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -51,6 +51,15 @@ test('the live part runs, checks the tree, finishes, and starts', async () => {
   assert.match(t.output(), /^ok {4}finish with the run's handle exits 0$/m);
   assert.match(t.output(), /^ok {4}start answers with a handle or instructions$/m);
   assert.match(t.output(), /it started fake f-1; close it when you are done/);
+});
+
+test('the live run sends reviewers, and a resolver that ignores them still passes', async () => {
+  const log = join(mkdtempSync(join(tmpdir(), 'lets-conformance-log-')), 'calls');
+  const t = setup({ FAKE_RESOLVER_LOG: log });
+  await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
+  assert.match(t.output(), /^ok {4}run answers with text, a known family and resolver$/m);
+  const [, request] = readFileSync(log, 'utf8').split('\n').find((line) => line.startsWith('run\t'))!.split('\t');
+  assert.ok(Array.isArray(JSON.parse(request).reviewers) && JSON.parse(request).reviewers.length > 0);
 });
 
 test('a live run that fails is reported with its reason', async () => {

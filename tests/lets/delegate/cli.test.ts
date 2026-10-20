@@ -74,3 +74,15 @@ test('neither delegate --help nor review --help says the default runs codex, cla
     assert.doesNotMatch(stdout, /from another model family when one is available/, argv.join(' '));
   }
 });
+
+test('setup with a flag that names an unknown family is a usage error that names it', async () => {
+  const { code, stderr } = await lets('delegate', 'setup', '--model', 'mistral=large');
+  assert.equal(code, 2);
+  assert.match(stderr, /mistral/);
+});
+
+test('setup --help names --write, --json, --order, --model and --resolver', async () => {
+  const { code, stdout } = await lets('delegate', 'setup', '--help');
+  assert.equal(code, 0);
+  for (const flag of ['--write', '--json', '--order', '--model', '--resolver']) assert.match(stdout, new RegExp(flag));
+});

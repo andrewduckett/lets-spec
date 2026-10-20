@@ -20,7 +20,7 @@
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
 import { scrubbedEnv } from './env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from './errors.ts';
-import { familiesFromExecutors } from './families.ts';
+import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from './families.ts';
 import type { ExecResult, Io } from './io.ts';
 import type { Family } from './protocol.ts';
 
@@ -36,7 +36,7 @@ export function agentArgs({ kind, family, model, effort, prompt, name }: Omit<Sp
   if (kind === 'start') return ['--remote-control', name, ...modelArgs('--model', model), prompt];
   if (family === 'gpt') return ['-s', 'read-only', ...modelArgs('-m', model)];
   if (family === 'claude') return ['--permission-mode', 'plan', '--effort', effort!, ...modelArgs('--model', model)];
-  return ['--mode', 'plan', '--effort', effort!, ...modelArgs('--model', model)];
+  return ['--mode', 'plan', '--effort', effort!, ...modelArgs('--model', model && withEffort(model, effort!))];
 }
 
 // The error code in a failed herdr command's JSON, or null.
@@ -70,6 +70,7 @@ export function createAdapter(io: Io): Adapter {
     name: 'herdr',
     detect: () => io.env.HERDR_ENV === '1' && io.commandExists('herdr'),
     availableFamilies: () => familiesFromExecutors(io.commandExists),
+    whyNot: (family) => `${HEADLESS_EXECUTOR[family]} is not on PATH`,
 
     async spawn(request): Promise<HerdrSession> {
       const { kind, name, cwd, family, prompt } = request;

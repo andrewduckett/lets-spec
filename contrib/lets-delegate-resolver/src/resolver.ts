@@ -4,9 +4,9 @@
 // process access here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
 import { exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
-import { pickFamily } from './families.ts';
+import { pickFamily, pickReviewer } from './families.ts';
 import { DECLINE, parseRequest } from './protocol.ts';
-import type { Request, Requests, Response } from './protocol.ts';
+import type { Family, Request, Requests, Response } from './protocol.ts';
 
 // What the process prints, and its exit code.
 export type Answer = { code: number; stdout: string; stderr: string };
@@ -44,8 +44,12 @@ async function answer(verb: string, request: Request, adapters: Adapters): Promi
 
 // Pick a family, start a read-only session, and wait for its final message.
 // A failure leaves the session in place, so a person can read it.
-async function run(adapter: Adapter, { cwd, name, prompt, sourceFamily, effort, timeoutMinutes }: Requests['run']): Promise<Answer> {
-  const { family, model } = pickFamily({ sourceFamily, available: adapter.availableFamilies({ effort }) });
+async function run(adapter: Adapter, { cwd, name, prompt, sourceFamily, effort, timeoutMinutes, reviewers }: Requests['run']): Promise<Answer> {
+  const available = adapter.availableFamilies({ effort });
+  const whyNot = (family: Family) => adapter.whyNot?.(family) ?? `${adapter.name} cannot run ${family}`;
+  const { family, model } = reviewers === undefined
+    ? pickFamily({ sourceFamily, available })
+    : pickReviewer({ sourceFamily, reviewers, available, whyNot });
   const session = await adapter.spawn({ kind: 'run', name, prompt, cwd, family, model, effort, readOnly: true });
   const where = `(${session.handle.kind} ${session.handle.id})`;
   try {

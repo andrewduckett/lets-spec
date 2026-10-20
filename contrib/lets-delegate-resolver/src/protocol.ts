@@ -27,10 +27,14 @@ export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium
 // process. A resolver may add fields; lets passes the handle back whole.
 export type Handle = { kind: string; id: string; [field: string]: unknown };
 
+// A family and model a review may run on. A null model is the tool's own
+// default. lets sends them in the order the user's delegate config gives.
+export type Reviewer = { family: Family; model: string | null };
+
 export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string };
 export type RunRequest = {
   protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; sourceFamily: Family;
-  readOnly: true; interactive: false; effort: Effort; timeoutMinutes: number;
+  readOnly: true; interactive: false; effort: Effort; timeoutMinutes: number; reviewers?: Reviewer[];
 };
 export type StartRequest = { protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; readOnly: false; interactive: true };
 export type FinishRequest = { protocol: typeof PROTOCOL; cwd: string; handle: Handle; ok: boolean };
@@ -47,23 +51,24 @@ export type Response = Responses[Verb];
 // What a caller gives buildRequest: the request without what the verb sets.
 export type Fields = {
   probe: { cwd: string };
-  run: { cwd: string; name: string; prompt: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number };
+  run: { cwd: string; name: string; prompt: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number; reviewers?: Reviewer[] };
   start: { cwd: string; name: string; prompt: string };
   finish: { cwd: string; handle: Handle; ok: boolean };
 };
 
 const builders: { [V in Verb]: (fields: Fields[V]) => Requests[V] } = {
   probe: ({ cwd }) => ({ protocol: PROTOCOL, cwd }),
-  run: ({ cwd, name, prompt, sourceFamily, effort, timeoutMinutes }) => ({
+  run: ({ cwd, name, prompt, sourceFamily, effort, timeoutMinutes, reviewers }) => ({
     protocol: PROTOCOL, cwd, name, prompt, sourceFamily, readOnly: true, interactive: false, effort,
     timeoutMinutes: timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES[effort],
+    ...(reviewers === undefined ? {} : { reviewers }),
   }),
   start: ({ cwd, name, prompt }) => ({ protocol: PROTOCOL, cwd, name, prompt, readOnly: false, interactive: true }),
   finish: ({ cwd, handle, ok }) => ({ protocol: PROTOCOL, cwd, handle, ok }),
 };
 
 // The request for a verb. run takes the default timeout for its effort when
-// none is given.
+// none is given, and has reviewers only when they are given.
 export function buildRequest<V extends Verb>(verb: V, fields: Fields[V]): Requests[V] {
   return (builders[verb] as (fields: Fields[V]) => Requests[V])(fields);
 }
@@ -88,6 +93,7 @@ export function parseRequest(verb: string, text: string): Request {
     check.oneOf('sourceFamily', FAMILIES);
     check.oneOf('effort', EFFORTS);
     check.wholeNumber('timeoutMinutes');
+    check.reviewers('reviewers');
   }
   if (verb === 'finish') {
     check.handle('handle', false);
@@ -188,6 +194,17 @@ function checker(object: Json, what: string, fail: (message: string) => Error) {
     },
     wholeNumber(field: string) {
       if (!Number.isInteger(object[field]) || (object[field] as number) < 1) throw bad(field, 'a whole number of minutes');
+    },
+    // An optional list of reviewers, each a known family and a string or null model.
+    reviewers(field: string) {
+      if (missing(field)) return;
+      const isReviewer = (value: unknown) => typeof value === 'object' && value !== null && !Array.isArray(value)
+        && (FAMILIES as readonly unknown[]).includes((value as Json).family)
+        && (typeof (value as Json).model === 'string' || (value as Json).model === null);
+      const value = object[field];
+      if (!Array.isArray(value) || !value.every(isReviewer)) {
+        throw bad(field, `a list of objects with a family (${FAMILIES.join(', ')}) and a string or null model`);
+      }
     },
     // nullable: the field may be null or absent.
     handle(field: string, nullable: boolean) {

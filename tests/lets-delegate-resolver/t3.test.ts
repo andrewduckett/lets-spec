@@ -137,6 +137,10 @@ test('t3 model selection carries the effort in each provider\'s own option', () 
     { instanceId: 'antigravity', model: 'gemini-3.8-flash-high', options: [] });
 });
 
+test('t3 model selection adds the effort to a gemini model without one', () => {
+  assert.equal(t3ModelSelection({ family: 'gemini', model: 'gemini-3.8-flash', effort: 'high' }).model, 'gemini-3.8-flash-high');
+});
+
 test('findProject matches the workspace root, or names the known projects', () => {
   const db = database();
   addProject(db, { id: 'p1', title: 'lets-spec', root: '/r' });
@@ -446,4 +450,37 @@ test('spawn fails with the add hint when t3 does not know the repo', async () =>
     openDb: () => shared(db),
   });
   await assert.rejects(createAdapter(io).spawn({ ...runRequest, cwd: '/r' }), /t3 project add \/r; known: other/);
+});
+
+// Spawn a run of family with a null model, with a manifest that has
+// defaults, and answer the model selection t3 was sent.
+async function nullModelSelection(family: SpawnRequest['family'], effort: SpawnRequest['effort'] = 'high') {
+  const db = database();
+  addProject(db, { root: '/r' });
+  const log: Log = [];
+  const manifest = { manifest: { currentModels: {}, providers: {
+    codex: { defaults: null }, claudeAgent: { defaults: { chat: 'claude-fable-5-1' } }, antigravity: { defaults: { chat: 'gemini-3.8-flash-high' } },
+  } } };
+  const io = fakeIo({
+    env: {},
+    files: { ...RUNNING, '/home/u/.t3/userdata/model-manifest.json': JSON.stringify(manifest) },
+    results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }, { stdout: 'main\n', stderr: '', code: 0 }],
+    openDb: () => shared(db),
+    fetch: fakeFetch([200], []),
+    WebSocket: fakeWebSocket(LAUNCHED, log),
+  });
+  await createAdapter(io).spawn({ ...runRequest, family, model: null, effort });
+  return (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload.modelSelection;
+}
+
+test('a run with a null model spawns the manifest\'s default chat model for the provider', async () => {
+  assert.equal((await nullModelSelection('claude')).model, 'claude-fable-5-1');
+});
+
+test('a run with a null model spawns null when the provider has no default', async () => {
+  assert.equal((await nullModelSelection('gpt')).model, null);
+});
+
+test('a gemini run with a null model spawns the default at the review\'s effort', async () => {
+  assert.equal((await nullModelSelection('gemini', 'low')).model, 'gemini-3.8-flash-low');
 });

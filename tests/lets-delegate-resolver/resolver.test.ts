@@ -125,3 +125,45 @@ test('finish with a handle no harness makes is exit 4, with nothing on stdout', 
   assert.equal(answer.code, 4);
   assert.equal(answer.stdout, '');
 });
+
+// A run request from a claude author, with reviewers.
+const runWith = (reviewers: object[]) => json({ ...JSON.parse(runRequest), reviewers });
+const spawned = (adapter: { calls: [string, unknown][] }) => adapter.calls.filter(([call]) => call === 'spawn').map(([, request]) => request as SpawnRequest);
+
+test('run takes the first reviewer from another family that the harness can run', async () => {
+  const all = adapters({ detects: true });
+  const answer = await handle('run', runWith([{ family: 'claude', model: null }, { family: 'gpt', model: 'gpt-6-luna' }]), all);
+  assert.equal(answer.code, 0);
+  assert.equal(spawned(all.t3)[0].model, 'gpt-6-luna');
+  assert.equal(JSON.parse(answer.stdout).family, 'gpt');
+});
+
+test('run passes over a reviewer the harness cannot run', async () => {
+  const all = adapters({ detects: true });
+  await handle('run', runWith([{ family: 'gemini', model: 'gemini-3.8-flash' }, { family: 'gpt', model: null }]), all);
+  assert.deepEqual([spawned(all.t3)[0].family, spawned(all.t3)[0].model], ['gpt', null]);
+});
+
+test('run takes the author\'s family when no other reviewer can run', async () => {
+  const all = adapters({ detects: true });
+  const answer = await handle('run', runWith([{ family: 'claude', model: null }]), all);
+  assert.equal(answer.code, 0);
+  assert.equal(JSON.parse(answer.stdout).family, 'claude');
+});
+
+test('run exits 3 when the harness can run no reviewer, naming each one and why', async () => {
+  const all = adapters({ detects: true, available: { gpt: [], claude: [], gemini: [] } });
+  const answer = await handle('run', runWith([{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'gemini', model: null }]), all);
+  assert.equal(answer.code, 3);
+  assert.match(answer.stderr, /gpt\/gpt-6-luna: t3 cannot run gpt/);
+  assert.match(answer.stderr, /gemini\/default: t3 cannot run gemini/);
+  assert.deepEqual(spawned(all.t3), []);
+});
+
+test('run exits 3 on an empty reviewers list, starting nothing', async () => {
+  const all = adapters({ detects: true });
+  const answer = await handle('run', runWith([]), all);
+  assert.equal(answer.code, 3);
+  assert.match(answer.stderr, /no reviewers/);
+  assert.deepEqual(spawned(all.t3), []);
+});

@@ -486,6 +486,40 @@ The skills ask for a session with `lets delegate`:
 
 Run `lets delegate review --help` for the options and the exit codes.
 
+### Set up delegation
+
+Run this once on each machine, and again after you install a harness, a
+CLI or a resolver:
+
+```bash
+lets delegate setup
+```
+
+It shows what your machine offers: the harness it runs in (T3 Code,
+herdr or none), the family CLIs on your `PATH` (`codex`, `claude`, `agy`),
+and the models each account can run. Then it proposes a config. It starts
+no session and spends no tokens.
+
+The config names the resolver to ask, and lists the reviewers in the
+order a review should try them. Each reviewer is a family and a model, or
+`null` for the CLI's default. A review takes the first reviewer from a
+family other than the author's that the harness can run.
+
+Setup writes nothing until you add `--write`. Change the proposal first
+with these flags:
+
+| Flag | What it changes |
+|---|---|
+| `--order gemini,gpt` | The reviewers' order. A family you leave out is dropped. |
+| `--model gpt=gpt-5.6-terra` | One family's model. Give it once per family. |
+| `--resolver <path>` or `--resolver none` | The resolver to ask, or none for the built-in default |
+
+The config is `~/.config/lets-delegate/config.json`, or
+`$XDG_CONFIG_HOME/lets-delegate/config.json` when that is set. To limit a
+reviewer to some efforts, add `"efforts": ["high"]` to its entry. Add
+`--json` for output an agent can read. Without a config, `lets` works as
+before.
+
 ### What a review gets
 
 A review gets the best of these that your machine offers. `lets` tries
@@ -506,8 +540,10 @@ A resolver is the program that turns a request into a real session.
 `lets` asks these in order, and the first that does not decline answers:
 
 1. The executable that `LETS_SPEC_RESOLVER` names, when it is set.
-2. `lets-delegate-resolver` on your `PATH`.
-3. The built-in default, which never declines.
+2. The resolver your [delegate config](#set-up-delegation) names. If it is
+   missing, `lets` exits 2 and says to run `lets delegate setup` again.
+3. `lets-delegate-resolver` on your `PATH`.
+4. The built-in default, which never declines.
 
 The built-in default starts no session, and picks no model family. For a
 review, it runs nothing: `lets delegate review` exits 3, and the review
@@ -534,7 +570,8 @@ Install it once for your user, with home-manager, a Nix profile or the
 release tarball. It is never part of a project: it answers for your
 machine. See
 [its README](contrib/lets-delegate-resolver/README.md#install-it) for the
-steps.
+steps. Then run `lets delegate setup --write`, so reviews use the models
+your accounts can run.
 
 ### Write your own resolver
 

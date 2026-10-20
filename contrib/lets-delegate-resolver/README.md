@@ -27,6 +27,10 @@ repository. `lets` finds it as `lets-delegate-resolver` on your `PATH`.
 It needs Node 26 or later. It runs `t3`, `herdr` and `git` from your
 `PATH`.
 
+After you install it, run `lets delegate setup --write`. It records this
+resolver in your delegate config, with the models your accounts can run.
+A review then runs the first of those models that T3 or herdr can start.
+
 ### With home-manager
 
 Add this repo as a flake input, then add the package:
@@ -130,8 +134,17 @@ its definition. The code that checks it is
 
 1. The executable that `LETS_SPEC_RESOLVER` names, when it is set. If the
    path is missing or not executable, `lets` exits 2.
-2. `lets-delegate-resolver` on your `PATH`.
-3. The built-in default, which never declines.
+2. The resolver the user's delegate config names: `resolver` in
+   `~/.config/lets-delegate/config.json`, or under `XDG_CONFIG_HOME`.
+   `lets delegate setup` writes it. When the lookup reaches this
+   resolver and it is missing or not executable, `lets` exits 2 and asks
+   no later one.
+3. `lets-delegate-resolver` on your `PATH`. When it is the same file as
+   the configured resolver, it is asked once.
+4. The built-in default, which never declines.
+
+Only `lets` reads the config. A resolver learns the user's reviewers from
+the `reviewers` field of the `run` request.
 
 ### How `lets` runs a resolver
 
@@ -163,8 +176,16 @@ verb.
 | `interactive` | `run`, `start` | `false` for `run`, `true` for `start` |
 | `effort` | `run` | `low`, `medium` or `high` |
 | `timeoutMinutes` | `run` | A whole number. By default 15 for `low` and `medium`, and 45 for `high`. |
+| `reviewers` | `run`, optional | The families and models the user allows for this effort, in their order: a list of `{ family, model }`, where `model` is a string or `null` for the tool's default. It is absent when the user has no delegate config, and may be empty. A resolver may ignore it. |
 | `handle` | `finish` | A handle this resolver returned |
 | `ok` | `finish` | `true` when the review succeeded, `false` when the session should stay for a person to read |
+
+This resolver walks `reviewers` in order. It runs the first reviewer from
+a family other than `sourceFamily` that its harness can run, else the
+first it can run at all. When it can run none, it exits 3 and names each
+reviewer it skipped and why. For `gemini`, it adds the effort to the
+model, as `gemini-3.8-flash-high`. Without `reviewers`, it picks the
+family itself.
 
 ### The response
 

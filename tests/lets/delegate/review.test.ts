@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/review.ts';
 import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
-import { commandDeps } from './fixtures/command-deps.ts';
+import { commandDeps, PROMPT_FILE } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
   ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', ...over });
@@ -28,6 +28,37 @@ test('the run request carries the need, with readOnly true and interactive false
     protocol: 1, cwd: '/repo', name: 'x-plan-review', prompt: 'PROMPT TEXT', sourceFamily: 'claude',
     readOnly: true, interactive: false, effort: 'high', timeoutMinutes: 45,
   });
+});
+
+const CONFIG = '/home/u/.config/lets-delegate/config.json';
+// commandDeps with a delegate config that holds reviewers.
+const withReviewers = (reviewers: object[]) => commandDeps({
+  files: { [PROMPT_FILE]: 'PROMPT TEXT', [CONFIG]: JSON.stringify({ version: 1, resolver: null, reviewers }) },
+});
+
+test('the run request carries the config\'s reviewers that serve the effort, as family and model', async () => {
+  const t = withReviewers([{ family: 'gpt', model: 'gpt-6-luna', efforts: ['high'] }, { family: 'gpt', model: 'gpt-5.6-luna' }]);
+  await run(options({ effort: 'low' }), t.deps);
+  assert.deepEqual(t.resolverCalls()[0][1].reviewers, [{ family: 'gpt', model: 'gpt-5.6-luna' }]);
+});
+
+test('when no reviewer serves the effort, stderr names the config file and the effort', async () => {
+  const t = withReviewers([{ family: 'gpt', model: 'gpt-6-luna', efforts: ['high'] }]);
+  await run(options({ effort: 'low' }), t.deps);
+  assert.deepEqual(t.resolverCalls()[0][1].reviewers, []);
+  assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
+});
+
+test('a config with no reviewers at all also names the file and the effort on stderr', async () => {
+  const t = withReviewers([]);
+  await run(options({ effort: 'low' }), t.deps);
+  assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
+});
+
+test('an invalid config is exit 2, naming the file and the bad value', async () => {
+  const t = withReviewers([{ family: 'mistral', model: null }]);
+  assert.equal(await run(options(), t.deps), 2);
+  assert.match(t.stderr(), new RegExp(`${CONFIG}.*mistral`));
 });
 
 test('the timeout is the one given, else the default by effort', async () => {

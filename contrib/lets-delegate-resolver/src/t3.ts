@@ -21,6 +21,7 @@
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { SessionFailed, SpawnError } from './errors.ts';
+import { withEffort, withoutEffort } from './families.ts';
 import type { Available } from './families.ts';
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
 import type { Db, Io } from './io.ts';
@@ -45,7 +46,12 @@ const T3_EFFORT_OPTION: Record<Family, string | null> = { gpt: 'reasoningEffort'
 const START_MODEL = 'claude-opus-5-5';
 
 export type ModelSelection = { instanceId: string; model: string | null; options: { id: string; value: string }[] };
-type Manifest = { manifest: { currentModels: Record<string, string[] | undefined> } };
+type Manifest = {
+  manifest: {
+    currentModels: Record<string, string[] | undefined>;
+    providers?: Record<string, { defaults?: { chat?: string } | null } | undefined>;
+  };
+};
 type Project = { project_id: string; title: string; workspace_root: string; default_model_selection_json: string | null };
 
 // t3 lists gemini once per effort, as gemini-<version>-<effort>. Put the one
@@ -59,9 +65,19 @@ export function familiesFromT3Manifest(manifest: Manifest, effort: Effort): Avai
   return families;
 }
 
+// The provider's default chat model in the manifest, or null when it has none.
+// gemini's default names an effort, which is dropped, so the review's own
+// effort is added in its place.
+export function defaultModel(manifest: Manifest, family: Family): string | null {
+  const model = manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
+  return family === 'gemini' && model !== null ? withoutEffort(model) : model;
+}
+
+// A gemini model takes the effort as a suffix, unless it already has one.
 export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort }): ModelSelection {
   const option = T3_EFFORT_OPTION[family];
-  return { instanceId: T3_INSTANCE[family], model, options: option ? [{ id: option, value: effort }] : [] };
+  const id = family === 'gemini' && model !== null ? withEffort(model, effort) : model;
+  return { instanceId: T3_INSTANCE[family], model: id, options: option ? [{ id: option, value: effort }] : [] };
 }
 
 export function baseDir(env: Io['env'], homedir: string): string {
@@ -288,6 +304,8 @@ export async function launch(io: Io, server: Server, input: ReturnType<typeof bu
 
 export function createAdapter(io: Io): Adapter {
   const databasePath = () => `${userdata(io)}/statev2.sqlite`;
+  const manifestPath = () => `${userdata(io)}/model-manifest.json`;
+  const readManifest = (): Manifest | null => (io.exists(manifestPath()) ? JSON.parse(io.readFile(manifestPath())) : null);
 
   // Open the database, run read(db), and close it again.
   function withDb<T>(read: (db: Db) => T): T {
@@ -328,9 +346,9 @@ export function createAdapter(io: Io): Adapter {
     },
 
     availableFamilies({ effort }) {
-      const path = `${userdata(io)}/model-manifest.json`;
-      if (!io.exists(path)) return { gpt: [], claude: [], gemini: [] };
-      return familiesFromT3Manifest(JSON.parse(io.readFile(path)), effort);
+      const manifest = readManifest();
+      if (manifest === null) return { gpt: [], claude: [], gemini: [] };
+      return familiesFromT3Manifest(manifest, effort);
     },
 
     async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
@@ -339,7 +357,10 @@ export function createAdapter(io: Io): Adapter {
       const repoRoot = resolve(await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']), '..');
       const project = withDb((db) => findProject(db, repoRoot));
       const branch = (await git(cwd, ['branch', '--show-current'])) || null;
-      const modelSelection = kind === 'run' ? t3ModelSelection({ family, model, effort: effort! }) : startSelection(project);
+      // A null model is the provider's default; with none, t3 picks its own.
+      const manifest = model === null && kind === 'run' ? readManifest() : null;
+      const runModel = model ?? (manifest === null ? null : defaultModel(manifest, family));
+      const modelSelection = kind === 'run' ? t3ModelSelection({ family, model: runModel, effort: effort! }) : startSelection(project);
       const token = await readToken(io);
       const { threadId } = await launch(io, { origin, token }, buildLaunch({
         threadId: randomUUID(),
