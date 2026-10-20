@@ -1,7 +1,7 @@
 ## 1. Shared contracts
 
 - [x] 1.1 [easy] A `run` request carries an optional `reviewers` list: `buildRequest` adds it only when given, `parseRequest` accepts entries with a known `family` and a string or `null` `model`, and rejects any other entry with a message that names the field; the contrib copy of `protocol.ts` is updated to match (verify: `node --test tests/lets/delegate/protocol.test.ts tests/lets-delegate-resolver/copies.test.ts`) (✓ `node --test tests/lets/delegate/protocol.test.ts tests/lets-delegate-resolver/copies.test.ts` passed)
-- [ ] 1.2 [medium] `readConfig(deps)` in `lets/src/delegate/config.ts` returns `null` when `$XDG_CONFIG_HOME/lets-delegate/config.json` (or `~/.config/...` when unset) is absent, the parsed config when it is valid, and throws a `UsageError` that names the file and the bad value for a wrong `version`, an unknown family, or a bad `model` or `efforts`; `Io` gains `homedir()` (verify: `node --test tests/lets/delegate/config.test.ts`)
+- [x] 1.2 [medium] `readConfig(deps)` in `lets/src/delegate/config.ts` returns `null` when `$XDG_CONFIG_HOME/lets-delegate/config.json` (or `~/.config/...` when unset) is absent, the parsed config when it is valid, and throws a `UsageError` that names the file and the bad value for a wrong `version`, an unknown family, or a bad `model` or `efforts`; `Io` gains `homedir()` (verify: `node --test tests/lets/delegate/config.test.ts`) (✓ `node --test tests/lets/delegate/config.test.ts` passed)
 
 ## 2. lets uses the config [depends-on: 1]
 

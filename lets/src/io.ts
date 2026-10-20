@@ -5,6 +5,7 @@ import {
   accessSync, chmodSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
   readlinkSync, rmSync, statSync, symlinkSync, writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
@@ -45,6 +46,8 @@ export type Io = {
   commandExists(cmd: string): boolean;
   // A file this process may run.
   isExecutable(path: string): boolean;
+  // The user's home folder.
+  homedir(): string;
   now(): number;
   // Rejects when signal aborts, so a caller can cancel a long wait.
   sleep(ms: number, signal?: AbortSignal): Promise<void>;
@@ -141,6 +144,7 @@ export function realIo(): Io {
         return false;
       }
     },
+    homedir: () => homedir(),
     now: () => Date.now(),
     sleep: (ms, signal) => setTimeout(ms, undefined, { signal }),
   };
