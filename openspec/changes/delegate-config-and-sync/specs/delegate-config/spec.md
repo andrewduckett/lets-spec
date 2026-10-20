@@ -27,14 +27,18 @@ The config SHALL be one JSON object in `$XDG_CONFIG_HOME/lets-delegate/config.js
 - **THEN** `/a` is asked first
 
 ### Requirement: A missing configured resolver stops the command
-When the config names a resolver that does not exist or cannot be run, `lets delegate` SHALL exit 2, name the path, and say to run `lets delegate setup` again. It SHALL ask no other resolver.
+When the lookup reaches the resolver the config names, and that resolver does not exist or cannot be run, `lets delegate` SHALL exit 2, name the path, and say to run `lets delegate setup` again. It SHALL ask no later resolver. A resolver earlier in the order that answers is not affected.
 
 #### Scenario: The resolver was removed
-- **WHEN** the config names `/nix/store/gone/bin/lets-delegate-resolver`, which does not exist
+- **WHEN** `LETS_SPEC_RESOLVER` is unset, and the config names `/nix/store/gone/bin/lets-delegate-resolver`, which does not exist
 - **THEN** `lets delegate review` exits 2, and stderr contains that path and `lets delegate setup`
 
+#### Scenario: The environment's resolver answers first
+- **WHEN** `LETS_SPEC_RESOLVER` names a resolver that answers the review, and the config names a path that does not exist
+- **THEN** `lets delegate review` exits 0 with that resolver's answer, and stderr does not name the config's path
+
 ### Requirement: A review sends the reviewers for its effort
-`lets delegate review` SHALL add a `reviewers` field to the `run` request. It SHALL hold, in config order, each reviewer that has no `efforts` or whose `efforts` include the review's effort, as `family` and `model`. When there is no config file, the request SHALL have no `reviewers` field.
+`lets delegate review` SHALL add a `reviewers` field to the `run` request. It SHALL hold, in config order, each reviewer that has no `efforts` or whose `efforts` include the review's effort, as `family` and `model`. When the config has reviewers but none serves the effort, `lets delegate review` SHALL say so on stderr, naming the config file and the effort. When there is no config file, the request SHALL have no `reviewers` field.
 
 #### Scenario: Effort filters the list
 - **WHEN** the config's reviewers are `gpt`/`gpt-6-luna` for `high`, then `gpt`/`gpt-5.6-luna`, and the review's effort is `low`
@@ -70,8 +74,8 @@ When a `run` request has `reviewers` and the harness can run none of them, the c
 - **THEN** it exits 3, and stderr names `gpt` and says `codex` is not on `PATH`
 
 #### Scenario: An empty list
-- **WHEN** `reviewers` is `[]`
-- **THEN** the resolver exits 3, and `lets delegate review` exits 3
+- **WHEN** the config's reviewers all have `efforts` `["high"]`, and the review's effort is `low`
+- **THEN** the request's `reviewers` is `[]`, the resolver exits 3, and `lets delegate review` exits 3 with stderr that names the config file and says no reviewer serves effort `low`
 
 ### Requirement: No list keeps the resolver's own choice
 When a `run` request has no `reviewers` field, the contrib resolver SHALL choose the family and model as it did before this field existed.

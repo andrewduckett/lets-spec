@@ -18,7 +18,7 @@ Handoffs do not use the reviewer list (D16). Installing or updating the resolver
 
 ### New Capabilities
 - `delegate-setup`: what `lets delegate setup` detects, how it shows its findings, the config it proposes, and how `--write` and its flags write it.
-- `delegate-config`: how `lets delegate` uses the user config: the config's resolver in the lookup, the reviewer list in the `run` request, and how the contrib resolver chooses from that list.
+- `delegate-config`: how `lets delegate` uses the user config. It covers the config's resolver in the lookup, the reviewer list in the `run` request, and how the contrib resolver chooses from that list.
 
 ### Modified Capabilities
 - `delegate-default`: the requirement "The default answers last" now also waits for the resolver the user config names.

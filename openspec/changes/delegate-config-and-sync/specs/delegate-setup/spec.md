@@ -30,8 +30,8 @@ For `gpt`, setup SHALL list the models that `codex debug models` reports as list
 - **THEN** setup lists `gpt-6-luna` and `gpt-5.6-terra` for `gpt`, in that order, and not `gpt-reserve`
 
 #### Scenario: The list command fails
-- **WHEN** `codex` is on `PATH` and `codex debug models` exits non-zero with `not logged in` on stderr
-- **THEN** setup reports `gpt` as available with the CLI's default, and its output contains `not logged in`
+- **WHEN** `codex` is on `PATH`, `codex debug models` exits non-zero with `not logged in` on stderr, and setup runs with `--json`
+- **THEN** `families.gpt` has `available` `true`, `models` `[]`, and an `error` that contains `not logged in`, and `proposed.reviewers` has a `gpt` entry with `model` `null`
 
 ### Requirement: Setup starts no session
 Setup SHALL start no agent session, and SHALL run nothing but the model list commands and the lookups on `PATH`.
@@ -81,8 +81,12 @@ Setup SHALL accept `--order <families>`, a comma-separated list that sets the re
 When a config file exists, setup SHALL show it alongside the proposal. When the file cannot be read as a config, setup SHALL say so and still show the proposal.
 
 #### Scenario: Running setup again
-- **WHEN** a config file exists and setup runs without `--write`
-- **THEN** the output shows the current resolver and reviewers, and the proposed ones
+- **WHEN** a config file exists and setup runs with `--json` and without `--write`
+- **THEN** `current` equals the file's config, `proposed` holds the proposal, and the file is unchanged
+
+#### Scenario: Running setup again in plain text
+- **WHEN** a config file names the resolver `/a/resolver`, setup would propose `/b/resolver`, and setup runs without `--json`
+- **THEN** stdout contains `/a/resolver` under a heading `Current` and `/b/resolver` under a heading `Proposed`
 
 ### Requirement: Setup prints JSON on request
 With `--json`, setup SHALL print one JSON object that holds `harness`, `families`, `current` and `proposed`, and nothing else on stdout.
