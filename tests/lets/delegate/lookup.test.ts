@@ -31,22 +31,58 @@ const kinds = (list: { kind: string }[]) => list.map(({ kind }) => kind);
 
 test('the candidates are the override, the resolver on PATH, then the default', () => {
   const io = fakeIo({ executables: ['/bin/mine'], commands: ['lets-delegate-resolver'] });
-  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r' });
+  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', config: null });
   assert.deepEqual(list.map((c) => c.name), ['/bin/mine', 'lets-delegate-resolver', 'default']);
   assert.deepEqual(kinds(list), ['external', 'external', 'default']);
 });
 
+// A config that names resolver, and no reviewers.
+const naming = (resolver: string | null) => ({ version: 1 as const, resolver, reviewers: [] });
+
+test('the config\'s resolver comes after the override and before the resolver on PATH', () => {
+  const io = fakeIo({ executables: ['/bin/mine', '/opt/r/resolver'], commands: ['lets-delegate-resolver'] });
+  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', config: naming('/opt/r/resolver') });
+  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', '/opt/r/resolver', 'lets-delegate-resolver', 'default']);
+});
+
+test('a config whose resolver is null adds no candidate', () => {
+  const list = candidates({ env: {}, io: fakeIo(), cwd: '/r', config: naming(null) });
+  assert.deepEqual(list.map((c) => c.name), ['default']);
+});
+
+test('the config\'s resolver is asked once when it is also the resolver on PATH', () => {
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-resolver'], commands: ['lets-delegate-resolver'] });
+  const config = naming('/opt/r/lets-delegate-resolver');
+  const list = candidates({ env: { PATH: '/usr/bin:/opt/r' }, io, cwd: '/r', config });
+  assert.deepEqual(list.map((c) => c.name), ['/opt/r/lets-delegate-resolver', 'default']);
+});
+
+test('a configured resolver that is missing stops the lookup with a usage error naming the path and setup', async () => {
+  const io = fakeIo({ commands: ['lets-delegate-resolver'] });
+  const config = naming('/nix/store/gone/bin/lets-delegate-resolver');
+  await assert.rejects(resolve('probe', probeRequest, { env: {}, io, cwd: '/r', config }),
+    (error) => error instanceof UsageError && error.message.includes('/nix/store/gone/bin/lets-delegate-resolver')
+      && error.message.includes('lets delegate setup'));
+  assert.deepEqual(io.calls, [], 'no later resolver was asked');
+});
+
+test('an override that answers is not stopped by a missing configured resolver', async () => {
+  const io = ioWith({});
+  const { candidate } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', config: naming('/no/such') });
+  assert.equal(candidate.name, FAKE);
+});
+
 test('without an override or a resolver on PATH, only the default is a candidate', () => {
-  assert.deepEqual(candidates({ env: { LETS_SPEC_RESOLVER: '' }, io: fakeIo(), cwd: '/r' }).map((c) => c.name), ['default']);
+  assert.deepEqual(candidates({ env: { LETS_SPEC_RESOLVER: '' }, io: fakeIo(), cwd: '/r', config: null }).map((c) => c.name), ['default']);
 });
 
 test('a relative override is taken from the working directory', () => {
   const io = fakeIo({ executables: ['/r/bin/mine'] });
-  assert.equal(candidates({ env: { LETS_SPEC_RESOLVER: 'bin/mine' }, io, cwd: '/r' })[0].name, '/r/bin/mine');
+  assert.equal(candidates({ env: { LETS_SPEC_RESOLVER: 'bin/mine' }, io, cwd: '/r', config: null })[0].name, '/r/bin/mine');
 });
 
 test('an override that is missing or not executable is a usage error that names the path', () => {
-  assert.throws(() => candidates({ env: { LETS_SPEC_RESOLVER: '/no/such' }, io: fakeIo(), cwd: '/r' }),
+  assert.throws(() => candidates({ env: { LETS_SPEC_RESOLVER: '/no/such' }, io: fakeIo(), cwd: '/r', config: null }),
     (error) => error instanceof UsageError && error.message.includes('/no/such') && error.message.includes('LETS_SPEC_RESOLVER'));
 });
 
@@ -54,7 +90,7 @@ test('the override answers when it does not decline, and is passed the verb and 
   const dir = await mkdtemp(join(tmpdir(), 'lets-lookup-'));
   const log = join(dir, 'log');
   const io = ioWith({ FAKE_RESOLVER_LOG: log }, ['lets-delegate-resolver']);
-  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', config: null });
   assert.equal(candidate.name, FAKE);
   assert.equal(outcome.code, 0);
   assert.deepEqual(outcome.response, { resolver: 'fake', text: 'FINDINGS', family: 'gpt', model: 'fake-model', handle: { kind: 'fake', id: 'f-1', extra: 'kept' } });
@@ -63,14 +99,14 @@ test('the override answers when it does not decline, and is passed the verb and 
 
 test('a decline passes the request to the next candidate', async () => {
   const io = ioWith({ FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' });
-  const { candidate, outcome } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', config: null });
   assert.equal(candidate.name, 'default');
   assert.deepEqual(outcome.response, { resolver: 'default' });
 });
 
 test('the resolver on PATH is run by name', async () => {
   const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '{"resolver":"t3"}', stderr: '', code: 0 }] });
-  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r' });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', config: null });
   assert.equal(candidate.name, 'lets-delegate-resolver');
   assert.deepEqual(outcome.response, { resolver: 't3' });
   const [[cmd, args, opts]] = io.calls;
@@ -83,7 +119,7 @@ test('the resolver on PATH is run by name', async () => {
 
 test('the default answers in process and is never skipped', async () => {
   const io = fakeIo();
-  const { candidate, outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r' });
+  const { candidate, outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', config: null });
   assert.equal(candidate.name, 'default');
   assert.equal(outcome.code, 3);
   assert.equal(outcome.response, null);
@@ -91,7 +127,7 @@ test('the default answers in process and is never skipped', async () => {
 
 test('a valid response with a non-zero exit: the exit code wins', async () => {
   const io = ioWith({ FAKE_RESOLVER_EXIT: '5', FAKE_RESOLVER_STDERR: 'session stopped to ask' });
-  const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', config: null });
   assert.equal(outcome.code, 5);
   assert.equal(outcome.response, null);
   assert.match(outcome.stderr, /session stopped to ask/);
@@ -99,7 +135,7 @@ test('a valid response with a non-zero exit: the exit code wins', async () => {
 
 test('a decline after printing to stdout is a bug: exit 4', async () => {
   const io = ioWith({ FAKE_RESOLVER_EXIT: '75' });
-  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r' });
+  const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', config: null });
   assert.equal(candidate.name, FAKE);
   assert.equal(outcome.code, 4);
   assert.match(outcome.stderr, /declined after printing/);
@@ -113,7 +149,7 @@ test('a malformed request, a bad response or an unknown exit is exit 4 with the 
     [{ FAKE_RESOLVER_EXIT: '9', FAKE_RESOLVER_STDOUT: '' }, /exited 9/],
   ];
   for (const [settings, message] of cases) {
-    const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith(settings), cwd: '/r' });
+    const { outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith(settings), cwd: '/r', config: null });
     assert.equal(outcome.code, 4, JSON.stringify(settings));
     assert.match(outcome.stderr, message);
   }
@@ -121,13 +157,13 @@ test('a malformed request, a bad response or an unknown exit is exit 4 with the 
 
 test('a resolver that cannot start is exit 4', async () => {
   const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '', stderr: 'spawn EACCES', code: null }] });
-  const { outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r' });
+  const { outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', config: null });
   assert.equal(outcome.code, 4);
   assert.match(outcome.stderr, /cannot run lets-delegate-resolver: spawn EACCES/);
 });
 
 test('a resolver past the timeout is killed and reported as exit 6', async () => {
-  const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r' }).filter((c) => c.kind === 'external');
+  const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r', config: null }).filter((c) => c.kind === 'external');
   const started = Date.now();
   const outcome = await callResolver(candidate, 'probe', probeRequest, { io: ioWith({ FAKE_RESOLVER_SLEEP_MS: '30000' }), timeoutMs: 200 });
   assert.equal(outcome?.code, 6);
@@ -137,7 +173,7 @@ test('a resolver past the timeout is killed and reported as exit 6', async () =>
 
 test('the backstop for run is the session timeout plus one minute', async () => {
   const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [new Promise(() => {})] });
-  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r' });
+  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', config: null });
   assert.equal(outcome.code, 6);
   assert.deepEqual(io.sleeps, [16 * 60000]);
   assert.deepEqual(io.killed, [4242]);

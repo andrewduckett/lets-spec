@@ -3,6 +3,7 @@
 // clean up, and reports which family answered. No process access here;
 // everything comes through deps.
 import type { Deps } from '../io.ts';
+import { readConfig } from './config.ts';
 import { EXIT, exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { callResolver, resolve, timeoutFor } from './lookup.ts';
@@ -29,13 +30,14 @@ export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
 async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }: ReviewOptions, deps: Deps) {
   const { io } = deps;
   const started = io.now();
+  const config = readConfig(deps);
   const prompt = readPromptFile(promptFile, deps);
   const cwd = await repoRoot(deps.cwd, io);
   // What is already uncommitted is the user's, not the session's.
   const before = await treeStatus(cwd, io);
 
   const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes });
-  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd });
+  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd, config });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
     return outcome.code;

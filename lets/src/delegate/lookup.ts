@@ -1,9 +1,11 @@
 // Which resolver answers a request. In order: the executable LETS_SPEC_RESOLVER
-// names, lets-delegate-resolver on PATH, then the built-in default. The first
+// names, the resolver the user's delegate config names, lets-delegate-resolver
+// on PATH, then the built-in default. The first
 // that does not decline answers. No process access here; everything comes
 // through io.
-import { resolve as resolvePath } from 'node:path';
+import { delimiter, join, resolve as resolvePath } from 'node:path';
 import type { Child, Io } from '../io.ts';
+import type { Config } from './config.ts';
 import { createDefaultResolver } from './default-resolver.ts';
 import type { DefaultResolver, Outcome } from './default-resolver.ts';
 import type { Env } from './env.ts';
@@ -19,14 +21,17 @@ export const BACKSTOP_MINUTES = 1;
 export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
 
 export type Candidate =
-  | { kind: 'external'; name: string; command: string }
+  // configured: the user's delegate config names it, and it is checked only
+  // when the lookup reaches it.
+  | { kind: 'external'; name: string; command: string; configured?: true }
   | { kind: 'default'; name: 'default'; resolver: DefaultResolver };
 
-export type LookupDeps = { env: Env; io: Io; cwd: string };
+// config: the user's delegate config, or null when there is none.
+export type LookupDeps = { env: Env; io: Io; cwd: string; config: Config | null };
 
 // The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
 // names a file that is missing or that this process cannot run.
-export function candidates({ env, io, cwd }: LookupDeps): Candidate[] {
+export function candidates({ env, io, cwd, config }: LookupDeps): Candidate[] {
   const list: Candidate[] = [];
   const override = env.LETS_SPEC_RESOLVER;
   if (override !== undefined && override !== '') {
@@ -36,9 +41,19 @@ export function candidates({ env, io, cwd }: LookupDeps): Candidate[] {
     }
     list.push({ kind: 'external', name: command, command });
   }
-  if (io.commandExists(RESOLVER_COMMAND)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
+  const configured = config?.resolver ?? null;
+  if (configured !== null) list.push({ kind: 'external', name: configured, command: configured, configured: true });
+  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || onPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
   list.push({ kind: 'default', name: 'default', resolver: createDefaultResolver(io) });
   return list;
+}
+
+// The path of the RESOLVER_COMMAND that PATH finds first, or null.
+function onPath(env: Env, io: Io): string | null {
+  for (const dir of (env.PATH ?? '').split(delimiter)) {
+    if (dir !== '' && io.isExecutable(join(dir, RESOLVER_COMMAND))) return join(dir, RESOLVER_COMMAND);
+  }
+  return null;
 }
 
 // Ask one candidate. null means it declined. The outcome's code is the exit
@@ -85,9 +100,13 @@ export function timeoutFor<V extends Verb>(verb: V, request: Requests[V]): numbe
 }
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
-// the caller can send finish to the same resolver.
+// the caller can send finish to the same resolver. Throws a UsageError when
+// it reaches a configured resolver that is missing or cannot be run.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
+    if (candidate.kind === 'external' && candidate.configured && !deps.io.isExecutable(candidate.command)) {
+      throw new UsageError(`your delegate config names the resolver ${candidate.command}, which does not exist or is not executable. Run \`lets delegate setup\` again.`);
+    }
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
     if (outcome !== null) return { candidate, outcome };
   }
