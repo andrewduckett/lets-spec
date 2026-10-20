@@ -36,6 +36,26 @@ test('buildRequest takes the timeout given, else the default by effort', () => {
   assert.equal(buildRequest('run', { ...run, timeoutMinutes: 3 }).timeoutMinutes, 3);
 });
 
+test('buildRequest adds reviewers to a run only when they are given', () => {
+  const reviewers = [{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'claude', model: null }] as const;
+  assert.deepEqual(buildRequest('run', { ...run, reviewers: [...reviewers] }).reviewers, reviewers);
+  assert.equal('reviewers' in runRequest(), false);
+});
+
+test('parseRequest accepts a run whose reviewers have a known family and a string or null model', () => {
+  const request = { ...runRequest(), reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'gemini', model: null }] };
+  assert.deepEqual(parseRequest('run', JSON.stringify(request)), request);
+  const empty = { ...runRequest(), reviewers: [] };
+  assert.deepEqual(parseRequest('run', JSON.stringify(empty)), empty);
+});
+
+test('parseRequest rejects a bad reviewers field, naming it', () => {
+  const bad = (reviewers: unknown) => JSON.stringify({ ...runRequest(), reviewers });
+  for (const reviewers of [{}, 'gpt', [null], [{ family: 'mistral', model: null }], [{ family: 'gpt' }], [{ family: 'gpt', model: 7 }]]) {
+    throwsWith(() => parseRequest('run', bad(reviewers)), UsageError, /reviewers/);
+  }
+});
+
 test('parseRequest accepts what buildRequest builds', () => {
   for (const [verb, request] of [['run', runRequest()], ['start', startRequest()], ['probe', { protocol: 1, cwd: '/r' }],
     ['finish', { protocol: 1, cwd: '/r', handle: { kind: 'thread', id: 't', origin: 'http://x' }, ok: false }]] as const) {
