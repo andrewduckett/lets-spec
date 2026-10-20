@@ -11,7 +11,7 @@
 ## 3. The contrib resolver walks the list [depends-on: 1]
 
 - [x] 3.1 [medium] `pickReviewer` in `families.ts` returns the first reviewer whose family is not the source and that the adapter's `Available` can run, else the first it can run, else throws `NoFamilyError` with one line per skipped reviewer and why; `resolver.ts` uses it when the request has `reviewers`, and `pickFamily` otherwise (verify: `node --test tests/lets-delegate-resolver/resolver.test.ts`) (✓ `node --test tests/lets-delegate-resolver/resolver.test.ts` passed)
-- [ ] 3.2 [parallel] [medium] The T3 adapter spawns a `null` model as the manifest's `providers.<instance>.defaults.chat` when there is one and as `null` otherwise, and spawns a `gemini` model with `-<effort>` added unless it already ends in one (verify: `node --test tests/lets-delegate-resolver/t3.test.ts`)
+- [x] 3.2 [parallel] [medium] The T3 adapter spawns a `null` model as the manifest's `providers.<instance>.defaults.chat` when there is one and as `null` otherwise, and spawns a `gemini` model with `-<effort>` added unless it already ends in one (verify: `node --test tests/lets-delegate-resolver/t3.test.ts`) (✓ `node --test tests/lets-delegate-resolver/t3.test.ts` passed)
 - [ ] 3.3 [parallel] [easy] The herdr adapter passes no `--model` for a `null` model, and `--model <model>-<effort>` for a `gemini` model without an effort suffix (verify: `node --test tests/lets-delegate-resolver/herdr.test.ts`)
 
 ## 4. lets delegate setup [depends-on: 1]
