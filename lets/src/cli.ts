@@ -10,6 +10,8 @@ import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
 import { run as review } from './delegate/review.ts';
+import { run as setup } from './delegate/setup.ts';
+import type { SetupOptions } from './delegate/setup.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
@@ -85,6 +87,26 @@ stdout: one JSON line, { resolver, handle }. When no session could be
 started, handle is null and instructions holds the text to show the user.
 
 Exit codes: 0 ok, 2 usage error, 4 the session could not start.`;
+
+const SETUP_HELP = `
+It starts no session and spends no tokens. It looks on PATH for t3, herdr,
+lets-delegate-resolver, and each family's CLI: codex (gpt), claude and agy
+(gemini). It asks codex and agy which models the account can run, with
+\`codex debug models\` and \`agy models\`. claude has no list, so its CLI's
+default runs.
+
+The proposal has one reviewer per available family, in the order gpt,
+claude, gemini, each with the first model its account lists. Its resolver
+is lets-delegate-resolver on PATH when t3 or herdr is installed; else none,
+and the built-in default answers.
+
+Nothing is written without --write. The config is
+$XDG_CONFIG_HOME/lets-delegate/config.json, or
+~/.config/lets-delegate/config.json when XDG_CONFIG_HOME is unset.
+--write replaces it. To limit a reviewer to some efforts, add
+"efforts": ["low", "medium", "high"] to its entry by hand.
+
+Exit codes: 0 ok, 2 usage error.`;
 
 const CONFORMANCE_HELP = `
 It prints one line per check, and exits 1 if any fails.
@@ -166,6 +188,20 @@ delegate
   .addHelpText('after', HANDOFF_HELP)
   .action(async (options: HandoffOptions) => {
     process.exitCode = await handoff(options, realDeps());
+  });
+
+delegate
+  .command('setup')
+  .summary('find what this machine can run, and propose a delegate config')
+  .description('Find the harness, the family CLIs and the models each account can run, and propose a delegate config. Writes it only with --write.')
+  .option('--write', 'write the proposed config, replacing the current one')
+  .option('--json', 'print the findings, the current config and the proposal as one JSON object')
+  .option('--order <families>', 'the reviewers, in order, comma-separated; a family left out is dropped')
+  .option('--model <family=model>', 'the model for one family; give it once per family', (value: string, list: string[] = []) => [...list, value])
+  .option('--resolver <path|none>', 'the resolver to name, or none for the built-in default')
+  .addHelpText('after', SETUP_HELP)
+  .action(async (options: SetupOptions) => {
+    process.exitCode = await setup(options, realDeps());
   });
 
 delegate

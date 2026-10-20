@@ -2,12 +2,12 @@
 // delegate config from that, and write it on request. It starts no session
 // and spends no tokens: it runs only the CLIs' model list commands and looks
 // on PATH. No process access here; everything comes through deps.
-import { isAbsolute } from 'node:path';
-import type { Child, Io } from '../io.ts';
-import { CONFIG_VERSION } from './config.ts';
+import { dirname, isAbsolute } from 'node:path';
+import type { Child, Deps, Io } from '../io.ts';
+import { CONFIG_VERSION, configPath, readConfig } from './config.ts';
 import type { Config } from './config.ts';
 import type { Env } from './env.ts';
-import { UsageError } from './errors.ts';
+import { EXIT, exitCodeOf, UsageError } from './errors.ts';
 import { resolverOnPath } from './lookup.ts';
 import { FAMILIES } from './protocol.ts';
 import type { Family } from './protocol.ts';
@@ -46,32 +46,112 @@ export async function detect({ env, io }: DetectDeps): Promise<Findings> {
 // The flags that change the proposal. order: comma-separated families.
 // model: family=model, any number of times. resolver: a path, or none.
 export type ProposeFlags = { order?: string; model?: string[]; resolver?: string };
+export type SetupOptions = ProposeFlags & { json?: boolean; write?: boolean };
+
+// The exit code: 0 ok, 2 usage.
+export async function run(options: SetupOptions, deps: Deps): Promise<number> {
+  try {
+    return await setup(options, deps);
+  } catch (error) {
+    const code = exitCodeOf(error);
+    if (code === null) throw error;
+    deps.stderr(`lets delegate: ${(error as Error).message}\n`);
+    return code;
+  }
+}
+
+async function setup(options: SetupOptions, deps: Deps): Promise<number> {
+  // A bad flag stops setup before it runs any list command.
+  parseFlags(options);
+  const findings = await detect(deps);
+  const proposed = propose(findings, options);
+  const path = configPath(deps);
+  let current: Config | null = null;
+  try {
+    current = readConfig(deps);
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    deps.stderr(`lets delegate: the current config cannot be read: ${error.message}\n`);
+  }
+
+  if (options.json) deps.stdout(`${JSON.stringify({ harness: findings.harness, families: findings.families, current, proposed })}\n`);
+  else deps.stdout(report(findings, current, proposed));
+
+  if (options.write) {
+    deps.io.mkdirp(dirname(path));
+    deps.io.writeFile(path, `${JSON.stringify(proposed, null, 2)}\n`);
+    (options.json ? deps.stderr : deps.stdout)(`Wrote ${path}\n`);
+  } else if (!options.json) {
+    deps.stdout(`\nNothing was written. Run again with --write to write ${path}.\n`);
+  }
+  return EXIT.ok;
+}
+
+// The findings, the current config and the proposal, as text for a person.
+function report({ harness, families }: Findings, current: Config | null, proposed: Config): string {
+  const yesNo = (found: boolean) => (found ? 'on PATH' : 'not on PATH');
+  const lines = [
+    `Harness: ${harness.name} (t3 ${yesNo(harness.onPath.t3)}, herdr ${yesNo(harness.onPath.herdr)})`,
+    '',
+    'Families',
+  ];
+  for (const family of FAMILIES) {
+    const { cli, available, models, error } = families[family];
+    const list = LISTS[family];
+    let detail = `${cli} ${yesNo(available)}`;
+    if (available && list === null) detail += '; no model list, so the CLI\'s default runs';
+    else if (available && error !== undefined) detail += `; no model list: ${error}`;
+    else if (available) detail += `; models from \`${[cli, ...list!.args].join(' ')}\`: ${models.join(', ')}`;
+    lines.push(`  ${family}: ${detail}`);
+  }
+  lines.push('', 'Current', ...(current === null ? ['  none'] : describe(current)), '', 'Proposed', ...describe(proposed));
+  return `${lines.join('\n')}\n`;
+}
+
+function describe({ resolver, reviewers }: Config): string[] {
+  const efforts = (list?: string[]) => (list === undefined ? '' : ` (efforts: ${list.join(', ')})`);
+  return [
+    `  resolver: ${resolver ?? 'none, so the built-in default answers'}`,
+    '  reviewers, in order:',
+    ...(reviewers.length === 0 ? ['    none'] : reviewers.map(({ family, model, efforts: e }) => `    ${family} ${model ?? '(CLI default)'}${efforts(e)}`)),
+  ];
+}
+
+// The flags, checked on their own: each family they name is known, and
+// each value has its form. Throws a UsageError that names what is wrong.
+function parseFlags(flags: ProposeFlags): { order?: Family[]; models: [Family, string][] } {
+  const known = (family: string, flag: string): Family => {
+    if (!(FAMILIES as readonly string[]).includes(family)) throw new UsageError(`${flag} names ${family}, which is not one of ${FAMILIES.join(', ')}`);
+    return family as Family;
+  };
+  const order = flags.order?.split(',').map((family) => known(family.trim(), '--order'));
+  const models = (flags.model ?? []).map((pair): [Family, string] => {
+    const match = pair.match(/^([^=]+)=(.+)$/);
+    if (!match) throw new UsageError(`--model must be <family>=<model>, got ${pair}`);
+    return [known(match[1], '--model'), match[2]];
+  });
+  if (flags.resolver !== undefined && flags.resolver !== 'none' && !isAbsolute(flags.resolver)) {
+    throw new UsageError(`--resolver must be an absolute path or none, got ${flags.resolver}`);
+  }
+  return { order, models };
+}
 
 // The config setup proposes: one reviewer per available family, in FAMILIES
 // order, with the first model the account lists, else the CLI's default.
 // The resolver is the one on PATH when a harness it serves is installed.
 // Throws a UsageError that names a flag's unknown or unavailable family.
 export function propose({ harness, families, resolver }: Findings, flags: ProposeFlags): Config {
-  const known = (family: string, flag: string): Family => {
-    if (!(FAMILIES as readonly string[]).includes(family)) throw new UsageError(`${flag} names ${family}, which is not one of ${FAMILIES.join(', ')}`);
-    if (!families[family as Family].available) {
-      throw new UsageError(`${flag} names ${family}, which is not available here: ${families[family as Family].cli} is not on PATH`);
-    }
-    return family as Family;
+  const parsed = parseFlags(flags);
+  const available = (family: Family, flag: string) => {
+    if (!families[family].available) throw new UsageError(`${flag} names ${family}, which is not available here: ${families[family].cli} is not on PATH`);
+    return family;
   };
-  const order = flags.order === undefined
-    ? FAMILIES.filter((family) => families[family].available)
-    : flags.order.split(',').map((family) => known(family.trim(), '--order'));
+  const order = parsed.order?.map((family) => available(family, '--order')) ?? FAMILIES.filter((family) => families[family].available);
   const models = new Map<Family, string>();
-  for (const pair of flags.model ?? []) {
-    const match = pair.match(/^([^=]+)=(.+)$/);
-    if (!match) throw new UsageError(`--model must be <family>=<model>, got ${pair}`);
-    const family = known(match[1], '--model');
+  for (const [family, model] of parsed.models) {
+    available(family, '--model');
     if (!order.includes(family)) throw new UsageError(`--model names ${family}, which --order leaves out`);
-    models.set(family, match[2]);
-  }
-  if (flags.resolver !== undefined && flags.resolver !== 'none' && !isAbsolute(flags.resolver)) {
-    throw new UsageError(`--resolver must be an absolute path or none, got ${flags.resolver}`);
+    models.set(family, model);
   }
   const harnessInstalled = harness.onPath.t3 || harness.onPath.herdr;
   return {

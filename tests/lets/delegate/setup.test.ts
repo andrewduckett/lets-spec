@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { UsageError } from '../../../lets/src/delegate/errors.ts';
-import { detect, propose } from '../../../lets/src/delegate/setup.ts';
+import { detect, propose, run } from '../../../lets/src/delegate/setup.ts';
 import type { Findings } from '../../../lets/src/delegate/setup.ts';
-import type { ExecResult } from '../../../lets/src/io.ts';
+import type { Deps, ExecResult } from '../../../lets/src/io.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
@@ -159,4 +159,98 @@ test('a flag that names a family that is not available is a usage error that nam
 test('a malformed --model or a relative --resolver is a usage error that names it', () => {
   assert.throws(() => propose(findings(), { model: ['gpt'] }), usageNaming('gpt'));
   assert.throws(() => propose(findings(), { resolver: 'bin/r' }), usageNaming('bin/r'));
+});
+
+const CONFIG = '/home/u/.config/lets-delegate/config.json';
+// Deps for the command: t3, the resolver and the three CLIs on PATH, the
+// model lists answered, and the files given.
+function setupDeps({ files = {} as Record<string, string>, env = {} as Record<string, string>, codex = ok(CODEX_MODELS) } = {}) {
+  const io = fakeIo({
+    files,
+    commands: ['t3', 'lets-delegate-resolver', 'codex', 'claude', 'agy'],
+    executables: ['/b/lets-delegate-resolver'],
+    results: [(cmd: string) => (cmd === 'codex' ? codex : ok(AGY_MODELS)), (cmd: string) => (cmd === 'codex' ? codex : ok(AGY_MODELS))],
+  });
+  const out: string[] = [];
+  const err: string[] = [];
+  const deps: Deps = { env: { PATH: '/b', ...env }, cwd: '/r', packageRoot: '/pkg', io, stdout: (t) => out.push(t), stderr: (t) => err.push(t) };
+  return { deps, io, stdout: () => out.join(''), stderr: () => err.join('') };
+}
+const PROPOSED = {
+  version: 1, resolver: '/b/lets-delegate-resolver',
+  reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'claude', model: null }, { family: 'gemini', model: 'gemini-3.8-flash' }],
+};
+
+test('a plain run writes no file and exits 0', async () => {
+  const t = setupDeps();
+  assert.equal(await run({}, t.deps), 0);
+  assert.equal(t.io.files.has(CONFIG), false);
+});
+
+test('--write writes the proposal to the config file, and names its path', async () => {
+  const t = setupDeps();
+  assert.equal(await run({ write: true }, t.deps), 0);
+  assert.deepEqual(JSON.parse(t.io.files.get(CONFIG)!), PROPOSED);
+  assert.match(t.stdout(), new RegExp(CONFIG));
+});
+
+test('--write writes under XDG_CONFIG_HOME when it is set', async () => {
+  const t = setupDeps({ env: { XDG_CONFIG_HOME: '/tmp/cfg' } });
+  await run({ write: true }, t.deps);
+  assert.equal(t.io.files.has('/tmp/cfg/lets-delegate/config.json'), true);
+});
+
+test('--json prints one object with the harness, the families, the current config and the proposal', async () => {
+  const t = setupDeps();
+  await run({ json: true }, t.deps);
+  const printed = JSON.parse(t.stdout());
+  assert.deepEqual(Object.keys(printed).sort(), ['current', 'families', 'harness', 'proposed']);
+  assert.deepEqual(printed.proposed, PROPOSED);
+});
+
+test('a failed list shows in --json, and its family is proposed with a null model', async () => {
+  const t = setupDeps({ codex: { stdout: '', stderr: 'not logged in', code: 1 } });
+  await run({ json: true }, t.deps);
+  const { families, proposed } = JSON.parse(t.stdout());
+  assert.equal(families.gpt.available, true);
+  assert.deepEqual(families.gpt.models, []);
+  assert.match(families.gpt.error, /not logged in/);
+  assert.deepEqual(proposed.reviewers[0], { family: 'gpt', model: null });
+});
+
+test('running setup again shows the current config beside the proposal, and leaves the file alone', async () => {
+  const current = JSON.stringify({ version: 1, resolver: '/a/resolver', reviewers: [{ family: 'claude', model: null }] });
+  const t = setupDeps({ files: { [CONFIG]: current } });
+  await run({ json: true }, t.deps);
+  assert.deepEqual(JSON.parse(t.stdout()).current, JSON.parse(current));
+  assert.equal(t.io.files.get(CONFIG), current);
+});
+
+test('in plain text the current config is under Current and the proposal under Proposed', async () => {
+  const t = setupDeps({ files: { [CONFIG]: JSON.stringify({ version: 1, resolver: '/a/resolver', reviewers: [] }) } });
+  await run({}, t.deps);
+  assert.match(t.stdout(), /^Current\b[\s\S]*\/a\/resolver[\s\S]*^Proposed\b[\s\S]*\/b\/lets-delegate-resolver/m);
+});
+
+test('a current config that cannot be read is named, and the proposal still shows', async () => {
+  const t = setupDeps({ files: { [CONFIG]: '{"version":9}' } });
+  assert.equal(await run({ json: true }, t.deps), 0);
+  assert.equal(JSON.parse(t.stdout()).current, null);
+  assert.deepEqual(JSON.parse(t.stdout()).proposed, PROPOSED);
+  assert.match(t.stderr(), /cannot be read.*version/);
+});
+
+test('--order and --model change what --write writes', async () => {
+  const t = setupDeps();
+  await run({ order: 'gemini,gpt', model: ['gpt=gpt-5.6-terra'], write: true }, t.deps);
+  assert.deepEqual(JSON.parse(t.io.files.get(CONFIG)!).reviewers,
+    [{ family: 'gemini', model: 'gemini-3.8-flash' }, { family: 'gpt', model: 'gpt-5.6-terra' }]);
+});
+
+test('a flag that names an unknown family exits 2, names it, writes nothing and runs no list command', async () => {
+  const t = setupDeps();
+  assert.equal(await run({ model: ['mistral=large'], write: true }, t.deps), 2);
+  assert.match(t.stderr(), /mistral/);
+  assert.equal(t.io.files.has(CONFIG), false);
+  assert.deepEqual(t.io.calls, []);
 });
