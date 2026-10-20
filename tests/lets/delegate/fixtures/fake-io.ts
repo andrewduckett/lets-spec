@@ -46,6 +46,9 @@ export function fakeIo({ results = [], files = {}, commands = [], executables = 
     commandExists: (cmd) => commands.includes(cmd),
     isExecutable: (path) => executables.includes(path),
     homedir: () => '/home/u',
+    pid: 4242,
+    parentPid: () => null,
+    processAlive: () => false,
     now: () => 0,
     // Resolves on the next turn of the event loop, so a command that has
     // already answered wins a race against it.

@@ -1,6 +1,6 @@
 // The real filesystem, git and child processes, as the modules see them.
 // Tests pass a fake with the same methods.
-import { execFile as nodeExecFile } from 'node:child_process';
+import { execFile as nodeExecFile, spawnSync } from 'node:child_process';
 import {
   accessSync, chmodSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
   readlinkSync, rmSync, statSync, symlinkSync, writeFileSync,
@@ -48,6 +48,10 @@ export type Io = {
   isExecutable(path: string): boolean;
   // The user's home folder.
   homedir(): string;
+  // This process, its parent, and whether a process is running.
+  pid: number;
+  parentPid(pid: number): number | null;
+  processAlive(pid: number): boolean;
   now(): number;
   // Rejects when signal aborts, so a caller can cancel a long wait.
   sleep(ms: number, signal?: AbortSignal): Promise<void>;
@@ -145,6 +149,23 @@ export function realIo(): Io {
       }
     },
     homedir: () => homedir(),
+    pid: process.pid,
+    // From /proc where there is one, else from ps, as on macOS.
+    parentPid(pid) {
+      const status = orNull(() => readFileSync(`/proc/${pid}/status`, 'utf8'));
+      const text = status !== null ? status.match(/^PPid:\s+(\d+)$/m)?.[1]
+        : existsSync('/proc/self') ? undefined : spawnSync('ps', ['-o', 'ppid=', '-p', String(pid)], { encoding: 'utf8' }).stdout?.trim();
+      return text && /^\d+$/.test(text) ? Number(text) : null;
+    },
+    processAlive(pid) {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch (error) {
+        // EPERM: the process exists but belongs to another user.
+        return (error as NodeJS.ErrnoException).code === 'EPERM';
+      }
+    },
     now: () => Date.now(),
     sleep: (ms, signal) => setTimeout(ms, undefined, { signal }),
   };
