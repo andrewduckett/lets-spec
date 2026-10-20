@@ -10,7 +10,7 @@
 
 ## 3. The contrib resolver walks the list [depends-on: 1]
 
-- [ ] 3.1 [medium] `pickReviewer` in `families.ts` returns the first reviewer whose family is not the source and that the adapter's `Available` can run, else the first it can run, else throws `NoFamilyError` with one line per skipped reviewer and why; `resolver.ts` uses it when the request has `reviewers`, and `pickFamily` otherwise (verify: `node --test tests/lets-delegate-resolver/resolver.test.ts`)
+- [x] 3.1 [medium] `pickReviewer` in `families.ts` returns the first reviewer whose family is not the source and that the adapter's `Available` can run, else the first it can run, else throws `NoFamilyError` with one line per skipped reviewer and why; `resolver.ts` uses it when the request has `reviewers`, and `pickFamily` otherwise (verify: `node --test tests/lets-delegate-resolver/resolver.test.ts`) (✓ `node --test tests/lets-delegate-resolver/resolver.test.ts` passed)
 - [ ] 3.2 [parallel] [medium] The T3 adapter spawns a `null` model as the manifest's `providers.<instance>.defaults.chat` when there is one and as `null` otherwise, and spawns a `gemini` model with `-<effort>` added unless it already ends in one (verify: `node --test tests/lets-delegate-resolver/t3.test.ts`)
 - [ ] 3.3 [parallel] [easy] The herdr adapter passes no `--model` for a `null` model, and `--model <model>-<effort>` for a `gemini` model without an effort suffix (verify: `node --test tests/lets-delegate-resolver/herdr.test.ts`)
 
@@ -28,3 +28,5 @@
 ## Deviations Ledger
 
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
+
+- 2026-10-20, task 3.1: `pickReviewer` also takes a `whyNot(family)` function, and `Adapter` gains an optional `whyNot`. `Available` alone cannot say why a family is missing, and the spec needs herdr to say `codex is not on PATH`. Adapters without it say `<harness> cannot run <family>`.
