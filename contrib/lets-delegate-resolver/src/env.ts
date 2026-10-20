@@ -1,6 +1,5 @@
-// Copied from lets/src/delegate/env.ts, so this resolver installs on its own.
-// Keep the two the same: a test compares them, and the conformance check runs
-// against this resolver in CI.
+// This resolver's own. It began as a copy of lets/src/delegate/env.ts,
+// which lets no longer needs, so the two may differ.
 
 // The variables that tie a process to the session that started it. A new
 // session must not inherit them, or it would think it is a child session.

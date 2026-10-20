@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 // The files the contrib resolver copies from lets, so it installs on its own.
-const COPIES = ['protocol', 'errors', 'families', 'env'];
+const COPIES = ['protocol', 'errors'];
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
 test('each copied file is the original under a three-line header', () => {

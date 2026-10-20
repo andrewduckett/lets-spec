@@ -1,8 +1,7 @@
-// Copied from lets/src/delegate/families.ts, so this resolver installs on its own.
-// Keep the two the same: a test compares them, and the conformance check runs
-// against this resolver in CI.
+// This resolver's own. It began as a copy of lets/src/delegate/families.ts,
+// which lets no longer needs, so the two may differ.
 
-// Which family takes a session. The order is the default's policy: the
+// Which family takes a session. The order is this resolver's policy: the
 // first family in FAMILIES that is available, skipping the source; the
 // source's own family when no other is.
 import { NoFamilyError } from './errors.ts';
