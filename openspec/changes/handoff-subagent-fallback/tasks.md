@@ -15,7 +15,7 @@
 
 ## 3. Integration [depends-on: 2]
 
-- [ ] 3.1 [easy] The whole suite, the type check, conformance and the flake pass (verify: pnpm test && nix flake check)
+- [x] 3.1 [easy] The whole suite, the type check, conformance and the flake pass (verify: pnpm test && nix flake check) (✓ pnpm test && nix flake check passed)
 
 ## Deviations Ledger
 - 1.4: its test passed on the first run, because 1.3's fixed text already named no CLI. Run against the resolver before 1.3, it fails.
