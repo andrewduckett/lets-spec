@@ -1,13 +1,13 @@
 // Deps for the review and handoff commands. git is scripted; the fake
-// resolver runs as a real process with its settings in its env; anything
-// else, such as the default resolver's executor, answers from a queue.
+// resolver runs as a real process with its settings in its env; any other
+// command answers from a queue.
 //
 // options:
 //   resolver:  true to set LETS_SPEC_RESOLVER to the fake resolver
 //   settings:  the fake resolver's FAKE_RESOLVER_* variables
 //   gitBefore: what `git status -z` prints before the session
 //   gitAfter:  what it prints after; default gitBefore
-//   commands:  the commands on PATH, for the default resolver
+//   commands:  the commands on PATH
 //   results:   answers for any other command, in order
 //   files:     the files there are; default the prompt file /repo/p.md
 import { mkdtempSync, readFileSync } from 'node:fs';

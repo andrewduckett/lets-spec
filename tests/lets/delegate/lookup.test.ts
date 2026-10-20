@@ -86,7 +86,7 @@ test('the default answers in process and is never skipped', async () => {
   const { candidate, outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r' });
   assert.equal(candidate.name, 'default');
   assert.equal(outcome.code, 3);
-  assert.match(outcome.stderr, /no family is available/);
+  assert.equal(outcome.response, null);
 });
 
 test('a valid response with a non-zero exit: the exit code wins', async () => {

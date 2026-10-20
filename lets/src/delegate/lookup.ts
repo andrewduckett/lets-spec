@@ -37,7 +37,7 @@ export function candidates({ env, io, cwd }: LookupDeps): Candidate[] {
     list.push({ kind: 'external', name: command, command });
   }
   if (io.commandExists(RESOLVER_COMMAND)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
-  list.push({ kind: 'default', name: 'default', resolver: createDefaultResolver(io, env) });
+  list.push({ kind: 'default', name: 'default', resolver: createDefaultResolver(io) });
   return list;
 }
 

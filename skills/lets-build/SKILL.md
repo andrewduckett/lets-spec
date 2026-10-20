@@ -208,8 +208,10 @@ builds. When it stops, read `state` once more with
      ```
 
   3. When its `handle` is `null`, no session was started. Show the user
-     its `instructions`, which say what to run. Otherwise tell the user
-     the session started, and name its `resolver` and `handle`.
+     its `instructions`. The built-in default's instructions
+     hold the prompt to carry on by hand, and the file it is saved in.
+     Otherwise tell the user the session started, and name its
+     `resolver` and `handle`.
   4. If it exits non-zero, show the user its stderr.
 
   Then stop.

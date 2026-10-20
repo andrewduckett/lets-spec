@@ -7,9 +7,3 @@ export const SESSION_MARKERS = ['CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSIO
 
 export type Env = Record<string, string | undefined>;
 
-// A copy of env without the session markers.
-export function scrubbedEnv(env: Env): Env {
-  const copy = { ...env };
-  for (const name of SESSION_MARKERS) delete copy[name];
-  return copy;
-}

@@ -60,3 +60,17 @@ test('review --help lists the exit codes', async () => {
   assert.match(stdout, /--timeout-minutes/);
   assert.match(stdout, /7 {2}the session changed files outside \.workspace\//);
 });
+
+test('review --help says exit 3 means no fresh session can run here', async () => {
+  const { stdout } = await lets('delegate', 'review', '--help');
+  assert.match(stdout.replace(/\s+/g, ' '),
+    /3 no fresh session can run here: no resolver started one, or none of its families is available/);
+});
+
+test('neither delegate --help nor review --help says the default runs codex, claude or agy', async () => {
+  for (const argv of [['delegate', '--help'], ['delegate', 'review', '--help']]) {
+    const { stdout } = await lets(...argv);
+    assert.doesNotMatch(stdout, /\b(codex|agy)\b/, argv.join(' '));
+    assert.doesNotMatch(stdout, /from another model family when one is available/, argv.join(' '));
+  }
+});
