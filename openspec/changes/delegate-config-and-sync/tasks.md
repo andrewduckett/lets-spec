@@ -6,7 +6,7 @@
 ## 2. lets uses the config [depends-on: 1]
 
 - [x] 2.1 [medium] The lookup asks the config's resolver after `LETS_SPEC_RESOLVER` and before `PATH`, checks that its path is executable only when it reaches it, exits 2 with the path and `lets delegate setup` when it is not, and asks a path that is also the one on `PATH` once (verify: `node --test tests/lets/delegate/lookup.test.ts`) (✓ `node --test tests/lets/delegate/lookup.test.ts` passed)
-- [ ] 2.2 [medium] `lets delegate review` sends the reviewers whose `efforts` are absent or include the effort, as `family` and `model` only; when the config has reviewers but none serves the effort, stderr names the file and the effort; with no config the request has no `reviewers`; `lets delegate handoff` never sends one (verify: `node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts`)
+- [x] 2.2 [medium] `lets delegate review` sends the reviewers whose `efforts` are absent or include the effort, as `family` and `model` only; when the config has reviewers but none serves the effort, stderr names the file and the effort; with no config the request has no `reviewers`; `lets delegate handoff` never sends one (verify: `node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts`) (✓ `node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts` passed)
 
 ## 3. The contrib resolver walks the list [depends-on: 1]
 
