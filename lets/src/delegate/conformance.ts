@@ -5,7 +5,7 @@
 import type { Child, Deps } from '../io.ts';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
-import { buildRequest, DECLINE, parseResponse, PROTOCOL } from './protocol.ts';
+import { buildRequest, DECLINE, FAMILIES, parseResponse, PROTOCOL } from './protocol.ts';
 import type { Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
@@ -17,6 +17,9 @@ const LIVE_RUN_MINUTES = 5;
 const LIVE_TIMEOUT_MS = (LIVE_RUN_MINUTES + 1) * 60000;
 const NAME = 'lets-conformance';
 const NEVER_ISSUED = { kind: 'lets-conformance', id: 'never-issued' };
+// The live run lists every family with its default model, so a resolver that
+// walks the list can run one, and one that ignores it still passes.
+const LIVE_REVIEWERS = FAMILIES.map((family) => ({ family, model: null }));
 
 type Call = { code: number | null; stdout: string; stderr: string };
 
@@ -68,6 +71,7 @@ export async function run({ command, live }: ConformanceOptions, deps: Deps): Pr
     const before = await treeStatus(cwd, deps.io);
     const runRequest = buildRequest('run', {
       cwd, name: NAME, prompt: 'Reply with the single word ready and stop.', sourceFamily: 'claude', effort: 'low', timeoutMinutes: LIVE_RUN_MINUTES,
+      reviewers: LIVE_REVIEWERS,
     });
     const ran = await call('run', JSON.stringify(runRequest), LIVE_TIMEOUT_MS);
     const response = parsed('run', ran);

@@ -59,10 +59,14 @@ The Nix wrapper sets WORKFLOW_RELEASE.`;
 
 const DELEGATE_HELP = `
 A resolver turns each request into a real session. lets asks, in order:
-the executable LETS_SPEC_RESOLVER names, lets-delegate-resolver on PATH,
-then the built-in default. The first that does not decline answers. The
-default starts no session: a review exits 3, and a handoff gives back the
-prompt to carry on by hand.
+the executable LETS_SPEC_RESOLVER names, the resolver your delegate config
+names, lets-delegate-resolver on PATH, then the built-in default. The first
+that does not decline answers. The default starts no session: a review
+exits 3, and a handoff gives back the prompt to carry on by hand.
+
+Run lets delegate setup once per machine. It finds what your machine can
+run, and proposes the config: which resolver to ask, and which families and
+models a review may use.
 
 Run lets delegate from the repo root.`;
 

@@ -23,7 +23,7 @@
 
 ## 5. Integration [depends-on: 2, 3, 4]
 
-- [ ] 5.1 [easy] The conformance check sends `reviewers` in its `run` request and accepts a resolver that ignores it; the README's *Delegate* section and `DELEGATE_HELP` say to run `lets delegate setup`, and the contrib README's *How lets finds a resolver* and *The request* document the config's place in the order and the `reviewers` field (verify: `pnpm test`)
+- [x] 5.1 [easy] The conformance check sends `reviewers` in its `run` request and accepts a resolver that ignores it; the README's *Delegate* section and `DELEGATE_HELP` say to run `lets delegate setup`, and the contrib README's *How lets finds a resolver* and *The request* document the config's place in the order and the `reviewers` field (verify: `pnpm test`) (✓ `pnpm test` passed)
 
 ## Deviations Ledger
 
