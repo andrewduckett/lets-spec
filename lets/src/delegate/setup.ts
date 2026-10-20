@@ -133,6 +133,12 @@ function parseFlags(flags: ProposeFlags): { order?: Family[]; models: [Family, s
   if (flags.resolver !== undefined && flags.resolver !== 'none' && !isAbsolute(flags.resolver)) {
     throw new UsageError(`--resolver must be an absolute path or none, got ${flags.resolver}`);
   }
+  const twice = (families: Family[], flag: string) => {
+    const repeated = families.find((family, i) => families.indexOf(family) !== i);
+    if (repeated !== undefined) throw new UsageError(`${flag} names ${repeated} twice`);
+  };
+  twice(order ?? [], '--order');
+  twice(models.map(([family]) => family), '--model');
   return { order, models };
 }
 

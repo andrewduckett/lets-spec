@@ -254,3 +254,8 @@ test('a flag that names an unknown family exits 2, names it, writes nothing and 
   assert.equal(t.io.files.has(CONFIG), false);
   assert.deepEqual(t.io.calls, []);
 });
+
+test('a family named twice in --order or --model is a usage error that names it', () => {
+  assert.throws(() => propose(findings(), { order: 'gpt,gpt' }), usageNaming('gpt'));
+  assert.throws(() => propose(findings(), { model: ['gpt=a', 'gpt=b'] }), usageNaming('gpt'));
+});
