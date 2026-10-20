@@ -43,13 +43,13 @@ export function candidates({ env, io, cwd, config }: LookupDeps): Candidate[] {
   }
   const configured = config?.resolver ?? null;
   if (configured !== null) list.push({ kind: 'external', name: configured, command: configured, configured: true });
-  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || onPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
+  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
   list.push({ kind: 'default', name: 'default', resolver: createDefaultResolver(io) });
   return list;
 }
 
 // The path of the RESOLVER_COMMAND that PATH finds first, or null.
-function onPath(env: Env, io: Io): string | null {
+export function resolverOnPath(env: Env, io: Io): string | null {
   for (const dir of (env.PATH ?? '').split(delimiter)) {
     if (dir !== '' && io.isExecutable(join(dir, RESOLVER_COMMAND))) return join(dir, RESOLVER_COMMAND);
   }

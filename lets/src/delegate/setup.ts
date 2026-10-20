@@ -2,8 +2,13 @@
 // delegate config from that, and write it on request. It starts no session
 // and spends no tokens: it runs only the CLIs' model list commands and looks
 // on PATH. No process access here; everything comes through deps.
+import { isAbsolute } from 'node:path';
 import type { Child, Io } from '../io.ts';
+import { CONFIG_VERSION } from './config.ts';
+import type { Config } from './config.ts';
 import type { Env } from './env.ts';
+import { UsageError } from './errors.ts';
+import { resolverOnPath } from './lookup.ts';
 import { FAMILIES } from './protocol.ts';
 import type { Family } from './protocol.ts';
 import { withTimeout } from './wait.ts';
@@ -18,7 +23,8 @@ export type Harness = { name: (typeof HARNESSES)[number] | 'none'; onPath: Recor
 // models: what the account can run, best first; [] when there is no list.
 // error: why the list command failed, when it did.
 export type FamilyFindings = { cli: string; available: boolean; models: string[]; error?: string };
-export type Findings = { harness: Harness; families: Record<Family, FamilyFindings> };
+// resolver: the path of lets-delegate-resolver on PATH, or null.
+export type Findings = { harness: Harness; families: Record<Family, FamilyFindings>; resolver: string | null };
 
 export type DetectDeps = { env: Env; io: Io };
 
@@ -34,7 +40,45 @@ export async function detect({ env, io }: DetectDeps): Promise<Findings> {
     const list = LISTS[family];
     if (families[family].available && list !== null) Object.assign(families[family], await listModels(io, cli, list));
   }
-  return { harness: { name, onPath }, families };
+  return { harness: { name, onPath }, families, resolver: resolverOnPath(env, io) };
+}
+
+// The flags that change the proposal. order: comma-separated families.
+// model: family=model, any number of times. resolver: a path, or none.
+export type ProposeFlags = { order?: string; model?: string[]; resolver?: string };
+
+// The config setup proposes: one reviewer per available family, in FAMILIES
+// order, with the first model the account lists, else the CLI's default.
+// The resolver is the one on PATH when a harness it serves is installed.
+// Throws a UsageError that names a flag's unknown or unavailable family.
+export function propose({ harness, families, resolver }: Findings, flags: ProposeFlags): Config {
+  const known = (family: string, flag: string): Family => {
+    if (!(FAMILIES as readonly string[]).includes(family)) throw new UsageError(`${flag} names ${family}, which is not one of ${FAMILIES.join(', ')}`);
+    if (!families[family as Family].available) {
+      throw new UsageError(`${flag} names ${family}, which is not available here: ${families[family as Family].cli} is not on PATH`);
+    }
+    return family as Family;
+  };
+  const order = flags.order === undefined
+    ? FAMILIES.filter((family) => families[family].available)
+    : flags.order.split(',').map((family) => known(family.trim(), '--order'));
+  const models = new Map<Family, string>();
+  for (const pair of flags.model ?? []) {
+    const match = pair.match(/^([^=]+)=(.+)$/);
+    if (!match) throw new UsageError(`--model must be <family>=<model>, got ${pair}`);
+    const family = known(match[1], '--model');
+    if (!order.includes(family)) throw new UsageError(`--model names ${family}, which --order leaves out`);
+    models.set(family, match[2]);
+  }
+  if (flags.resolver !== undefined && flags.resolver !== 'none' && !isAbsolute(flags.resolver)) {
+    throw new UsageError(`--resolver must be an absolute path or none, got ${flags.resolver}`);
+  }
+  const harnessInstalled = harness.onPath.t3 || harness.onPath.herdr;
+  return {
+    version: CONFIG_VERSION,
+    resolver: flags.resolver === undefined ? (harnessInstalled ? resolver : null) : flags.resolver === 'none' ? null : flags.resolver,
+    reviewers: order.map((family) => ({ family, model: models.get(family) ?? families[family].models[0] ?? null })),
+  };
 }
 
 // True when the T3 server in T3's runtime file is alive and one of this

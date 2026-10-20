@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { detect } from '../../../lets/src/delegate/setup.ts';
+import { UsageError } from '../../../lets/src/delegate/errors.ts';
+import { detect, propose } from '../../../lets/src/delegate/setup.ts';
+import type { Findings } from '../../../lets/src/delegate/setup.ts';
 import type { ExecResult } from '../../../lets/src/io.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
@@ -86,4 +88,75 @@ test('a list command that does not answer in time is a failed list', async () =>
   const { families } = await detect(listDeps({ codex: new Promise(() => {}), agy: ok(AGY_MODELS) }));
   assert.deepEqual(families.gpt.models, []);
   assert.match(families.gpt.error!, /30 seconds/);
+});
+
+test('detect finds the path of the resolver on PATH, as PATH gives it', async () => {
+  const io = fakeIo({ executables: ['/home/u/.nix-profile/bin/lets-delegate-resolver'] });
+  assert.equal((await detect({ env: { PATH: '/usr/bin:/home/u/.nix-profile/bin' }, io })).resolver, '/home/u/.nix-profile/bin/lets-delegate-resolver');
+});
+
+const RESOLVER = '/home/u/.nix-profile/bin/lets-delegate-resolver';
+// Findings with t3 on PATH, the resolver found, and all three families.
+const findings = (over: Partial<Findings> = {}): Findings => ({
+  harness: { name: 't3', onPath: { t3: true, herdr: false } },
+  families: {
+    gpt: { cli: 'codex', available: true, models: ['gpt-6-luna', 'gpt-5.6-terra'] },
+    claude: { cli: 'claude', available: true, models: [] },
+    gemini: { cli: 'agy', available: true, models: ['gemini-3.8-flash'] },
+  },
+  resolver: RESOLVER,
+  ...over,
+});
+const usageNaming = (name: string) => (error: unknown) => error instanceof UsageError && error.message.includes(name);
+
+test('the proposal has one reviewer per available family, gpt then claude then gemini, with the first model listed', () => {
+  assert.deepEqual(propose(findings(), {}), {
+    version: 1,
+    resolver: RESOLVER,
+    reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'claude', model: null }, { family: 'gemini', model: 'gemini-3.8-flash' }],
+  });
+});
+
+test('the proposal leaves out a family that is not available', () => {
+  const { families } = findings();
+  const proposal = propose(findings({ families: { ...families, gemini: { ...families.gemini, available: false, models: [] } } }), {});
+  assert.deepEqual(proposal.reviewers.map(({ family }) => family), ['gpt', 'claude']);
+});
+
+test('the proposed resolver is null when neither t3 nor herdr is on PATH', () => {
+  assert.equal(propose(findings({ harness: { name: 'none', onPath: { t3: false, herdr: false } } }), {}).resolver, null);
+});
+
+test('the proposed resolver is null when no resolver is on PATH', () => {
+  assert.equal(propose(findings({ resolver: null }), {}).resolver, null);
+});
+
+test('--order sets the reviewers\' order and drops the families it leaves out', () => {
+  assert.deepEqual(propose(findings(), { order: 'gemini,gpt' }).reviewers.map(({ family }) => family), ['gemini', 'gpt']);
+});
+
+test('--model sets one family\'s model', () => {
+  assert.deepEqual(propose(findings(), { model: ['gpt=gpt-5.6-terra'] }).reviewers[0], { family: 'gpt', model: 'gpt-5.6-terra' });
+});
+
+test('--resolver sets the resolver, and none sets it to null', () => {
+  assert.equal(propose(findings(), { resolver: '/opt/r/resolver' }).resolver, '/opt/r/resolver');
+  assert.equal(propose(findings(), { resolver: 'none' }).resolver, null);
+});
+
+test('a flag that names an unknown family is a usage error that names it', () => {
+  assert.throws(() => propose(findings(), { model: ['mistral=large'] }), usageNaming('mistral'));
+  assert.throws(() => propose(findings(), { order: 'gpt,mistral' }), usageNaming('mistral'));
+});
+
+test('a flag that names a family that is not available is a usage error that names it', () => {
+  const { families } = findings();
+  const noGemini = findings({ families: { ...families, gemini: { ...families.gemini, available: false } } });
+  assert.throws(() => propose(noGemini, { order: 'gemini,gpt' }), usageNaming('gemini'));
+  assert.throws(() => propose(noGemini, { model: ['gemini=gemini-3.8-flash'] }), usageNaming('gemini'));
+});
+
+test('a malformed --model or a relative --resolver is a usage error that names it', () => {
+  assert.throws(() => propose(findings(), { model: ['gpt'] }), usageNaming('gpt'));
+  assert.throws(() => propose(findings(), { resolver: 'bin/r' }), usageNaming('bin/r'));
 });
