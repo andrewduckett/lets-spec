@@ -23,6 +23,15 @@ test('agent argv for each case: a run starts idle, a start carries its prompt', 
     ['--mode', 'plan', '--effort', 'medium', '--model', 'gemini-3.8-flash-medium']);
   assert.deepEqual(args({ kind: 'start', family: 'claude', effort: null, name: 'fix-login' }), ['--remote-control', 'fix-login', 'P']);
 });
+test('a gemini model without an effort suffix runs with the effort added', () => {
+  assert.deepEqual(args({ family: 'gemini', effort: 'high', model: 'gemini-3.8-flash' }),
+    ['--mode', 'plan', '--effort', 'high', '--model', 'gemini-3.8-flash-high']);
+});
+
+test('a family herdr cannot run is one whose executor is not on PATH', () => {
+  assert.equal(createAdapter(fakeIo({ commands: ['herdr'] })).whyNot?.('gpt'), 'codex is not on PATH');
+});
+
 test('a start prompt with quotes and a newline is one argv element', () => {
   assert.equal(args({ kind: 'start', family: 'claude', effort: null, prompt: TRICKY }).at(-1), TRICKY);
 });
