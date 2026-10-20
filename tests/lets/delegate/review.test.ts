@@ -49,6 +49,12 @@ test('when no reviewer serves the effort, stderr names the config file and the e
   assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
 });
 
+test('a config with no reviewers at all also names the file and the effort on stderr', async () => {
+  const t = withReviewers([]);
+  await run(options({ effort: 'low' }), t.deps);
+  assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
+});
+
 test('an invalid config is exit 2, naming the file and the bad value', async () => {
   const t = withReviewers([{ family: 'mistral', model: null }]);
   assert.equal(await run(options(), t.deps), 2);

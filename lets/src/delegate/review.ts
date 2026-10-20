@@ -38,7 +38,7 @@ async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }
   const before = await treeStatus(cwd, io);
 
   const reviewers = config === null ? undefined : reviewersFor(config, effort);
-  if (config !== null && config.reviewers.length > 0 && reviewers!.length === 0) {
+  if (reviewers !== undefined && reviewers.length === 0) {
     deps.stderr(`lets delegate: no reviewer in ${configPath(deps)} serves effort ${effort}\n`);
   }
   const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, reviewers });
