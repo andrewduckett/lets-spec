@@ -454,7 +454,7 @@ test('spawn fails with the add hint when t3 does not know the repo', async () =>
 
 // Spawn a run of family with a null model, with a manifest that has
 // defaults, and answer the model selection t3 was sent.
-async function nullModelSelection(family: SpawnRequest['family']) {
+async function nullModelSelection(family: SpawnRequest['family'], effort: SpawnRequest['effort'] = 'high') {
   const db = database();
   addProject(db, { root: '/r' });
   const log: Log = [];
@@ -469,7 +469,7 @@ async function nullModelSelection(family: SpawnRequest['family']) {
     fetch: fakeFetch([200], []),
     WebSocket: fakeWebSocket(LAUNCHED, log),
   });
-  await createAdapter(io).spawn({ ...runRequest, family, model: null });
+  await createAdapter(io).spawn({ ...runRequest, family, model: null, effort });
   return (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload.modelSelection;
 }
 
@@ -479,4 +479,8 @@ test('a run with a null model spawns the manifest\'s default chat model for the 
 
 test('a run with a null model spawns null when the provider has no default', async () => {
   assert.equal((await nullModelSelection('gpt')).model, null);
+});
+
+test('a gemini run with a null model spawns the default at the review\'s effort', async () => {
+  assert.equal((await nullModelSelection('gemini', 'low')).model, 'gemini-3.8-flash-low');
 });

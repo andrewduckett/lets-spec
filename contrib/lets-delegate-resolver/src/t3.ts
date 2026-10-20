@@ -65,8 +65,11 @@ export function familiesFromT3Manifest(manifest: Manifest, effort: Effort): Avai
 }
 
 // The provider's default chat model in the manifest, or null when it has none.
+// gemini's default names an effort, which is dropped, so the review's own
+// effort is added in its place.
 export function defaultModel(manifest: Manifest, family: Family): string | null {
-  return manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
+  const model = manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
+  return family === 'gemini' && model !== null ? model.replace(/-(low|medium|high)$/, '') : model;
 }
 
 // A gemini model takes the effort as a suffix, unless it already has one.
