@@ -2,14 +2,17 @@
 // delegate config from that, and write it on request. It starts no session
 // and spends no tokens: it runs only the CLIs' model list commands and looks
 // on PATH. No process access here; everything comes through deps.
-import type { Io } from '../io.ts';
+import type { Child, Io } from '../io.ts';
 import type { Env } from './env.ts';
 import { FAMILIES } from './protocol.ts';
 import type { Family } from './protocol.ts';
+import { withTimeout } from './wait.ts';
 
 export const HARNESSES = ['t3', 'herdr'] as const;
 // The CLI that runs each family.
 export const FAMILY_CLI: Record<Family, string> = { gpt: 'codex', claude: 'claude', gemini: 'agy' };
+// How long a model list command may take.
+export const LIST_TIMEOUT_MS = 30_000;
 
 export type Harness = { name: (typeof HARNESSES)[number] | 'none'; onPath: Record<(typeof HARNESSES)[number], boolean> };
 // models: what the account can run, best first; [] when there is no list.
@@ -28,6 +31,8 @@ export async function detect({ env, io }: DetectDeps): Promise<Findings> {
   for (const family of FAMILIES) {
     const cli = FAMILY_CLI[family];
     families[family] = { cli, available: io.commandExists(cli), models: [] };
+    const list = LISTS[family];
+    if (families[family].available && list !== null) Object.assign(families[family], await listModels(io, cli, list));
   }
   return { harness: { name, onPath }, families };
 }
@@ -53,4 +58,46 @@ function insideT3(env: Env, io: Io): boolean {
     current = io.parentPid(current);
   }
   return false;
+}
+
+// How each family's account lists its models: the command, and how to read
+// what it prints. claude has no list, so its CLI's default runs.
+type List = { args: string[]; parse: (stdout: string) => string[] };
+const LISTS: Record<Family, List | null> = {
+  gpt: { args: ['debug', 'models'], parse: codexModels },
+  claude: null,
+  gemini: { args: ['models'], parse: agyModels },
+};
+
+// Run a list command. A command that fails, times out or prints what does not
+// parse gives no models, and an error that says why.
+async function listModels(io: Io, cli: string, { args, parse }: List): Promise<{ models: string[]; error?: string }> {
+  const command = [cli, ...args].join(' ');
+  const started: { child?: Child } = {};
+  const result = await withTimeout(io, io.execFile(cli, args, { started: (child) => { started.child = child; } }), LIST_TIMEOUT_MS);
+  if (result === null) {
+    started.child?.kill();
+    return { models: [], error: `${command} did not answer in ${LIST_TIMEOUT_MS / 1000} seconds` };
+  }
+  if (result.code !== 0) return { models: [], error: `${command} exited ${result.code}: ${result.stderr.trim()}` };
+  try {
+    const models = parse(result.stdout);
+    if (models.length === 0) throw new Error('no models');
+    return { models };
+  } catch {
+    return { models: [], error: `could not read the models in what ${command} printed` };
+  }
+}
+
+// The slug of each model codex lists for the account, in its order.
+export function codexModels(stdout: string): string[] {
+  const { models } = JSON.parse(stdout) as { models: { slug?: unknown; visibility?: unknown }[] };
+  return models.filter((m) => m.visibility === 'list' && typeof m.slug === 'string').map((m) => m.slug as string);
+}
+
+// Each gemini model agy lists, once, without its effort suffix: agy lists a
+// model once per effort, and the resolver adds the effort back.
+export function agyModels(stdout: string): string[] {
+  const ids = stdout.split('\n').map((line) => line.split(/\s/)[0]).filter((id) => id.startsWith('gemini-'));
+  return [...new Set(ids.map((id) => id.replace(/-(low|medium|high)$/, '')))];
 }
