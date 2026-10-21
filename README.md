@@ -51,7 +51,7 @@ Spec keeps one copy here, and copies it into each project. It aims to:
 | `lets` | The command-line tool. `lets sync` sets a project up and keeps it up to date. `lets delegate` runs a prompt in a fresh session, for the review skills and `lets-build`. See [Fresh sessions](#-fresh-sessions). |
 | Nix flake module | Puts the OpenSpec CLI, `lets` and `gh` in the project's dev shell, and runs `lets sync` each time the shell starts |
 | Release tarball | `lets` and the skills for every flow, published on GitHub for each release. mise installs it. |
-| Contrib resolver | `contrib/lets-delegate-resolver/`: starts fresh sessions inside T3 Code and herdr. It is personal to your machine, so no project installs it. See [The T3 Code and herdr resolver](#the-t3-code-and-herdr-resolver). |
+| Contrib resolvers | `lets-delegate-t3` and `lets-delegate-herdr`: each starts fresh sessions inside one harness, T3 Code or herdr. They are personal to your machine, so no project installs them. See [The T3 Code and herdr resolvers](#the-t3-code-and-herdr-resolvers). |
 
 `lets sync` copies the skills into `.agents/skills/` and the schemas into
 `openspec/schemas/`. By default your project commits these copies, along
@@ -542,7 +542,8 @@ A resolver is the program that turns a request into a real session.
 1. The executable that `LETS_SPEC_RESOLVER` names, when it is set.
 2. The resolver your [delegate config](#set-up-delegation) names. If it is
    missing, `lets` exits 2 and says to run `lets delegate setup` again.
-3. `lets-delegate-resolver` on your `PATH`.
+3. `lets-delegate-resolver` on your `PATH`. No program by that name
+   ships any more, so name your resolver in the config instead.
 4. The built-in default, which never declines.
 
 The built-in default starts no session, and picks no model family. For a
@@ -555,23 +556,42 @@ When a session fails, `lets` stops and says why. It never retries, and it
 never falls back to another resolver or family. It leaves the failed
 session in place, so you can read what happened.
 
-### The T3 Code and herdr resolver
+### The T3 Code and herdr resolvers
 
-A resolver for T3 Code and herdr is in this repo, in
-`contrib/lets-delegate-resolver/`:
+This repo has a resolver for each of two harnesses. Each answers only
+inside its own harness, and declines anywhere else:
 
-| You work in | A review runs as | A handoff starts |
-|---|---|---|
-| T3 Code | A new thread, archived when the review succeeds | A new thread in the sidebar |
-| herdr | A new tab, closed when the review succeeds | A new tab |
-| Anything else | It declines, and the built-in default answers | It declines, and the built-in default answers |
+| Resolver | You work in | A review runs as | A handoff starts |
+|---|---|---|---|
+| [`lets-delegate-t3`](contrib/t3-resolver/README.md) | T3 Code | A new thread, archived when the review succeeds | A new thread in the sidebar |
+| [`lets-delegate-herdr`](contrib/herdr-resolver/README.md) | herdr | A new tab, closed when the review succeeds | A new tab |
 
-Install it once for your user, with home-manager, a Nix profile or the
-release tarball. It is never part of a project: it answers for your
-machine. See
-[its README](contrib/lets-delegate-resolver/README.md#install-it) for the
-steps. Then run `lets delegate setup --write`, so reviews use the models
-your accounts can run.
+Install the one for your harness once for your user, with home-manager, a
+Nix profile or the release tarball. It is never part of a project: it
+answers for your machine. Its README gives the steps. Then name it in your
+delegate config, so reviews use it and the models your accounts can run:
+
+```sh
+lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
+```
+
+The config names one resolver. If you work in both harnesses, name the one
+you review from most. Reviews in the other harness fall to the built-in
+default.
+
+#### Switching from lets-delegate-resolver
+
+`lets-delegate-resolver`, which served both harnesses, is gone. Install
+the resolver for your harness in its place, then name it with
+`lets delegate setup --resolver <path> --write`. Until you do, reviews fall
+to the built-in default.
+
+| You installed it with | Do this |
+|---|---|
+| home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-herdr` in `home.packages` |
+| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:andrewduckett/lets-spec#lets-delegate-t3`, or `#lets-delegate-herdr` |
+| mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-herdr` from the release folder |
+| A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/herdr-resolver/bin/lets-delegate-herdr` instead |
 
 ### Write your own resolver
 
@@ -581,8 +601,8 @@ stdout. The verbs are `probe`, `run`, `start` and `finish`. A resolver
 that does not handle a request where it runs exits 75 before it starts
 anything, and `lets` asks the next one.
 
-[The contract](contrib/lets-delegate-resolver/README.md#the-contract)
-gives every field, exit code and rule.
+[The resolver contract](docs/resolver-contract.md) gives every field,
+exit code and rule.
 [`contrib/headless-resolver`](contrib/headless-resolver) is a complete
 resolver in about twenty lines of `sh`, to copy from.
 
@@ -830,14 +850,16 @@ OpenSpec CLI. Then run `pnpm install` once.
 | `nix/flake-module.nix` | The flake module that projects import |
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
 | `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `build.mjs` bundles it into one file with esbuild. |
-| `contrib/lets-delegate-resolver/` | The resolver for T3 Code and herdr, in TypeScript, with no runtime dependencies. Its README holds the resolver contract. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
+| `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
+| `contrib/t3-resolver/`, `contrib/herdr-resolver/` | `lets-delegate-t3` and `lets-delegate-herdr`: each is its harness's adapter on the kit, bundled with no runtime dependencies |
+| `docs/resolver-contract.md` | The resolver contract, which every resolver keeps |
 | `contrib/headless-resolver` | A complete resolver in `sh`: the worked example for writing your own |
 | `package.json`, `pnpm-workspace.yaml`, `tsconfig.json` | The pnpm workspace, its scripts, and the type check's settings |
 | `skills/` | The authored skills, one `lets-*` folder each |
 | `schemas/` | The OpenSpec schemas, each with its templates |
 | `overlays/` | The rules fragment and the files `lets sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
 | `tests/*.bats` | End-to-end tests: `lets sync` in real git repos, the release build, the pinned OpenSpec CLI reading each schema, and every command, file and skill the prose names |
-| `tests/lets/`, `tests/lets-delegate-resolver/` | Unit tests for the `lets` command and the contrib resolver, run with fakes |
+| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/herdr-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
 | `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
@@ -859,12 +881,13 @@ version in its `release.json`.
 ### Releases
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
-a release for every flow, and both resolvers in `contrib/`. Its version is
+a release for every flow, and the three resolvers in `contrib/`:
+`headless-resolver`, `lets-delegate-herdr` and `lets-delegate-t3`. Its version is
 `0.0.0-dev`. Each Node bundle is one file that any Node 26 runs, with no
 `node_modules` beside it. Only `bin/` goes on a mise project's `PATH`.
 
-`nix build .#lets-delegate-resolver` builds the contrib resolver as a
-package for a user's profile.
+`nix build .#lets-delegate-t3` and `nix build .#lets-delegate-herdr` build
+the contrib resolvers as packages for a user's profile.
 
 Release tags are `v<major>.<minor>.<patch>`. When you push one, the
 release workflow builds the folder, sets its version from the tag, and
@@ -885,7 +908,7 @@ nix flake check
 This:
 
 - runs the bats tests, the Node tests and the type check
-- runs the conformance check against the built-in default, the contrib
+- runs the conformance check against the built-in default, each contrib
   resolver and the shell example
 - builds every flow
 - builds the `dist` folder, the release tarball's contents, and runs its
@@ -899,8 +922,8 @@ In the dev shell:
 |---|---|
 | `pnpm test` | The Node tests, the type check, the conformance check and the bats tests |
 | `pnpm check` | The type check alone: `tsc --noEmit` |
-| `pnpm conformance` | The conformance check alone, against the built-in default, the contrib resolver and the shell example |
-| `pnpm build` | The bundles, into `lets/dist/lets` and `contrib/lets-delegate-resolver/dist/lets-delegate-resolver` |
+| `pnpm conformance` | The conformance check alone, against the built-in default, each contrib resolver and the shell example |
+| `pnpm build` | The bundles, into `lets/dist/lets`, `contrib/t3-resolver/dist/lets-delegate-t3` and `contrib/herdr-resolver/dist/lets-delegate-herdr` |
 | `bats tests` | The bats tests alone |
 
 Node runs the TypeScript source directly, so you do not need to build
@@ -908,9 +931,9 @@ before you test. With mise, `mise run test` runs `pnpm test`.
 
 ### After a t3 update
 
-The T3 half of the contrib resolver depends on t3's internal protocol and
-database. After each t3 update, run the smoke test in
-[its README](contrib/lets-delegate-resolver/README.md#after-a-t3-update).
+`lets-delegate-t3` depends on t3's internal protocol and database. After
+each t3 update, run the smoke test in
+[its README](contrib/t3-resolver/README.md#after-a-t3-update).
 
 ## 📄 License
 
