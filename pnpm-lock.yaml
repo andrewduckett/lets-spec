@@ -173,7 +173,20 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  contrib/lets-delegate-resolver:
+  contrib/herdr-resolver:
+    dependencies:
+      resolver-kit:
+        specifier: workspace:*
+        version: link:../resolver-kit
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  contrib/resolver-kit:
     devDependencies:
       '@types/node':
         specifier: ^26.6.5
@@ -181,6 +194,19 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
+  contrib/t3-resolver:
+    dependencies:
+      resolver-kit:
+        specifier: workspace:*
+        version: link:../resolver-kit
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       typescript:
         specifier: ^7.0.2
         version: 7.0.2

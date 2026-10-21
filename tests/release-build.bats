@@ -132,20 +132,32 @@ build_from() {
   [ "$output" = 0.0.0-dev ]
 }
 
-# The tarball ships the contrib resolver as contrib/lets-delegate-resolver. A
-# mise user links it onto PATH and runs it with the system node, with no
-# node_modules beside it. Outside T3 and herdr it declines.
-@test "the resolver bundle is one executable script that runs with no node_modules" {
-  local bin="$BATS_TEST_TMPDIR/contrib/lets-delegate-resolver"
-  node "$repo/contrib/lets-delegate-resolver/build.mjs" "$bin"
+# The tarball ships each harness's resolver as contrib/<program>. A mise user
+# links one onto PATH and runs it with the system node, with no node_modules
+# beside it. Outside its harness it declines.
+# bundle_alone <package> <program>: build the program into an empty folder,
+# check it is the one executable script there, and cd to an empty folder.
+bundle_alone() {
+  bin="$BATS_TEST_TMPDIR/contrib/$2"
+  node "$repo/contrib/$1/build.mjs" "$bin"
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
-  [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = lets-delegate-resolver ]
+  [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = "$2" ]
   mkdir "$BATS_TEST_TMPDIR/empty"
   cd "$BATS_TEST_TMPDIR/empty"
-  # No T3 server runtime file, and no herdr pane.
-  run env -u HERDR_ENV T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe \
-    <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+}
+
+@test "the T3 resolver bundle declines outside T3 Code with no node_modules beside it" {
+  bundle_alone t3-resolver lets-delegate-t3
+  # No T3 server runtime file.
+  run env T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
-  [ "$output" = 'lets-delegate-resolver: not inside T3 or herdr' ]
+  [ "$output" = 'lets-delegate-t3: not inside T3 Code' ]
+}
+
+@test "the herdr resolver bundle declines outside herdr with no node_modules beside it" {
+  bundle_alone herdr-resolver lets-delegate-herdr
+  run env -u HERDR_ENV node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  [ "$status" -eq 75 ]
+  [ "$output" = 'lets-delegate-herdr: not inside herdr' ]
 }

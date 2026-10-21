@@ -110,11 +110,13 @@
           '';
         };
 
-        # The T3 and herdr resolver, for a user's profile. Never in a dev
-        # shell: it answers for the machine, not the project. It runs git and
-        # t3 from PATH, because t3 is the user's own install.
-        lets-delegate-resolver = pkgs.stdenv.mkDerivation {
-          pname = "lets-delegate-resolver";
+        # A resolver program, for a user's profile: the bundle esbuild makes,
+        # in libexec, and a bin/<program> that runs it with Node 26. Never in
+        # a dev shell: it answers for the machine, not the project. It runs
+        # its harness's commands, such as git and t3, from PATH, because they
+        # are the user's own install.
+        resolver = program: dir: pkgs.stdenv.mkDerivation {
+          pname = program;
           version = "0.0.0";
           src = workspaceSource;
           nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
@@ -122,18 +124,20 @@
           dontPatchShebangs = true;
           buildPhase = ''
             runHook preBuild
-            pnpm --filter lets-delegate-resolver build
+            pnpm --filter ${program} build
             runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
-            install -Dm755 contrib/lets-delegate-resolver/dist/lets-delegate-resolver $out/libexec/lets-delegate-resolver
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets-delegate-resolver \
-              --add-flags $out/libexec/lets-delegate-resolver
+            install -Dm755 contrib/${dir}/dist/${program} $out/libexec/${program}
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${program} \
+              --add-flags $out/libexec/${program}
             runHook postInstall
           '';
-          meta.mainProgram = "lets-delegate-resolver";
+          meta.mainProgram = program;
         };
+        lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
+        lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
 
         # lets, bound to one release.
         lets = flow:
@@ -146,12 +150,13 @@
             '';
 
         # The folder the release tarball is made from: the lets bundle, one
-        # release for every flow, and the contrib resolver outside bin/, so
-        # mise never puts it on a project's PATH. CI sets the real version.
+        # release for every flow, and the contrib resolvers outside bin/, so
+        # mise never puts them on a project's PATH. CI sets the real version.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
           mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
-          cp ${lets-delegate-resolver}/libexec/lets-delegate-resolver $out/contrib/lets-delegate-resolver
+          cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
+          cp ${lets-delegate-herdr}/libexec/lets-delegate-herdr $out/contrib/lets-delegate-herdr
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
@@ -168,7 +173,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli lets-delegate-resolver dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
@@ -264,12 +269,14 @@
             [ -x ${dist}/bin/lets ]
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
-            # The resolver is per user, so it is never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-resolver " ]
-            [ -x ${dist}/contrib/lets-delegate-resolver ]
+            # The resolvers are per user, so they are never on a project's PATH.
+            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-t3 " ]
             [ -x ${dist}/contrib/headless-resolver ]
-            [ "$(head -n 1 ${dist}/contrib/lets-delegate-resolver)" = '#!/usr/bin/env node' ]
             [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
+            for program in lets-delegate-herdr lets-delegate-t3; do
+              [ -x ${dist}/contrib/$program ]
+              [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
+            done
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
             mkdir project
@@ -283,14 +290,20 @@
             grep -q 'schema: lets-minimal' openspec/config.yaml
             git add -A
             node ${dist}/bin/lets sync --check
-            # Outside T3 and herdr the resolver declines, with no node_modules.
-            status=0
-            echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/lets-delegate-resolver probe || status=$?
-            [ "$status" -eq 75 ]
+            # Outside its harness each resolver declines, with no node_modules,
+            # and says which harness it needs.
+            declines() {
+              status=0
+              echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
+              [ "$status" -eq 75 ]
+              [ "$(cat stderr)" = "$2" ]
+            }
+            declines lets-delegate-t3 'lets-delegate-t3: not inside T3 Code'
+            declines lets-delegate-herdr 'lets-delegate-herdr: not inside herdr'
             touch "$out"
           '';
 
-        # The unit tests for the lets package and the contrib resolver, and
+        # The unit tests for the lets package and the contrib resolvers, and
         # the type check. They use fakes, so no harness and no real gh
         # run here.
         node-tests = pkgs.runCommand "node-tests"
@@ -307,11 +320,11 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/lets-delegate-resolver/bin contrib/headless-resolver
+            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/lets-delegate-resolver/*.test.ts"
+            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts"
             pnpm check
-            # The built-in default, the contrib resolver and the shell example
+            # The built-in default, the contrib resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
             pnpm conformance
             touch "$out"

@@ -2,7 +2,7 @@
 # A complete lets delegate resolver: run sends the prompt to claude, headless
 # and read-only. It needs jq, and claude for run. It issues no handles, and
 # leaves the timeout to lets, which stops it a minute after timeoutMinutes.
-# The contract: contrib/lets-delegate-resolver/README.md
+# The contract: docs/resolver-contract.md
 # Check it with: lets delegate conformance contrib/headless-resolver
 
 request=$(cat)
