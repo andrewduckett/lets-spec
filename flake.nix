@@ -110,11 +110,13 @@
           '';
         };
 
-        # The T3 and herdr resolver, for a user's profile. Never in a dev
-        # shell: it answers for the machine, not the project. It runs git and
-        # t3 from PATH, because t3 is the user's own install.
-        lets-delegate-resolver = pkgs.stdenv.mkDerivation {
-          pname = "lets-delegate-resolver";
+        # A resolver program, for a user's profile: the bundle esbuild makes,
+        # in libexec, and a bin/<program> that runs it with Node 26. Never in
+        # a dev shell: it answers for the machine, not the project. It runs
+        # its harness's commands, such as git and t3, from PATH, because they
+        # are the user's own install.
+        resolver = program: dir: pkgs.stdenv.mkDerivation {
+          pname = program;
           version = "0.0.0";
           src = workspaceSource;
           nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
@@ -122,18 +124,22 @@
           dontPatchShebangs = true;
           buildPhase = ''
             runHook preBuild
-            pnpm --filter lets-delegate-resolver build
+            pnpm --filter ${program} build
             runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
-            install -Dm755 contrib/lets-delegate-resolver/dist/lets-delegate-resolver $out/libexec/lets-delegate-resolver
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets-delegate-resolver \
-              --add-flags $out/libexec/lets-delegate-resolver
+            install -Dm755 contrib/${dir}/dist/${program} $out/libexec/${program}
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${program} \
+              --add-flags $out/libexec/${program}
             runHook postInstall
           '';
-          meta.mainProgram = "lets-delegate-resolver";
+          meta.mainProgram = program;
         };
+        lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
+        lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
+        # The combined T3 and herdr resolver, until it goes.
+        lets-delegate-resolver = resolver "lets-delegate-resolver" "lets-delegate-resolver";
 
         # lets, bound to one release.
         lets = flow:
@@ -168,7 +174,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli lets-delegate-resolver dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr lets-delegate-resolver dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {

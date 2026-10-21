@@ -149,3 +149,33 @@ build_from() {
   [ "$status" -eq 75 ]
   [ "$output" = 'lets-delegate-resolver: not inside T3 or herdr' ]
 }
+
+# The tarball ships each harness's resolver as contrib/<program>. A mise user
+# links one onto PATH and runs it with the system node, with no node_modules
+# beside it. Outside its harness it declines.
+# bundle_alone <package> <program>: build the program into an empty folder,
+# check it is the one executable script there, and cd to an empty folder.
+bundle_alone() {
+  bin="$BATS_TEST_TMPDIR/contrib/$2"
+  node "$repo/contrib/$1/build.mjs" "$bin"
+  [ -x "$bin" ]
+  [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
+  [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = "$2" ]
+  mkdir "$BATS_TEST_TMPDIR/empty"
+  cd "$BATS_TEST_TMPDIR/empty"
+}
+
+@test "the T3 resolver bundle declines outside T3 Code with no node_modules beside it" {
+  bundle_alone t3-resolver lets-delegate-t3
+  # No T3 server runtime file.
+  run env T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  [ "$status" -eq 75 ]
+  [ "$output" = 'lets-delegate-t3: not inside T3 Code' ]
+}
+
+@test "the herdr resolver bundle declines outside herdr with no node_modules beside it" {
+  bundle_alone herdr-resolver lets-delegate-herdr
+  run env -u HERDR_ENV node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  [ "$status" -eq 75 ]
+  [ "$output" = 'lets-delegate-herdr: not inside herdr' ]
+}
