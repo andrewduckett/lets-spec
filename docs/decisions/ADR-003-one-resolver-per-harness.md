@@ -14,7 +14,7 @@ description: Architecture decision record (ADR) for shipping one resolver progra
 
 ## Decision
 
-Each harness gets its own resolver program, built from a shared kit that holds the protocol code. A resolver answers only when the process runs inside its own harness. Anywhere else it declines with exit 75, and it never looks for another harness. Choosing between harnesses is decided by which resolvers the user installs and the order `lets` asks them in, not inside any resolver.
+Each harness gets its own resolver program, built from a shared kit that holds the protocol code. A resolver answers only when the process runs inside its own harness. Anywhere else it declines with exit 75, and it never looks for another harness. No resolver chooses between harnesses. The user does that by which resolvers they install, and the order `lets` asks them in.
 
 ## Consequences
 

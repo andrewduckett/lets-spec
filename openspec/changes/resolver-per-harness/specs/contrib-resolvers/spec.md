@@ -35,7 +35,7 @@ When the process is not inside its harness, a resolver SHALL decline `probe`, `r
 
 #### Scenario: The T3 resolver while T3 Code runs elsewhere
 - **WHEN** the T3 server is running, and `lets-delegate-t3 probe` runs in a terminal that the server did not start
-- **THEN** it exits 75 and stdout is empty
+- **THEN** it exits 75, stdout is empty, and stderr is `lets-delegate-t3: not inside T3 Code`
 
 #### Scenario: The herdr resolver inside T3 Code
 - **WHEN** `lets-delegate-herdr run` runs inside T3 Code, and `HERDR_ENV` is unset
@@ -43,7 +43,7 @@ When the process is not inside its harness, a resolver SHALL decline `probe`, `r
 
 #### Scenario: herdr is not on PATH
 - **WHEN** `lets-delegate-herdr probe` runs with `HERDR_ENV=1`, and `herdr` is not on `PATH`
-- **THEN** it exits 75 and stdout is empty
+- **THEN** it exits 75, stdout is empty, and stderr is `lets-delegate-herdr: not inside herdr`
 
 ### Requirement: A resolver refuses to finish a handle it never makes
 A resolver SHALL answer `finish` for a handle of a kind it does not make with exit 4 and nothing on stdout.

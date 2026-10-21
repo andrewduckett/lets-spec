@@ -44,7 +44,7 @@ tests/t3-resolver/         t3 adapter, and the program end to end on fakeIo; fix
 tests/herdr-resolver/      herdr adapter, and the program end to end on fakeIo
 ```
 
-Tests stay under `tests/<package>/`, which is the repository's convention, and not inside each package. `fake-io.ts` is shared, so it lives in the kit's tests. The root `test` script globs `tests/{resolver-kit,t3-resolver,herdr-resolver}/*.test.ts`. `tsconfig.json` includes `contrib/*/src` and those test folders.
+Tests stay under `tests/<package>/`, which is the repository's convention, and not inside each package. `fake-io.ts` is shared, so it lives in the kit's tests. The root `test` script globs `tests/{resolver-kit,t3-resolver,herdr-resolver}/*.test.ts`. `tsconfig.json` includes `contrib/*/src` and those test folders. A test imports the kit and each program's files by relative path, such as `../../contrib/resolver-kit/src/protocol.ts`. The root package does not depend on the kit, so a bare `resolver-kit` import from `tests/` would not resolve, for Node or for `tsc`.
 
 *Alternative:* tests inside each package, run by a `test` script in each. Rejected: CI and the flake's `node-tests` run one `node --test` from the root, and splitting it adds a recursive run for no gain.
 
@@ -80,23 +80,22 @@ The kit's `main.ts` exports `runResolver(createAdapter)`. It reads the verb from
 
 ### One Nix function, two packages
 
-The flake gets `resolver = program: dir: pkgs.stdenv.mkDerivation { … }`, which is today's derivation with the names as parameters, run as `pnpm --filter <program> build`. It provides `packages.lets-delegate-t3` and `packages.lets-delegate-herdr`, and no longer `packages.lets-delegate-resolver` (D4). `dist` copies each bundle to `contrib/<program>`. `dist-check` asserts that `contrib/` lists exactly `headless-resolver lets-delegate-herdr lets-delegate-t3`, that each Node program has the `#!/usr/bin/env node` shebang, and that each declines `probe` with 75. `node-tests` runs `patchShebangs` on both new `bin/` folders. A new workspace package changes `pnpm-lock.yaml`, so `pnpmDeps`'s hash is renewed as the flake's comment says.
+The flake gets `resolver = program: dir: pkgs.stdenv.mkDerivation { … }`, which is today's derivation with the names as parameters, run as `pnpm --filter <program> build`. It provides `packages.lets-delegate-t3` and `packages.lets-delegate-herdr`, and no longer `packages.lets-delegate-resolver` (D4). `dist` copies each bundle to `contrib/<program>`. `dist-check` asserts three things about `contrib/`. It lists exactly `headless-resolver lets-delegate-herdr lets-delegate-t3`. Each Node program starts with the `#!/usr/bin/env node` shebang. And each declines `probe` with exit 75 and its own decline message on stderr. `tests/release-build.bats` builds both bundles in the same way, and checks the same exit code and message for each. `node-tests` runs `patchShebangs` on both new `bin/` folders. A new workspace package changes `pnpm-lock.yaml`, so `pnpmDeps`'s hash is renewed as the flake's comment says.
 
 ### The docs
 
 - `docs/resolver-contract.md` takes the old README's *The contract* and *Write your own* sections whole, with the `sh` example (D3). Its *How `lets` finds a resolver* part still says `lets-delegate-resolver` on `PATH`, because that is still how `lets` behaves (D1). It also says that no program by that name ships any more, and that #49 removes the step.
 - `contrib/t3-resolver/README.md` and `contrib/herdr-resolver/README.md` each give: what the program does, how to install it (home-manager, Nix profile, mise from the release folder, a checkout), and how to name it with `lets delegate setup --resolver <path> --write` and check it with `lets delegate conformance`. The T3 one keeps *Before the first review in T3 Code* and *After a t3 update*.
-- In the main README, the *Contrib resolver* row and *The T3 Code and herdr resolver* section name the two programs and link to their READMEs. *Write your own resolver* links to `docs/resolver-contract.md`. The layout table and the `pnpm build` and `nix build` lines name the new packages. A *Switching from lets-delegate-resolver* note gives the one-line move for each install method.
+- In the main README, the *Contrib resolver* row and *The T3 Code and herdr resolver* section name the two programs and link to their READMEs. *Write your own resolver* links to `docs/resolver-contract.md`. The layout table and the `pnpm build` and `nix build` lines name the new packages. A *Switching from lets-delegate-resolver* note gives the one-line move for each install method. It also says that the config names one resolver for now. A user of both T3 Code and herdr names the one they review from most, and the other harness's reviews fall to the built-in default.
+- `pnpm conformance` checks `tests/lets/delegate/fixtures/default-resolver`, as it does today, as well as the three contrib programs (D11).
 - `contrib/headless-resolver`'s header comment points at `docs/resolver-contract.md`. `skill-interfaces.bats` diffs the example against that doc.
 
 ### Commits
 
-The split lands as a few commits, one per unit of work, each passing `pnpm test`:
+The split lands as a few commits, one per unit of work. Each commit leaves both `pnpm test` and `nix flake check` passing. So no commit removes a path while anything still names it: `package.json`'s scripts, `tsconfig.json`, `flake.nix`, `tests/release-build.bats` or `tests/skill-interfaces.bats`.
 
-1. The kit is created and the shared files move into it.
-2. The two programs are created, and the combined package is deleted. This is the `feat!` commit, with a `BREAKING CHANGE:` footer.
-3. The flake and the release are updated.
-4. The docs are updated.
+- The new packages, the flake's new packages and the contract doc can land beside the old package, which keeps building until it goes.
+- One commit deletes `contrib/lets-delegate-resolver/` and `packages.lets-delegate-resolver`. It updates every reference above at the same time. This is the `feat!` commit, with a `BREAKING CHANGE:` footer.
 
 The tasks step sets the exact cut.
 
