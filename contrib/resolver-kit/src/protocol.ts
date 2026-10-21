@@ -1,6 +1,6 @@
-// Copied from lets/src/delegate/protocol.ts, so this resolver installs on its own.
+// Copied from lets/src/delegate/protocol.ts, so each resolver installs on its own.
 // Keep the two the same: a test compares them, and the conformance check runs
-// against this resolver in CI.
+// against each resolver in CI.
 
 // The resolver contract. lets runs a resolver as `<resolver> <verb>`, writes
 // one JSON request to its stdin, and reads one JSON response from its stdout.

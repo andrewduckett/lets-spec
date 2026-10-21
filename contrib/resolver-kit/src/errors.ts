@@ -1,6 +1,6 @@
-// Copied from lets/src/delegate/errors.ts, so this resolver installs on its own.
+// Copied from lets/src/delegate/errors.ts, so each resolver installs on its own.
 // Keep the two the same: a test compares them, and the conformance check runs
-// against this resolver in CI.
+// against each resolver in CI.
 
 // The exit codes of lets delegate, and the errors that map to them. A command
 // catches only these classes; anything else is a bug and propagates.

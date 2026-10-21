@@ -1,4 +1,4 @@
-// This resolver's own. It began as a copy of lets/src/delegate/env.ts,
+// The kit's own. It began as a copy of lets/src/delegate/env.ts,
 // which lets no longer needs, so the two may differ.
 
 // The variables that tie a process to the session that started it. A new

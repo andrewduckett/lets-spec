@@ -1,4 +1,4 @@
-// This resolver's own. It began as a copy of lets/src/delegate/families.ts,
+// The kit's own. It began as a copy of lets/src/delegate/families.ts,
 // which lets no longer needs, so the two may differ.
 
 // Which family takes a session. With the reviewers lets sends, the first
