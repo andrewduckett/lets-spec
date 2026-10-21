@@ -23,7 +23,7 @@ import { dirname, resolve } from 'node:path';
 import { SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
 import type { Available } from 'resolver-kit/families.ts';
-import type { Adapter, Session, SpawnRequest } from './adapter.ts';
+import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
@@ -339,6 +339,9 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 't3',
+    program: 'lets-delegate-t3',
+    harness: 'T3 Code',
+    handleKind: 'thread',
 
     detect() {
       const runtime = readRuntime(io);

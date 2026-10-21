@@ -7,8 +7,8 @@ import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, familiesFromT3Manifest, findProject, isAncestor, launch, readFinalMessage,
   readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
-} from '../../contrib/lets-delegate-resolver/src/t3.ts';
-import type { SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
+} from '../../contrib/t3-resolver/src/t3.ts';
+import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');

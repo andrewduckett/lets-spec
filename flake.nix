@@ -307,9 +307,9 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/lets-delegate-resolver/bin contrib/headless-resolver
+            patchShebangs tests contrib/lets-delegate-resolver/bin contrib/t3-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/lets-delegate-resolver/*.test.ts"
+            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/lets-delegate-resolver/*.test.ts"
             pnpm check
             # The built-in default, the contrib resolver and the shell example
             # keep the shape of the contract. None starts a session here.

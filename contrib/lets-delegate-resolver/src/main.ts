@@ -4,7 +4,7 @@
 import { createAdapter as createHerdr } from './herdr.ts';
 import { realIo } from 'resolver-kit/io.ts';
 import { handle } from './resolver.ts';
-import { createAdapter as createT3 } from './t3.ts';
+import { createAdapter as createT3 } from '../../t3-resolver/src/t3.ts';
 
 let input = '';
 for await (const chunk of process.stdin) input += chunk;
