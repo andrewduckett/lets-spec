@@ -77,7 +77,7 @@ Run `pnpm install` in the checkout first.
 ## Name it in your delegate config
 
 `lets` does not look for `lets-delegate-t3` on your `PATH`. Name it in your
-delegate config once, after you install it:
+delegate config after you install it:
 
 ```sh
 lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
@@ -85,6 +85,10 @@ lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
 
 This records the resolver, with the models your accounts can run. A review
 then runs the first of those models that T3 Code can start.
+
+Pass `--resolver` again each time you run setup with `--write`. Setup does
+not find `lets-delegate-t3` by itself yet, so without the flag it writes a config
+with no resolver, and reviews fall to the built-in default.
 
 The config names one resolver. If you also work in herdr, name the
 resolver for the harness you review from most. Reviews in the other

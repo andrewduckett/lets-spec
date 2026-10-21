@@ -495,6 +495,11 @@ CLI or a resolver:
 lets delegate setup
 ```
 
+If you use `lets-delegate-t3` or `lets-delegate-herdr`, pass
+`--resolver <path>` each time you run it with `--write`. Setup does not
+find either program by itself yet, so without the flag it writes a config
+with no resolver, and reviews fall to the built-in default.
+
 It shows what your machine offers: the harness it runs in (T3 Code,
 herdr or none), the family CLIs on your `PATH` (`codex`, `claude`, `agy`),
 and the models each account can run. Then it proposes a config. It starts

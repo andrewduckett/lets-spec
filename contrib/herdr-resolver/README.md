@@ -76,7 +76,7 @@ Run `pnpm install` in the checkout first.
 ## Name it in your delegate config
 
 `lets` does not look for `lets-delegate-herdr` on your `PATH`. Name it in
-your delegate config once, after you install it:
+your delegate config after you install it:
 
 ```sh
 lets delegate setup --resolver "$(command -v lets-delegate-herdr)" --write
@@ -84,6 +84,10 @@ lets delegate setup --resolver "$(command -v lets-delegate-herdr)" --write
 
 This records the resolver, with the models your accounts can run. A review
 then runs the first of those models that herdr can start.
+
+Pass `--resolver` again each time you run setup with `--write`. Setup does
+not find `lets-delegate-herdr` by itself yet, so without the flag it writes a config
+with no resolver, and reviews fall to the built-in default.
 
 The config names one resolver. If you also work in T3 Code, name the
 resolver for the harness you review from most. Reviews in the other
