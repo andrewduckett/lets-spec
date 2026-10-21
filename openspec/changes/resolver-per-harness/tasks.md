@@ -23,7 +23,7 @@
 
 ## 4. Integration [depends-on: 3]
 
-- [ ] 4.1 [easy] The whole change passes both project checks, and the release folder holds the three programs, each declining outside its harness (verify: `pnpm test && nix flake check`)
+- [x] 4.1 [easy] The whole change passes both project checks, and the release folder holds the three programs, each declining outside its harness (verify: `pnpm test && nix flake check`) (✓ pnpm test and nix flake check passed; the dist folder's contrib/ lists headless-resolver lets-delegate-herdr lets-delegate-t3)
 
 ## Deviations Ledger
 
