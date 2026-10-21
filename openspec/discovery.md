@@ -27,7 +27,7 @@
 
 ## Journey Map
 
-Stage status checked against the code on 2026-10-19.
+Stage status checked against the code on 2026-10-20.
 
 ### People who use Let's Spec
 
@@ -39,11 +39,11 @@ Stage status checked against the code on 2026-10-19.
    partial         partial          supported   partial    partial   supported  partial
 ```
 
-1. **Set it up** — install with Nix or mise, run `lets sync`, describe the project — partial: the ignored-mode messages are wrong ([#31](https://github.com/andrewduckett/lets-spec/issues/31)); the flow and skills mode live in `mise.toml`, not the project's config ([#23](https://github.com/andrewduckett/lets-spec/issues/23)); the mise example does not say when to pin ([#25](https://github.com/andrewduckett/lets-spec/issues/25))
+1. **Set it up** — install with Nix or mise, run `lets sync`, describe the project — partial: the resolver is installed by hand, one per machine, and nothing updates it when the release moves ([#44](https://github.com/andrewduckett/lets-spec/issues/44)); setup asks nothing in a terminal ([#50](https://github.com/andrewduckett/lets-spec/issues/50)); the flow and skills mode live in `mise.toml`, not the project's config ([#23](https://github.com/andrewduckett/lets-spec/issues/23)); the mise example does not say when to pin ([#25](https://github.com/andrewduckett/lets-spec/issues/25))
 2. **Set up the backlog** — `lets-setup-backlog` creates the Project and its fields — partial: the skill describes workflows a new Project no longer has ([#18](https://github.com/andrewduckett/lets-spec/issues/18)); views, options and workflows are not converged ([#29](https://github.com/andrewduckett/lets-spec/issues/29))
 3. **Shape** — `lets-shape` turns an idea or a bug into issues with packets — supported
-4. **Build** — `lets-build` claims an issue, plans it, and builds the plan in a fresh session — partial: a handoff that starts no session stops and prints a command ([#39](https://github.com/andrewduckett/lets-spec/issues/39)); the resolver is installed and found by convention, with no record of what the user chose ([#40](https://github.com/andrewduckett/lets-spec/issues/40)); a stale resolver is not detected before the plan exists ([#33](https://github.com/andrewduckett/lets-spec/issues/33))
-5. **Review** — plan and code reviews run in a fresh session, from another family — partial: a review from T3 picks a model the account cannot run ([#34](https://github.com/andrewduckett/lets-spec/issues/34)); the gemini CLI returns nothing headless ([#35](https://github.com/andrewduckett/lets-spec/issues/35)); which models the machine can run is not configured ([#40](https://github.com/andrewduckett/lets-spec/issues/40))
+4. **Build** — `lets-build` claims an issue, plans it, and builds the plan in a fresh session — partial: one binary picks between harnesses at run time instead of one program per harness chosen at setup ([#47](https://github.com/andrewduckett/lets-spec/issues/47), [#48](https://github.com/andrewduckett/lets-spec/issues/48), [#49](https://github.com/andrewduckett/lets-spec/issues/49)); a stale resolver is not detected before the plan exists ([#33](https://github.com/andrewduckett/lets-spec/issues/33))
+5. **Review** — plan and code reviews run in a fresh session, from another family — partial: a review from T3 picks a model the account cannot run ([#34](https://github.com/andrewduckett/lets-spec/issues/34)); the gemini CLI returns nothing headless ([#35](https://github.com/andrewduckett/lets-spec/issues/35))
 6. **Merge** — the user merges the pull request; archive is the last commit — supported
 7. **Update** — move the pin, sync, commit — partial: `lets --version` says 0.0.0-dev under Nix ([#19](https://github.com/andrewduckett/lets-spec/issues/19)); the label-backlog migration is undocumented ([#20](https://github.com/andrewduckett/lets-spec/issues/20)); the OpenSpec CLI warning does not name the line to set ([#26](https://github.com/andrewduckett/lets-spec/issues/26))
 
