@@ -134,10 +134,10 @@ flow_texts() {
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 
-@test "the resolver README shows contrib/headless-resolver as it is" {
-  local readme="$repo/contrib/lets-delegate-resolver/README.md"
+@test "the resolver contract shows contrib/headless-resolver as it is" {
+  local doc="$repo/docs/resolver-contract.md"
   diff "$repo/contrib/headless-resolver" \
-    <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$readme")
+    <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$doc")
 }
 
 @test "the review skills say exit 3 also means no resolver started a session" {
