@@ -9,5 +9,5 @@
     "target": "es2024",
     "types": ["node"]
   },
-  "include": ["lets/src", "tests/lets", "contrib/lets-delegate-resolver/src", "tests/lets-delegate-resolver"]
+  "include": ["lets/src", "tests/lets", "contrib/resolver-kit/src", "tests/resolver-kit", "contrib/lets-delegate-resolver/src", "tests/lets-delegate-resolver"]
 }

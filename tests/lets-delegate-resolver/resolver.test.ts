@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Adapter, SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
-import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/lets-delegate-resolver/src/errors.ts';
-import type { Available } from '../../contrib/lets-delegate-resolver/src/families.ts';
-import { buildRequest } from '../../contrib/lets-delegate-resolver/src/protocol.ts';
-import type { Handle } from '../../contrib/lets-delegate-resolver/src/protocol.ts';
+import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
+import type { Available } from '../../contrib/resolver-kit/src/families.ts';
+import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
+import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from '../../contrib/lets-delegate-resolver/src/resolver.ts';
 
 type Options = { detects?: boolean; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };

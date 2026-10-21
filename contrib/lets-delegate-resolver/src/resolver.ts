@@ -3,10 +3,10 @@
 // when it is inside neither. finish goes to the harness the handle names. No
 // process access here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
-import { exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
-import { pickFamily, pickReviewer } from './families.ts';
-import { DECLINE, parseRequest } from './protocol.ts';
-import type { Family, Request, Requests, Response } from './protocol.ts';
+import { exitCodeOf, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { pickFamily, pickReviewer } from 'resolver-kit/families.ts';
+import { DECLINE, parseRequest } from 'resolver-kit/protocol.ts';
+import type { Family, Request, Requests, Response } from 'resolver-kit/protocol.ts';
 
 // What the process prints, and its exit code.
 export type Answer = { code: number; stdout: string; stderr: string };

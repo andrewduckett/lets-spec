@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
-import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/lets-delegate-resolver/src/errors.ts';
+import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import { agentArgs, createAdapter } from '../../contrib/lets-delegate-resolver/src/herdr.ts';
-import type { ExecResult } from '../../contrib/lets-delegate-resolver/src/io.ts';
-import { fakeIo } from './fixtures/fake-io.ts';
+import type { ExecResult } from '../../contrib/resolver-kit/src/io.ts';
+import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const TRICKY = 'Say "hi".\nIt\'s fine.';
 const CREATED = { stdout: JSON.stringify({ result: { root_pane: { pane_id: 'pane-9' }, tab: { tab_id: 'tab-3' } } }), stderr: '', code: 0 };

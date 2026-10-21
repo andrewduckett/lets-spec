@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { SessionFailed, SpawnError } from '../../contrib/lets-delegate-resolver/src/errors.ts';
-import type { Db } from '../../contrib/lets-delegate-resolver/src/io.ts';
+import { SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
+import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, familiesFromT3Manifest, findProject, isAncestor, launch, readFinalMessage,
   readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
 } from '../../contrib/lets-delegate-resolver/src/t3.ts';
 import type { SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
-import { fakeIo } from './fixtures/fake-io.ts';
+import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';

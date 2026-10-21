@@ -7,7 +7,7 @@
 //   files:    initial files, { path: text }
 //   commands: the commands commandExists finds
 //   any other io field replaces the default.
-import type { ExecOptions, ExecResult, Io } from '../../../contrib/lets-delegate-resolver/src/io.ts';
+import type { ExecOptions, ExecResult, Io } from '../../../contrib/resolver-kit/src/io.ts';
 
 type Result = ExecResult | ((cmd: string, args: string[], opts: ExecOptions) => ExecResult);
 

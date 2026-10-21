@@ -1,7 +1,7 @@
 // What the resolver needs from a harness. Each adapter makes sessions in
 // one harness; resolver.ts turns protocol verbs into these calls.
-import type { Available } from './families.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
+import type { Available } from 'resolver-kit/families.ts';
+import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
 
 // run: read-only, and the resolver waits for the final message.
 // start: interactive, and the resolver returns at once.

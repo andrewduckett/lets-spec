@@ -18,11 +18,11 @@
 // after `--`, so the prompt stays literal. herdr prints its errors as JSON
 // on stderr with exit 1.
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
-import { scrubbedEnv } from './env.ts';
-import { SessionFailed, SpawnError, TimeoutError } from './errors.ts';
-import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from './families.ts';
-import type { ExecResult, Io } from './io.ts';
-import type { Family } from './protocol.ts';
+import { scrubbedEnv } from 'resolver-kit/env.ts';
+import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
+import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
+import type { ExecResult, Io } from 'resolver-kit/io.ts';
+import type { Family } from 'resolver-kit/protocol.ts';
 
 const READ_LINES = '2000';
 

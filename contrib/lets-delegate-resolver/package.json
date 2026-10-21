@@ -12,6 +12,9 @@
   "scripts": {
     "build": "node build.mjs"
   },
+  "dependencies": {
+    "resolver-kit": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",

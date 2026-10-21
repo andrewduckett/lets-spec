@@ -20,14 +20,14 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { SessionFailed, SpawnError } from './errors.ts';
-import { withEffort, withoutEffort } from './families.ts';
-import type { Available } from './families.ts';
+import { SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
+import type { Available } from 'resolver-kit/families.ts';
 import type { Adapter, Session, SpawnRequest } from './adapter.ts';
-import type { Db, Io } from './io.ts';
-import { FAMILIES } from './protocol.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
-import { pollUntil } from './wait.ts';
+import type { Db, Io } from 'resolver-kit/io.ts';
+import { FAMILIES } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
+import { pollUntil } from 'resolver-kit/wait.ts';
 
 export const TOKEN_FILE_SUFFIX = '.config/lets-delegate/t3-token';
 
