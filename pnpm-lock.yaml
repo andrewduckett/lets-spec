@@ -173,6 +173,19 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  contrib/herdr-resolver:
+    dependencies:
+      resolver-kit:
+        specifier: workspace:*
+        version: link:../resolver-kit
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   contrib/lets-delegate-resolver:
     dependencies:
       resolver-kit:

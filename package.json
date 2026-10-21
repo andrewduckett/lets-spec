@@ -7,8 +7,8 @@
     "node": ">=26"
   },
   "scripts": {
-    "test": "node --test \"tests/lets/**/*.test.ts\" \"tests/resolver-kit/*.test.ts\" \"tests/t3-resolver/*.test.ts\" \"tests/lets-delegate-resolver/*.test.ts\" && tsc --noEmit && pnpm conformance && bats tests",
-    "conformance": "node lets/bin/lets delegate conformance tests/lets/delegate/fixtures/default-resolver && node lets/bin/lets delegate conformance contrib/lets-delegate-resolver/bin/lets-delegate-resolver && node lets/bin/lets delegate conformance contrib/t3-resolver/bin/lets-delegate-t3 && node lets/bin/lets delegate conformance contrib/headless-resolver",
+    "test": "node --test \"tests/lets/**/*.test.ts\" \"tests/resolver-kit/*.test.ts\" \"tests/t3-resolver/*.test.ts\" \"tests/herdr-resolver/*.test.ts\" \"tests/lets-delegate-resolver/*.test.ts\" && tsc --noEmit && pnpm conformance && bats tests",
+    "conformance": "node lets/bin/lets delegate conformance tests/lets/delegate/fixtures/default-resolver && node lets/bin/lets delegate conformance contrib/lets-delegate-resolver/bin/lets-delegate-resolver && node lets/bin/lets delegate conformance contrib/t3-resolver/bin/lets-delegate-t3 && node lets/bin/lets delegate conformance contrib/herdr-resolver/bin/lets-delegate-herdr && node lets/bin/lets delegate conformance contrib/headless-resolver",
     "check": "tsc --noEmit",
     "build": "pnpm --recursive build"
   },

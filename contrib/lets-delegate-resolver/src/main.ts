@@ -1,7 +1,7 @@
 // The real entry: read the verb and the request, answer, and exit with the
 // answer's code. resolver.ts holds the logic; this file wires it to the real
 // world.
-import { createAdapter as createHerdr } from './herdr.ts';
+import { createAdapter as createHerdr } from '../../herdr-resolver/src/herdr.ts';
 import { realIo } from 'resolver-kit/io.ts';
 import { handle } from './resolver.ts';
 import { createAdapter as createT3 } from '../../t3-resolver/src/t3.ts';

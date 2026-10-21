@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { SpawnRequest } from '../../contrib/lets-delegate-resolver/src/adapter.ts';
+import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
 import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
-import { agentArgs, createAdapter } from '../../contrib/lets-delegate-resolver/src/herdr.ts';
+import { agentArgs, createAdapter } from '../../contrib/herdr-resolver/src/herdr.ts';
 import type { ExecResult } from '../../contrib/resolver-kit/src/io.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 

@@ -17,7 +17,7 @@
 // does not inherit this session's markers. herdr shell-quotes each argument
 // after `--`, so the prompt stays literal. herdr prints its errors as JSON
 // on stderr with exit 1.
-import type { Adapter, Session, SpawnRequest } from './adapter.ts';
+import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
@@ -68,6 +68,9 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 'herdr',
+    program: 'lets-delegate-herdr',
+    harness: 'herdr',
+    handleKind: 'tab',
     detect: () => io.env.HERDR_ENV === '1' && io.commandExists('herdr'),
     availableFamilies: () => familiesFromExecutors(io.commandExists),
     whyNot: (family) => `${HEADLESS_EXECUTOR[family]} is not on PATH`,
