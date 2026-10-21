@@ -9,5 +9,5 @@
     "target": "es2024",
     "types": ["node"]
   },
-  "include": ["lets/src", "tests/lets", "contrib/resolver-kit/src", "tests/resolver-kit", "contrib/t3-resolver/src", "tests/t3-resolver", "contrib/herdr-resolver/src", "tests/herdr-resolver", "contrib/lets-delegate-resolver/src", "tests/lets-delegate-resolver"]
+  "include": ["lets/src", "tests/lets", "contrib/resolver-kit/src", "tests/resolver-kit", "contrib/t3-resolver/src", "tests/t3-resolver", "contrib/herdr-resolver/src", "tests/herdr-resolver"]
 }

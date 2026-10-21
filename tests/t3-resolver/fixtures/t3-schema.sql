@@ -1,5 +1,5 @@
 -- CREATE statements copied from a t3code 0.1.0 statev2.sqlite on 2026-10-17.
--- Used by the lets-delegate-resolver tests to build an in-memory database with the real shape.
+-- Used by the lets-delegate-t3 tests to build an in-memory database with the real shape.
 
 CREATE TABLE projection_projects (
       project_id TEXT PRIMARY KEY,
