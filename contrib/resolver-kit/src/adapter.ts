@@ -32,12 +32,16 @@ export type Adapter = {
   handleKind: string;
   // True when this process runs inside the adapter's harness.
   detect(): boolean;
+  // Why this process declines, when detect() is false and the adapter can
+  // say more than "not inside <harness>".
+  whyDeclined?(): string;
   availableFamilies(options: { effort: Effort }): Available;
   // Why a family is not available here, when the adapter can say more than
   // that it is not.
   whyNot?(family: Family): string;
   spawn(request: SpawnRequest): Promise<Session>;
   waitForResult(session: Session, options: { timeoutMs: number }): Promise<{ text: string }>;
-  // Cleans up after a session on ok. Throws when it cannot.
-  finish(handle: Handle, ok: boolean): Promise<void>;
+  // Cleans up after a session on ok. cwd is the finish request's folder.
+  // Throws when it cannot.
+  finish(handle: Handle, ok: boolean, options: { cwd: string }): Promise<void>;
 };

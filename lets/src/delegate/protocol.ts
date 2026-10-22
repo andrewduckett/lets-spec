@@ -1,6 +1,6 @@
 // The resolver contract. lets runs a resolver as `<resolver> <verb>`, writes
 // one JSON request to its stdin, and reads one JSON response from its stdout.
-// The contrib resolver keeps a copy of this file; a test and the conformance
+// The contrib resolver keeps a copy of this file; a test and the verify
 // check keep the two in step.
 import { isAbsolute } from 'node:path';
 import { ContractError, EXIT, UsageError } from './errors.ts';
@@ -24,7 +24,7 @@ export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium
 export type Handle = { kind: string; id: string; [field: string]: unknown };
 
 // A family and model a review may run on. A null model is the tool's own
-// default. lets never sends them; the conformance check does.
+// default. lets never sends them; the verify check does.
 export type Reviewer = { family: Family; model: string | null };
 
 export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string };

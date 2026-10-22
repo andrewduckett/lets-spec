@@ -1,4 +1,4 @@
-// lets delegate conformance: check that a resolver keeps the contract. The
+// lets delegate verify: check that a resolver keeps the contract. The
 // shape part sends requests that start nothing. The live part, with --live,
 // runs a real session and starts another, so it spends tokens and may open
 // a thread. No process access here; everything comes through deps.
@@ -9,14 +9,14 @@ import { buildRequest, DECLINE, FAMILIES, parseResponse, PROTOCOL } from './prot
 import type { Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
-export type ConformanceOptions = { command: string[]; live: boolean };
+export type VerifyOptions = { command: string[]; live: boolean };
 
 const SHAPE_TIMEOUT_MS = 60000;
 const LIVE_RUN_MINUTES = 5;
 // The live run waits the session's timeout, plus a minute, as review does.
 const LIVE_TIMEOUT_MS = (LIVE_RUN_MINUTES + 1) * 60000;
-const NAME = 'lets-conformance';
-const NEVER_ISSUED = { kind: 'lets-conformance', id: 'never-issued' };
+const NAME = 'lets-verify';
+const NEVER_ISSUED = { kind: 'lets-verify', id: 'never-issued' };
 // The live run lists every family with its default model, so a resolver that
 // walks the list can run one, and one that ignores it still passes.
 const LIVE_REVIEWERS = FAMILIES.map((family) => ({ family, model: null }));
@@ -24,10 +24,10 @@ const LIVE_REVIEWERS = FAMILIES.map((family) => ({ family, model: null }));
 type Call = { code: number | null; stdout: string; stderr: string };
 
 // The exit code: 0 when every check passes, 1 when one fails, 2 usage.
-export async function run({ command, live }: ConformanceOptions, deps: Deps): Promise<number> {
+export async function run({ command, live }: VerifyOptions, deps: Deps): Promise<number> {
   const [cmd, ...args] = command;
   if (cmd === undefined) {
-    deps.stderr('lets delegate: conformance needs a resolver command\n');
+    deps.stderr('lets delegate: verify needs a resolver command\n');
     return EXIT.usage;
   }
   let failures = 0;
@@ -61,7 +61,7 @@ export async function run({ command, live }: ConformanceOptions, deps: Deps): Pr
   const probe = (fields = {}) => JSON.stringify({ ...buildRequest('probe', { cwd }), ...fields });
 
   report('probe answers { resolver } or declines with 75', checkProbe(await call('probe', probe())));
-  report('an unknown verb exits 2', exits(await call('lets-conformance-verb', probe()), [2]));
+  report('an unknown verb exits 2', exits(await call('lets-verify-verb', probe()), [2]));
   report('a request that is not JSON exits 2', exits(await call('probe', 'not json'), [2]));
   report(`protocol 99 exits 2 (this is protocol ${PROTOCOL})`, exits(await call('probe', probe({ protocol: 99 })), [2]));
   const unknown = await call('finish', JSON.stringify(buildRequest('finish', { cwd, handle: NEVER_ISSUED, ok: true })));
@@ -85,10 +85,15 @@ export async function run({ command, live }: ConformanceOptions, deps: Deps): Pr
       }
     }
 
+    // A resolver that only runs headless declines start, and the next
+    // resolver in the chain answers the handoff.
     const started = await call('start', JSON.stringify(buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.' })));
-    const answer = parsed('start', started);
-    report('start answers with a handle or instructions', typeof answer === 'string' ? answer : null);
-    if (typeof answer !== 'string') {
+    const declined = started.code === DECLINE;
+    const answer = declined ? silent(started) : parsed('start', started);
+    report('start answers with a handle or instructions, or declines', typeof answer === 'string' ? answer : null);
+    if (declined && answer === null) {
+      deps.stdout('      it declined start; the next resolver in the chain answers handoffs\n');
+    } else if (answer !== null && typeof answer !== 'string') {
       deps.stdout(answer.handle
         ? `      it started ${answer.handle.kind} ${answer.handle.id}; close it when you are done\n`
         : `      it answered: ${answer.instructions}\n`);

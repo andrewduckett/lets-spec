@@ -6,8 +6,11 @@ import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export type ExecResult = { stdout: string; stderr: string; code: number };
-export type ExecOptions = { cwd?: string; env?: Record<string, string | undefined> };
+// timedOut: the command ran past timeoutMs, and was stopped.
+export type ExecResult = { stdout: string; stderr: string; code: number; timedOut?: boolean };
+// input goes to the command's stdin. timeoutMs stops the command when it
+// runs longer.
+export type ExecOptions = { cwd?: string; env?: Record<string, string | undefined>; input?: string; timeoutMs?: number };
 
 // The part of a node:sqlite database the adapters use.
 export type Db = Pick<DatabaseSync, 'prepare' | 'close'>;
@@ -34,16 +37,24 @@ export type Io = {
 
 export function realIo(): Io {
   return {
-    // Resolves on any exit code. Rejects only when the command cannot start.
-    execFile(cmd, args, { cwd, env } = {}) {
+    // Resolves on any exit code, and on a timeout. Rejects only when the
+    // command cannot start.
+    execFile(cmd, args, { cwd, env, input, timeoutMs } = {}) {
       return new Promise((resolve, reject) => {
+        let timedOut = false;
         const child = nodeExecFile(cmd, args, { cwd, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
+          clearTimeout(timer);
           if (error && typeof error.code === 'string') return reject(new Error(`cannot run ${cmd}: ${error.message}`));
-          resolve({ stdout, stderr, code: error ? ((error.code as number | undefined) ?? 1) : 0 });
+          resolve({ stdout, stderr, code: error ? ((error.code as number | undefined) ?? 1) : 0, timedOut });
         });
-        // Close stdin, so a command that reads it does not hang.
+        // Do not leave the command running, and spending tokens, after we stop waiting.
+        const timer = timeoutMs === undefined ? undefined : setTimeout(() => {
+          timedOut = true;
+          child.kill();
+        }, timeoutMs);
+        // Close stdin after the input, so a command that reads it does not hang.
         child.stdin!.on('error', () => {});
-        child.stdin!.end();
+        child.stdin!.end(input);
       });
     },
 

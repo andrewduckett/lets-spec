@@ -13,10 +13,10 @@ You do not install it. `lets` ships it and runs it for you.
 | `probe` | Answers `{"resolver":"subagent"}`. |
 | `finish` | Does nothing, and prints nothing. It never issues a handle. |
 
-To get a fresh session in another model family, install the resolver for
-your harness, such as [`lets-delegate-t3`](../t3-resolver/README.md) or
-[`lets-delegate-herdr`](../herdr-resolver/README.md), and list it in your
-delegate config before `subagent`. Every resolver keeps
+To get a fresh session in another model family, install a resolver, such
+as [`lets-delegate-t3`](../t3-resolver/README.md) for T3 Code or
+[`lets-delegate-cli`](../cli-resolver/README.md) for any terminal, and
+list it in your delegate config before `subagent`. Every resolver keeps
 [the resolver contract](../../docs/resolver-contract.md).
 
 ## Where lets finds it
@@ -45,5 +45,5 @@ in `tests/subagent-resolver/`.
 
 ```sh
 node --test tests/subagent-resolver/*.test.ts
-node lets/bin/lets delegate conformance contrib/subagent-resolver/bin/lets-delegate-subagent
+node lets/bin/lets delegate verify contrib/subagent-resolver/bin/lets-delegate-subagent
 ```

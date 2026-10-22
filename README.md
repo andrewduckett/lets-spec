@@ -51,7 +51,7 @@ Spec keeps one copy here, and copies it into each project. It aims to:
 | `lets` | The command-line tool. `lets sync` sets a project up and keeps it up to date. `lets delegate` runs a prompt in a fresh session, for the review skills and `lets-build`. See [Fresh sessions](#-fresh-sessions). |
 | Nix flake module | Puts the OpenSpec CLI, `lets` and `gh` in the project's dev shell, and runs `lets sync` each time the shell starts |
 | Release tarball | `lets` and the skills for every flow, published on GitHub for each release. mise installs it. |
-| Contrib resolvers | `lets-delegate-t3` and `lets-delegate-herdr`: each starts fresh sessions inside one harness, T3 Code or herdr. They are personal to your machine, so no project installs them. See [The T3 Code and herdr resolvers](#the-t3-code-and-herdr-resolvers). |
+| Contrib resolvers | `lets-delegate-t3` starts fresh sessions inside T3 Code. `lets-delegate-cli` runs reviews headless with `codex`, `claude` or `agy`, in any terminal. They are personal to your machine, so no project installs them. See [The T3 Code and cli resolvers](#the-t3-code-and-cli-resolvers). |
 
 `lets sync` copies the skills into `.agents/skills/` and the schemas into
 `openspec/schemas/`. By default your project commits these copies, along
@@ -551,9 +551,13 @@ once on each machine. It lists the resolvers to ask, in order, and is
 version: 2
 resolvers:
   - /home/you/.nix-profile/bin/lets-delegate-t3
-  - /home/you/.nix-profile/bin/lets-delegate-herdr
+  - /home/you/.nix-profile/bin/lets-delegate-cli
   - subagent
 ```
+
+List the resolvers for your harnesses first, then `lets-delegate-cli`,
+then `subagent`. `lets` asks them in the order you write them, and does
+not check that order.
 
 Write each resolver as a full absolute path: `lets` does not expand `~`
 or `$HOME`. `command -v lets-delegate-t3` prints the path to use.
@@ -624,24 +628,25 @@ When a session fails, `lets` stops and says why. It never retries, and it
 never falls back to another resolver or family. It leaves the failed
 session in place, so you can read what happened.
 
-### The T3 Code and herdr resolvers
+### The T3 Code and cli resolvers
 
-This repo has a resolver for each of two harnesses. Each answers only
-inside its own harness, and declines anywhere else:
+This repo has two resolvers you can install:
 
-| Resolver | You work in | A review runs as | A handoff starts |
+| Resolver | It answers | A review runs as | A handoff |
 |---|---|---|---|
-| [`lets-delegate-t3`](contrib/t3-resolver/README.md) | T3 Code | A new thread, archived when the review succeeds | A new thread in the sidebar |
-| [`lets-delegate-herdr`](contrib/herdr-resolver/README.md) | herdr | A new tab, closed when the review succeeds | A new tab |
+| [`lets-delegate-t3`](contrib/t3-resolver/README.md) | Inside T3 Code | A new thread, archived when the review succeeds | Starts a new thread in the sidebar |
+| [`lets-delegate-cli`](contrib/cli-resolver/README.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, so the next resolver answers |
 
-Install the one for your harness once for your user, with home-manager, a
-Nix profile or the release tarball. It is never part of a project: it
-answers for your machine. Its README gives the steps. Then add its path to
-`resolvers` in your [delegate config](#set-up-delegation), before
-`subagent`.
+Install each one you want once for your user, with home-manager, a Nix
+profile or the release tarball. It is never part of a project: it answers
+for your machine. Its README gives the steps. Then add its path to
+`resolvers` in your [delegate config](#set-up-delegation): `lets-delegate-t3`
+first, then `lets-delegate-cli`, then `subagent`.
 
-Each declines outside its own harness, so if you work in both, list both.
-The one for the harness you are in answers.
+`lets-delegate-t3` declines outside T3 Code, and `lets-delegate-cli`
+declines when none of its CLIs is on your `PATH`. So the first one that
+fits where you work answers. A handoff outside T3 Code falls through to
+`subagent`, which gives you the prompt to start any agent with.
 
 #### Switching from lets-delegate-resolver
 
@@ -653,10 +658,10 @@ default, `lets-delegate-subagent`.
 
 | You installed it with | Do this |
 |---|---|
-| home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-herdr` in `home.packages` |
-| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:andrewduckett/lets-spec#lets-delegate-t3`, or `#lets-delegate-herdr` |
-| mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-herdr` from the release folder |
-| A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/herdr-resolver/bin/lets-delegate-herdr` instead |
+| home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-cli` in `home.packages` |
+| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:andrewduckett/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
+| mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-cli` from the release folder |
+| A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/cli-resolver/bin/lets-delegate-cli` instead |
 
 ### Write your own resolver
 
@@ -674,11 +679,13 @@ resolver in about twenty lines of `sh`, to copy from.
 To check your resolver, run:
 
 ```bash
-lets delegate conformance <your resolver>
+lets delegate verify <your resolver>
 ```
 
 It sends requests that start nothing. Add `--live` to also run a short
 session and start another one. That spends tokens, and may open a thread.
+A resolver that only runs headless may decline the handoff; the check
+passes it, and says the next resolver answers handoffs.
 When every check passes, your resolver is done.
 
 ## 📜 The working rules
@@ -916,7 +923,7 @@ OpenSpec CLI. Then run `pnpm install` once.
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
 | `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `build.mjs` bundles it into one file with esbuild. |
 | `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
-| `contrib/t3-resolver/`, `contrib/herdr-resolver/` | `lets-delegate-t3` and `lets-delegate-herdr`: each is its harness's adapter on the kit, bundled with no runtime dependencies |
+| `contrib/t3-resolver/`, `contrib/cli-resolver/` | `lets-delegate-t3` and `lets-delegate-cli`: each is an adapter on the kit, bundled with no runtime dependencies |
 | `contrib/subagent-resolver/` | `lets-delegate-subagent`, the default resolver that ships with `lets`. `lets/contrib/lets-delegate-subagent` links to it, so the source tree's `lets` finds it as an install would |
 | `docs/resolver-contract.md` | The resolver contract, which every resolver keeps |
 | `contrib/headless-resolver` | A complete resolver in `sh`: the worked example for writing your own |
@@ -925,7 +932,7 @@ OpenSpec CLI. Then run `pnpm install` once.
 | `schemas/` | The OpenSpec schemas, each with its templates |
 | `overlays/` | The rules fragment and the files `lets sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
 | `tests/*.bats` | End-to-end tests: `lets sync` in real git repos, the release build, the pinned OpenSpec CLI reading each schema, and every command, file and skill the prose names |
-| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/herdr-resolver/`, `tests/subagent-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
+| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/cli-resolver/`, `tests/subagent-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
 | `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
@@ -948,12 +955,12 @@ version in its `release.json`.
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
 a release for every flow, and the four resolvers in `contrib/`:
-`headless-resolver`, `lets-delegate-herdr`, `lets-delegate-subagent` and
+`headless-resolver`, `lets-delegate-cli`, `lets-delegate-subagent` and
 `lets-delegate-t3`. Its version is
 `0.0.0-dev`. Each Node bundle is one file that any Node 26 runs, with no
 `node_modules` beside it. Only `bin/` goes on a mise project's `PATH`.
 
-`nix build .#lets-delegate-t3` and `nix build .#lets-delegate-herdr` build
+`nix build .#lets-delegate-t3` and `nix build .#lets-delegate-cli` build
 the contrib resolvers as packages for a user's profile. The `lets`
 package carries `lets-delegate-subagent` in its own `contrib/`.
 
@@ -976,7 +983,7 @@ nix flake check
 This:
 
 - runs the bats tests, the Node tests and the type check
-- runs the conformance check against the default,
+- runs the verify check against the default,
   `lets-delegate-subagent`, each contrib resolver and the shell example
 - builds every flow
 - builds the `dist` folder, the release tarball's contents, and runs its
@@ -988,10 +995,10 @@ In the dev shell:
 
 | Command | What it runs |
 |---|---|
-| `pnpm test` | The Node tests, the type check, the conformance check and the bats tests |
+| `pnpm test` | The Node tests, the type check, the verify check and the bats tests |
 | `pnpm check` | The type check alone: `tsc --noEmit` |
-| `pnpm conformance` | The conformance check alone, against `lets-delegate-subagent`, each contrib resolver and the shell example |
-| `pnpm build` | The bundles, into `lets/dist/lets`, `contrib/t3-resolver/dist/lets-delegate-t3`, `contrib/herdr-resolver/dist/lets-delegate-herdr` and `contrib/subagent-resolver/dist/lets-delegate-subagent` |
+| `pnpm verify` | The verify check alone, against `lets-delegate-subagent`, each contrib resolver and the shell example |
+| `pnpm build` | The bundles, into `lets/dist/lets`, `contrib/t3-resolver/dist/lets-delegate-t3`, `contrib/cli-resolver/dist/lets-delegate-cli` and `contrib/subagent-resolver/dist/lets-delegate-subagent` |
 | `bats tests` | The bats tests alone |
 
 Node runs the TypeScript source directly, so you do not need to build

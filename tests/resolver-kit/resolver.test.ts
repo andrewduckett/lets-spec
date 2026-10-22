@@ -7,7 +7,7 @@ import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
 
-type Options = { detects?: boolean; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
+type Options = { detects?: boolean; whyDeclined?: string; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
@@ -21,6 +21,7 @@ function fakeAdapter(options: Options = {}) {
     handleKind: 'pad',
     calls,
     detect: () => detects,
+    ...(options.whyDeclined === undefined ? {} : { whyDeclined: () => options.whyDeclined! }),
     availableFamilies: (query) => {
       calls.push(['availableFamilies', query]);
       return available;
@@ -35,8 +36,8 @@ function fakeAdapter(options: Options = {}) {
       if (options.waitError) throw options.waitError;
       return { text };
     },
-    async finish(h: Handle, ok: boolean) {
-      calls.push(['finish', { h, ok }]);
+    async finish(h: Handle, ok: boolean, { cwd }: { cwd: string }) {
+      calls.push(['finish', { h, ok, cwd }]);
       if (options.finishError) throw options.finishError;
     },
   };
@@ -57,6 +58,11 @@ test('outside its harness, the resolver declines each session verb with its own 
   }
 });
 
+test('outside its harness, the resolver declines with the adapter\'s own reason when it gives one', async () => {
+  const answer = await handle('probe', probeRequest, fakeAdapter({ detects: false, whyDeclined: 'no pond on PATH' }));
+  assert.deepEqual(answer, { code: 75, stdout: '', stderr: 'lets-delegate-pond: no pond on PATH\n' });
+});
+
 const finishRequest = (h: Handle, ok = true) => json(buildRequest('finish', { cwd: '/r', handle: h, ok }));
 
 test('finish refuses a handle of a kind the adapter never makes, with exit 4', async () => {
@@ -67,10 +73,10 @@ test('finish refuses a handle of a kind the adapter never makes, with exit 4', a
   assert.deepEqual(adapter.calls, []);
 });
 
-test('finish goes to the adapter outside its harness', async () => {
+test('finish goes to the adapter outside its harness, with the request\'s folder', async () => {
   const adapter = fakeAdapter({ detects: false });
   assert.deepEqual(await handle('finish', finishRequest({ kind: 'pad', id: 'pad-3' }, false), adapter), { code: 0, stdout: '{}\n', stderr: '' });
-  assert.deepEqual(adapter.calls, [['finish', { h: { kind: 'pad', id: 'pad-3' }, ok: false }]]);
+  assert.deepEqual(adapter.calls, [['finish', { h: { kind: 'pad', id: 'pad-3' }, ok: false, cwd: '/r' }]]);
 });
 
 test('a finish that fails is reported under the program\'s name, and the exit is still 0', async () => {

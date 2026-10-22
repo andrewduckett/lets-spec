@@ -113,7 +113,7 @@ The contrib resolver SHALL start the session with the reviewer's model, or with 
 When a `run` request has `reviewers` and the harness can run none of them, the contrib resolver SHALL exit 3, start no session, and name on stderr each reviewer it skipped and why.
 
 #### Scenario: The harness lacks the family
-- **WHEN** the resolver runs in herdr, `reviewers` holds only `gpt`/`gpt-6-luna`, and `codex` is not on `PATH`
+- **WHEN** `lets-delegate-cli run` runs with `claude` on `PATH`, `reviewers` holds only `gpt`/`gpt-6-luna`, and `codex` is not on `PATH`
 - **THEN** it exits 3, and stderr names `gpt` and says `codex` is not on `PATH`
 
 #### Scenario: An empty list
@@ -124,5 +124,5 @@ When a `run` request has `reviewers` and the harness can run none of them, the c
 When a `run` request has no `reviewers` field, the contrib resolver SHALL choose the family and model as it did before this field existed.
 
 #### Scenario: An older lets
-- **WHEN** a `run` request without `reviewers` reaches the resolver in herdr, with `codex` on `PATH` and `sourceFamily` `claude`
+- **WHEN** a `run` request without `reviewers` reaches `lets-delegate-cli`, with `codex` on `PATH` and `sourceFamily` `claude`
 - **THEN** the session runs on `gpt` with codex's default model

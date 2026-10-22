@@ -5,12 +5,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
-import { run as conformance } from './delegate/conformance.ts';
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
 import { run as review } from './delegate/review.ts';
 import type { ReviewOptions } from './delegate/review.ts';
+import { run as verify } from './delegate/verify.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
 import { run as sync } from './sync/main.ts';
@@ -102,7 +102,7 @@ Exit codes:
   2  usage error, or every resolver in the config declined
   4  the session could not start`;
 
-const CONFORMANCE_HELP = `
+const VERIFY_HELP = `
 It prints one line per check, and exits 1 if any fails.
 
 The live part runs "Reply with the single word ready and stop" read-only,
@@ -186,14 +186,14 @@ delegate
   });
 
 delegate
-  .command('conformance')
+  .command('verify')
   .summary('check that a resolver keeps the contract')
   .description('Check that a resolver keeps the contract. The checks send requests that start nothing, unless you give --live.')
   .argument('<command...>', 'the resolver, and any arguments to give it before the verb')
   .option('--live', 'also run a session and start another: this spends tokens and may open a thread')
-  .addHelpText('after', CONFORMANCE_HELP)
+  .addHelpText('after', VERIFY_HELP)
   .action(async (command: string[], { live }: { live?: boolean }) => {
-    process.exitCode = await conformance({ command, live: live === true }, realDeps());
+    process.exitCode = await verify({ command, live: live === true }, realDeps());
   });
 
 try {

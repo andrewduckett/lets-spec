@@ -1,7 +1,7 @@
 # The resolver contract
 
 `lets delegate` hands a fresh session to a resolver: a program that opens
-the session in your harness, such as a T3 Code thread or a herdr tab. This
+the session, such as a T3 Code thread or a headless child process. This
 page defines how `lets` and a resolver talk, for anyone who writes or
 checks a resolver.
 
@@ -52,7 +52,7 @@ it when something fails.
 
 | Verb | `lets` sends it | Answer |
 |---|---|---|
-| `probe` | never; the conformance check and people do | `{ resolver }` |
+| `probe` | never; the verify check and people do | `{ resolver }` |
 | `run` | for `lets delegate review` | `{ resolver, text, family, model?, handle? }`, after the session's turn ends |
 | `start` | for `lets delegate handoff` | `{ resolver, handle }`, or `{ resolver, handle: null, instructions }`. Returns at once. |
 | `finish` | after a `run` that returned a handle | `{}`, or nothing |
@@ -73,7 +73,7 @@ verb.
 | `interactive` | `run`, `start` | `false` for `run`, `true` for `start` |
 | `effort` | `run` | `low`, `medium` or `high` |
 | `timeoutMinutes` | `run` | A whole number. By default 15 for `low` and `medium`, and 45 for `high`. |
-| `reviewers` | `run`, optional | A list of `{ family, model }` to try, in order, where `model` is a string or `null` for the tool's default. `lets` never sends it; the conformance check does. It may be empty. A resolver may ignore it. |
+| `reviewers` | `run`, optional | A list of `{ family, model }` to try, in order, where `model` is a string or `null` for the tool's default. `lets` never sends it; the verify check does. It may be empty. A resolver may ignore it. |
 | `handle` | `finish` | A handle this resolver returned |
 | `ok` | `finish` | `true` when the review succeeded, `false` when the session should stay for a person to read |
 
@@ -88,11 +88,11 @@ picks the family itself.
 
 | Field | Value |
 |---|---|
-| `resolver` | The resolver's own name, such as `t3` or `herdr` |
+| `resolver` | The resolver's own name, such as `t3` or `cli` |
 | `text` | The session's final message. Empty is a failure. |
 | `family` | The family that answered: `gpt`, `claude` or `gemini`. `lets` reports the review as independent when this differs from `sourceFamily`. |
 | `model` | The model that answered. Optional, for people. |
-| `handle` | `{ kind, id }` for the session, or `null`. `kind` names what it is, such as `thread`, `tab` or `process`. A resolver may add fields; `lets` passes the handle back whole. |
+| `handle` | `{ kind, id }` for the session, or `null`. `kind` names what it is, such as `thread` or `process`. A resolver may add fields; `lets` passes the handle back whole. |
 | `instructions` | For `start` with no handle: the exact text a person needs to start the session themselves |
 
 ## Exit codes
@@ -153,7 +153,7 @@ headless and read-only. It declines `start`, so the default,
 # and read-only. It needs jq, and claude for run. It issues no handles, and
 # leaves the timeout to lets, which stops it a minute after timeoutMinutes.
 # The contract: docs/resolver-contract.md
-# Check it with: lets delegate conformance contrib/headless-resolver
+# Check it with: lets delegate verify contrib/headless-resolver
 
 request=$(cat)
 if ! printf '%s' "$request" | jq -e '.protocol == 1' >/dev/null 2>&1; then
@@ -181,12 +181,14 @@ esac
 It leaves out one rule: it does not stop `claude` at `timeoutMinutes`.
 Yours should.
 
-Run the conformance check against yours until it passes:
+Run the verify check against yours until it passes:
 
 ```sh
-lets delegate conformance <your resolver>
+lets delegate verify <your resolver>
 ```
 
 It sends requests that start nothing. Add `--live` to also run a short
-session and start another. That spends tokens, and may open a thread or a
-tab.
+session and start another. That spends tokens, and may open a thread. A
+resolver that only runs headless may decline `start` with exit 75 and
+nothing on stdout: the check passes it, and says the next resolver in the
+chain answers handoffs.
