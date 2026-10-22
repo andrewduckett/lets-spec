@@ -1,37 +1,63 @@
-# lets-delegate-herdr
+# lets-delegate-cli
 
-A resolver for herdr. When a Let's Spec skill asks `lets delegate` for a
-fresh session, this resolver opens it as a herdr tab, so you can watch it
-work.
+A resolver for any terminal. When a Let's Spec skill asks `lets delegate`
+for a review, this resolver runs it headless with the command line tool
+(CLI) of another model family: `codex`, `claude` or `agy`. It works in a
+plain terminal, in herdr, or inside another harness.
 
-| You work in | A review runs as | A handoff starts |
+| Where you work | A review runs as | A handoff |
 |---|---|---|
-| herdr | A new tab, closed when the review succeeds | A new tab |
-| Anything else | It declines, and the default, `lets-delegate-subagent`, answers | It declines, and the default, `lets-delegate-subagent`, answers |
+| Anywhere with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | It declines, and the next resolver in your config answers |
+| Anywhere with none of them | It declines, and the next resolver in your config answers | It declines, and the next resolver in your config answers |
 
-It counts as inside herdr only when `HERDR_ENV` is `1` and `herdr` is on
-your `PATH`. When it declines, it says
-`lets-delegate-herdr: not inside herdr` on stderr.
+When none of the three is on your `PATH`, it says
+`lets-delegate-cli: none of codex, claude or agy is on PATH` on stderr.
+When it declines a handoff, it says
+`lets-delegate-cli: this resolver only runs headless`.
 
-For T3 Code, install [`lets-delegate-t3`](../t3-resolver/README.md)
-instead. Every resolver keeps [the resolver
+Every resolver keeps [the resolver
 contract](../../docs/resolver-contract.md).
 
 This page covers:
 
+- [How a review runs](#how-a-review-runs)
 - [Install it](#install-it)
 - [List it in your delegate config](#list-it-in-your-delegate-config)
 - [Check that it works](#check-that-it-works)
 
+## How a review runs
+
+It picks a family whose CLI is on your `PATH`, from another family than
+the author's when it can. It runs that CLI in the repository, and waits
+for its final message:
+
+| Family | Command | The prompt goes | The answer comes from |
+|---|---|---|---|
+| `gpt` | `codex exec -s read-only` | on stdin | `.workspace/lets-delegate/<name>.last-message.md` |
+| `claude` | `claude -p --permission-mode plan` | on stdin | stdout |
+| `gemini` | `agy --mode plan … -p <prompt>` | in the arguments | stdout |
+
+Each command gets the review's effort, and the reviewer's model when
+`lets` names one. When the review succeeds, `finish` removes the
+session's files in `.workspace/lets-delegate/`. When it fails, they stay,
+so you can read them.
+
+A review that runs past its time limit is stopped. Each failure has its
+own exit code:
+
+| What happened | Exit |
+|---|---|
+| The CLI cannot start | 4 |
+| The CLI exits non-zero, or ends with an empty message | 5 |
+| The CLI runs past the time limit | 6 |
+
 ## Install it
 
-Install it once for your user, not in a project. It answers "is this
-process inside herdr?", and that is true of your machine, not of a
-repository.
+Install it once for your user, not in a project. Which CLIs are on your
+`PATH` is a fact about your machine, not about a repository.
 
-It needs Node 26 or later. It runs `herdr` from your `PATH`, and the
-command line tool of each model family a review can use: `codex`,
-`claude` or `agy`.
+It needs Node 26 or later, and at least one of `codex`, `claude` or `agy`
+on your `PATH`.
 
 ### With home-manager
 
@@ -39,24 +65,24 @@ Add this repo as a flake input, then add the package:
 
 ```nix
 home.packages = [
-  inputs.lets-spec.packages.${pkgs.stdenv.hostPlatform.system}.lets-delegate-herdr
+  inputs.lets-spec.packages.${pkgs.stdenv.hostPlatform.system}.lets-delegate-cli
 ];
 ```
 
 ### With a Nix profile
 
 ```sh
-nix profile add github:andrewduckett/lets-spec#lets-delegate-herdr
+nix profile add github:andrewduckett/lets-spec#lets-delegate-cli
 ```
 
 ### With mise
 
-The release tarball holds the resolver at `contrib/lets-delegate-herdr`,
+The release tarball holds the resolver at `contrib/lets-delegate-cli`,
 outside `bin/`, so mise never puts it on a project's `PATH`. Link it onto
 yours. Use the `lets-spec` version from your project's `mise.toml`:
 
 ```sh
-ln -sf "$(mise where github:andrewduckett/lets-spec@<version>)/contrib/lets-delegate-herdr" ~/.local/bin/
+ln -sf "$(mise where github:andrewduckett/lets-spec@<version>)/contrib/lets-delegate-cli" ~/.local/bin/
 ```
 
 The link names one version. After you update `lets-spec`, run it again
@@ -68,49 +94,52 @@ To try a change to the resolver, link its dev entry instead, or set
 `LETS_SPEC_RESOLVER` to its path:
 
 ```sh
-ln -sf "$PWD/contrib/herdr-resolver/bin/lets-delegate-herdr" ~/.local/bin/
+ln -sf "$PWD/contrib/cli-resolver/bin/lets-delegate-cli" ~/.local/bin/
 ```
 
 Run `pnpm install` in the checkout first.
 
 ## List it in your delegate config
 
-`lets` does not look for `lets-delegate-herdr` on your `PATH`. After you
+`lets` does not look for `lets-delegate-cli` on your `PATH`. After you
 install it, add its full absolute path to `resolvers` in
-`~/.config/lets-delegate/config.yaml`, before `subagent`:
+`~/.config/lets-delegate/config.yaml`. List it after the resolvers for
+your harnesses, and before `subagent`:
 
 ```yaml
 version: 2
 resolvers:
-  - /home/you/.nix-profile/bin/lets-delegate-herdr
+  - /home/you/.nix-profile/bin/lets-delegate-t3
+  - /home/you/.nix-profile/bin/lets-delegate-cli
   - subagent
 ```
 
-`command -v lets-delegate-herdr` prints the path to use. `lets` does not
+`command -v lets-delegate-cli` prints the path to use. `lets` does not
 expand `~`. The README's
 [Set up delegation](../../README.md#set-up-delegation) section explains
 the file.
 
-It declines outside herdr. If you also work in T3 Code, list the
-resolver for that harness too: the one for the harness you are in
-answers.
+It declines every handoff, so keep `subagent` after it: a handoff then
+falls through to the default, which gives you the prompt to start any
+agent with.
 
 ## Check that it works
 
 From inside a project, run:
 
 ```sh
-command -v lets-delegate-herdr
-lets delegate conformance lets-delegate-herdr
+command -v lets-delegate-cli
+lets delegate verify lets-delegate-cli
 ```
 
 Expect a path, then `The resolver keeps the contract.` The check starts
-nothing. Outside herdr, the check passes because the resolver declines.
+nothing.
 
-To run a real session, run this from a herdr pane in a project:
+To run a real review, run this in a project:
 
 ```sh
-lets delegate conformance --live lets-delegate-herdr
+lets delegate verify --live lets-delegate-cli
 ```
 
-It spends tokens, and opens a tab. CI never runs it.
+It spends tokens. The handoff check passes with a note that the next
+resolver answers handoffs. CI never runs it.

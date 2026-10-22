@@ -14,8 +14,8 @@ through any number of parent processes. A terminal outside T3 Code
 declines, even while T3 Code runs. When it declines, it says
 `lets-delegate-t3: not inside T3 Code` on stderr.
 
-For herdr, install [`lets-delegate-herdr`](../herdr-resolver/README.md)
-instead. Every resolver keeps [the resolver
+For any other terminal, install [`lets-delegate-cli`](../cli-resolver/README.md)
+too. Every resolver keeps [the resolver
 contract](../../docs/resolver-contract.md).
 
 This page covers:
@@ -92,9 +92,9 @@ expand `~`. The README's
 [Set up delegation](../../README.md#set-up-delegation) section explains
 the file.
 
-It declines outside T3 Code. If you also work in herdr, list the
-resolver for that harness too: the one for the harness you are in
-answers.
+It declines outside T3 Code. If you also work in other terminals, list
+[`lets-delegate-cli`](../cli-resolver/README.md) after it: outside T3
+Code, that one answers.
 
 Until [#58](https://github.com/andrewduckett/lets-spec/issues/58) lands,
 a review runs the first model in T3 Code's catalog for the family it
@@ -119,7 +119,7 @@ From inside a project, run:
 
 ```sh
 command -v lets-delegate-t3
-lets delegate conformance lets-delegate-t3
+lets delegate verify lets-delegate-t3
 ```
 
 Expect a path, then `The resolver keeps the contract.` The check starts
@@ -137,7 +137,7 @@ update can break it. After each update, run these from a T3 thread in a
 project that T3 knows:
 
 ```sh
-lets delegate conformance --live lets-delegate-t3
+lets delegate verify --live lets-delegate-t3
 printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
 lets delegate review --name smoke-review --prompt-file .workspace/p.md \
   --source-family claude --effort low
