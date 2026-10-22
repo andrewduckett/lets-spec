@@ -103,6 +103,37 @@ test('a listed resolver that answers is not stopped by a missing path later in t
   assert.equal(candidate.name, '/a');
 });
 
+test('when every listed resolver declines, the lookup is a usage error naming the config file', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [decline, decline] });
+  await assert.rejects(resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/a', '/b') }),
+    (error) => error instanceof UsageError && error.message.includes('every resolver') && error.message.includes('declined')
+      && error.message.includes(CONFIG_FILE));
+});
+
+test('an empty chain is a usage error that says every resolver declined', async () => {
+  await assert.rejects(resolve('probe', probeRequest, { env: {}, io: fakeIo(), cwd: '/r', ...SELF, config: chain() }),
+    (error) => error instanceof UsageError && error.message.includes('declined') && error.message.includes(CONFIG_FILE));
+});
+
+test('a declining override with an all-declining chain is the same usage error', async () => {
+  const io = fakeIo({ executables: ['/bin/mine', '/a'], results: [decline, decline] });
+  await assert.rejects(resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: chain('/a') }),
+    (error) => error instanceof UsageError && error.message.includes('declined'));
+});
+
+test('a missing default reached through the subagent entry is exit 4, naming an incomplete install', async () => {
+  const io = fakeIo();
+  await assert.rejects(resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('subagent') }),
+    (error) => error instanceof SpawnError && error.message.includes(SUBAGENT) && error.message.includes('incomplete'));
+});
+
+test('a broken default reached through the subagent entry is exit 4 with the install message', async () => {
+  const io = fakeIo({ files: { [SUBAGENT]: 'garbage' }, results: [{ stdout: '', stderr: 'SyntaxError', code: 1 }] });
+  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('subagent') });
+  assert.equal(outcome.code, 4);
+  assert.match(outcome.stderr, /^lets cannot run its default resolver at .*incomplete/);
+});
+
 test('an override that answers is not stopped by a missing listed resolver', async () => {
   const io = ioWith({});
   const { candidate } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SELF, config: chain('/no/such') });

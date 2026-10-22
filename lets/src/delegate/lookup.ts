@@ -100,8 +100,8 @@ const incompleteInstall = (problem: 'find' | 'run', path: string) =>
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
-// it reaches a listed resolver that is missing or cannot be run, and a
-// SpawnError when the default is missing.
+// it reaches a listed resolver that is missing or cannot be run, or when
+// every resolver declines, and a SpawnError when the default is missing.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
     if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
@@ -117,6 +117,7 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
     }
     if (outcome !== null) return { candidate, outcome };
   }
-  // The default is last, and it never declines.
-  throw new Error('every resolver declined, the default included');
+  // Only a config can get here: with none, the default is last, and it
+  // never declines.
+  throw new UsageError(`every resolver declined. ${configPath(deps)} lists the resolvers to ask; add subagent to fall back to a subagent.`);
 }
