@@ -14,7 +14,7 @@
 
 ## 3. lets delegate verify
 
-- [ ] 3.1 [medium] `lets delegate conformance` becomes `lets delegate verify`, with its source and test renamed and `pnpm conformance` becoming `pnpm verify` over `lets-delegate-cli` instead of `lets-delegate-herdr`; `lets delegate conformance` exits 2 as an unknown command (verify: node --test tests/lets/delegate/verify.test.ts tests/lets/delegate/cli.test.ts && pnpm verify)
+- [x] 3.1 [medium] `lets delegate conformance` becomes `lets delegate verify`, with its source and test renamed and `pnpm conformance` becoming `pnpm verify` over `lets-delegate-cli` instead of `lets-delegate-herdr`; `lets delegate conformance` exits 2 as an unknown command (verify: node --test tests/lets/delegate/verify.test.ts tests/lets/delegate/cli.test.ts && pnpm verify) (✓ node --test tests/lets/delegate/verify.test.ts tests/lets/delegate/cli.test.ts && pnpm verify passed)
 - [ ] 3.2 [easy] With `--live`, a `start` that exits 75 with empty stdout passes and the output says the next resolver answers handoffs, while one that exits 75 and prints on stdout fails (verify: node --test tests/lets/delegate/verify.test.ts)
 
 ## 4. Docs and shipping

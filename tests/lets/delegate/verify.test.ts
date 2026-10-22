@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { run } from '../../../lets/src/delegate/conformance.ts';
+import { run } from '../../../lets/src/delegate/verify.ts';
 import { realIo } from '../../../lets/src/io.ts';
 import type { Deps } from '../../../lets/src/io.ts';
 
@@ -15,7 +15,7 @@ const SUBAGENT = fileURLToPath(new URL('../../../contrib/subagent-resolver/bin/l
 // Real deps in a fresh git repo. settings go into the env of each command
 // the check runs, for the fake resolver.
 function setup(settings: Record<string, string> = {}) {
-  const cwd = mkdtempSync(join(tmpdir(), 'lets-conformance-'));
+  const cwd = mkdtempSync(join(tmpdir(), 'lets-verify-'));
   execFileSync('git', ['init', '--quiet'], { cwd });
   const io = realIo();
   const out: string[] = [];
@@ -55,7 +55,7 @@ test('the live part runs, checks the tree, finishes, and starts', async () => {
 });
 
 test('the live run sends reviewers, and a resolver that ignores them still passes', async () => {
-  const log = join(mkdtempSync(join(tmpdir(), 'lets-conformance-log-')), 'calls');
+  const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');
   const t = setup({ FAKE_RESOLVER_LOG: log });
   await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
   assert.match(t.output(), /^ok {4}run answers with text, a known family and resolver$/m);

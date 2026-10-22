@@ -348,7 +348,7 @@
             pnpm check
             # The default, lets-delegate-subagent, the contrib resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
-            pnpm conformance
+            pnpm verify
             touch "$out"
           '';
 

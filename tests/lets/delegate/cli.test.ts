@@ -18,11 +18,18 @@ const REVIEW = ['delegate', 'review', '--name', 'x', '--prompt-file', 'p.md', '-
 const HANDOFF = ['delegate', 'handoff', '--name', 'x', '--prompt-file', 'p.md'];
 
 test('every old command is rejected by name', async () => {
-  for (const command of ['critique', 'detect', 'setup']) {
+  for (const command of ['critique', 'detect', 'setup', 'conformance']) {
     const { code, stderr } = await lets('delegate', command);
     assert.equal(code, 2, command);
     assert.match(stderr, new RegExp(`unknown command '${command}'`));
   }
+});
+
+test('verify checks a resolver', async () => {
+  const resolver = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+  const { code, stdout } = await lets('delegate', 'verify', resolver);
+  assert.equal(code, 0);
+  assert.equal(stdout.trim().split('\n').at(-1), 'The resolver keeps the contract.');
 });
 
 test('every old flag is rejected by name', async () => {
