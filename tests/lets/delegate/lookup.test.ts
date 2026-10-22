@@ -209,3 +209,13 @@ test('a default that exits 3 gets no install message', async () => {
   const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: null });
   assert.equal(outcome.stderr, 'run it in a subagent');
 });
+
+test('a default that exits other than 0, 3 or 4 is exit 4 with the install message', async () => {
+  for (const code of [5, 6, 75]) {
+    const io = fakeIo({ files: { [SUBAGENT]: '' }, results: [{ stdout: '', stderr: 'odd', code }] });
+    const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: null });
+    assert.equal(outcome.code, 4, `exit ${code}`);
+    assert.equal(outcome.response, null, `exit ${code}`);
+    assert.match(outcome.stderr, /^lets cannot run its default resolver at .*incomplete/, `exit ${code}`);
+  }
+});

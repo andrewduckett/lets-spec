@@ -116,10 +116,11 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
     }
     if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
-    // The default never exits 5 or 6, as it starts no session, so exit 4
-    // from it always means it could not run.
-    if (candidate.builtIn && outcome?.code === EXIT.spawn) {
-      return { candidate, outcome: { ...outcome, stderr: `${incompleteInstall('run', candidate.name)}\n${outcome.stderr}` } };
+    // The default answers 0 or 3, and never declines. Anything else means
+    // it could not run.
+    if (candidate.builtIn && (outcome === null || (outcome.code !== EXIT.ok && outcome.code !== EXIT.noSession))) {
+      const stderr = outcome === null ? 'it declined' : outcome.stderr;
+      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall('run', candidate.name)}\n${stderr}` } };
     }
     if (outcome !== null) return { candidate, outcome };
   }
