@@ -318,6 +318,10 @@
             mkdir ../alone
             cp ${dist}/contrib/lets-delegate-subagent ../alone/
             [ "$(echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent"}' ]
+            # With nothing else installed or configured, the tarball's lets
+            # finds the default beside it.
+            echo 'Run lets-build on branch build-x' > p.md
+            [ "$(node ${dist}/bin/lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
             touch "$out"
           '';
 
