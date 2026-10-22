@@ -16,7 +16,7 @@
 
 - [x] 3.1 [medium] `lets delegate review` sends a `run` request with no `reviewers` field whatever the config holds, and `fixtures/command-deps.ts` writes `config.yaml`, gains an `executables` option, and keeps routing the Node-run subagent call to the real program; `handoff` reads the same config (verify: `node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts`) (✓ `node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts` passed, 35 tests)
 - [x] 3.2 [medium] `lets delegate setup` is gone: `lets/src/delegate/setup.ts` and `tests/lets/delegate/setup.test.ts` are deleted, `cli.ts` registers no `setup` command, `lets delegate setup --help` exits 2, and `DELEGATE_HELP`, `REVIEW_HELP` and `HANDOFF_HELP` describe the chain and name "every resolver declined" under exit 2 (verify: `node --test tests/lets/delegate/cli.test.ts`) (✓ `node --test tests/lets/delegate/cli.test.ts` passed, 9 tests; `lets delegate setup` exits 2, and `setup --help` is a deviation, see the ledger)
-- [ ] 3.3 [easy] The type check and the conformance check pass with the field and the module gone (verify: `pnpm check && pnpm conformance`)
+- [x] 3.3 [easy] The type check and the conformance check pass with the field and the module gone (verify: `pnpm check && pnpm conformance`) (✓ `pnpm check && pnpm conformance` passed: no type errors, and all four resolvers keep the contract)
 
 ## 4. Specs and docs [depends-on: 3]
 
