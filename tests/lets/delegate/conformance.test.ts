@@ -20,7 +20,7 @@ function setup(settings: Record<string, string> = {}) {
   const io = realIo();
   const out: string[] = [];
   const deps: Deps = {
-    env: {}, cwd, packageRoot: '/pkg',
+    env: {}, cwd, packageRoot: '/pkg', nodePath: process.execPath,
     io: { ...io, execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, env: { ...process.env, ...settings } }) },
     stdout: (text) => out.push(text),
     stderr: (text) => out.push(text),

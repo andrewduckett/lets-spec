@@ -62,6 +62,8 @@ export type Deps = {
   env: Record<string, string | undefined>;
   cwd: string;
   packageRoot: string;
+  // The Node that runs lets, which runs the default resolver too.
+  nodePath: string;
   io: Io;
   stdout: (text: string) => void;
   stderr: (text: string) => void;

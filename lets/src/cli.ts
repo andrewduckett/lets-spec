@@ -140,6 +140,7 @@ function realDeps(): Deps {
     env: process.env,
     cwd: process.cwd(),
     packageRoot,
+    nodePath: process.execPath,
     io: realIo(),
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),

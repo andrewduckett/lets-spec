@@ -1,37 +1,41 @@
 // Which resolver answers a request. In order: the executable LETS_SPEC_RESOLVER
 // names, the resolver the user's delegate config names, lets-delegate-resolver
-// on PATH, then the built-in default. The first
-// that does not decline answers. No process access here; everything comes
-// through io.
+// on PATH, then the default, lets-delegate-subagent, which ships beside lets.
+// The first that does not decline answers. No process access here;
+// everything comes through io.
 import { delimiter, join, resolve as resolvePath } from 'node:path';
 import type { Child, Io } from '../io.ts';
 import type { Config } from './config.ts';
-import { createDefaultResolver } from './default-resolver.ts';
-import type { DefaultResolver, Outcome } from './default-resolver.ts';
 import type { Env } from './env.ts';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 import { DECLINE, exitFor, parseResponse } from './protocol.ts';
-import type { Requests, Verb } from './protocol.ts';
+import type { Requests, Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
 export const RESOLVER_COMMAND = 'lets-delegate-resolver';
+// The default resolver, relative to the folder lets runs from.
+export const DEFAULT_RESOLVER = 'contrib/lets-delegate-subagent';
 // How long lets waits past a run's own timeout before it stops the resolver.
 export const BACKSTOP_MINUTES = 1;
 // How long lets waits on any verb but run. None of them waits on a session.
 export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
 
-export type Candidate =
-  // configured: the user's delegate config names it, and it is checked only
-  // when the lookup reaches it.
-  | { kind: 'external'; name: string; command: string; configured?: true }
-  | { kind: 'default'; name: 'default'; resolver: DefaultResolver };
+// A resolver to ask: lets runs `<command> [...args] <verb>`. configured: the
+// user's delegate config names it, and it is checked only when the lookup
+// reaches it.
+export type Candidate = { kind: 'external'; name: string; command: string; args?: string[]; configured?: true };
+
+// What a verb came to: the exit lets gives, the response, if any, and what
+// the resolver said on stderr.
+export type Outcome<V extends Verb> = { code: number; response: Responses[V] | null; stderr: string };
 
 // config: the user's delegate config, or null when there is none.
-export type LookupDeps = { env: Env; io: Io; cwd: string; config: Config | null };
+// packageRoot: the folder lets runs from. nodePath: the Node that runs lets.
+export type LookupDeps = { env: Env; io: Io; cwd: string; config: Config | null; packageRoot: string; nodePath: string };
 
 // The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
 // names a file that is missing or that this process cannot run.
-export function candidates({ env, io, cwd, config }: LookupDeps): Candidate[] {
+export function candidates({ env, io, cwd, config, packageRoot, nodePath }: LookupDeps): Candidate[] {
   const list: Candidate[] = [];
   const override = env.LETS_SPEC_RESOLVER;
   if (override !== undefined && override !== '') {
@@ -44,7 +48,9 @@ export function candidates({ env, io, cwd, config }: LookupDeps): Candidate[] {
   const configured = config?.resolver ?? null;
   if (configured !== null) list.push({ kind: 'external', name: configured, command: configured, configured: true });
   if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
-  list.push({ kind: 'default', name: 'default', resolver: createDefaultResolver(io) });
+  // The default runs with lets's own Node, so it needs no node on PATH.
+  const subagent = join(packageRoot, DEFAULT_RESOLVER);
+  list.push({ kind: 'external', name: subagent, command: nodePath, args: [subagent] });
   return list;
 }
 
@@ -61,15 +67,10 @@ export function resolverOnPath(env: Env, io: Io): string | null {
 export async function callResolver<V extends Verb>(
   candidate: Candidate, verb: V, request: Requests[V], { io, timeoutMs }: { io: Io; timeoutMs: number },
 ): Promise<Outcome<V> | null> {
-  if (candidate.kind === 'default') {
-    const outcome = await candidate.resolver.handle(verb, request);
-    return { ...outcome, code: exitFor(outcome.code) };
-  }
-
-  const { command } = candidate;
+  const { command, args = [] } = candidate;
   const failed = (code: number, stderr: string) => ({ code, response: null, stderr });
   const started: { child?: Child } = {};
-  const finished = io.execFile(command, [verb], {
+  const finished = io.execFile(command, [...args, verb], {
     cwd: request.cwd, input: JSON.stringify(request), started: (child) => { started.child = child; },
   });
   const result = await withTimeout(io, finished, timeoutMs);

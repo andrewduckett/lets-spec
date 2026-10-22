@@ -173,7 +173,7 @@ function setupDeps({ files = {} as Record<string, string>, env = {} as Record<st
   });
   const out: string[] = [];
   const err: string[] = [];
-  const deps: Deps = { env: { PATH: '/b', ...env }, cwd: '/r', packageRoot: '/pkg', io, stdout: (t) => out.push(t), stderr: (t) => err.push(t) };
+  const deps: Deps = { env: { PATH: '/b', ...env }, cwd: '/r', packageRoot: '/pkg', nodePath: process.execPath, io, stdout: (t) => out.push(t), stderr: (t) => err.push(t) };
   return { deps, io, stdout: () => out.join(''), stderr: () => err.join('') };
 }
 const PROPOSED = {

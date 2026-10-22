@@ -57,7 +57,7 @@ export function commandDeps({
   const deps: Deps = {
     env: resolver ? { LETS_SPEC_RESOLVER: FAKE_RESOLVER } : {},
     cwd: '/repo',
-    packageRoot: '/pkg',
+    packageRoot: '/pkg', nodePath: process.execPath,
     io,
     stdout: (text) => out.push(text),
     stderr: (text) => err.push(text),
