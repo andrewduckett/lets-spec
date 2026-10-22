@@ -23,7 +23,9 @@ These rules come from lets-spec, and apply to every agent.
   has one.
 - **The backlog is the GitHub Project linked to this repository.**
   `lets-shape` sets kind, priority, size and readiness; `lets-build`
-  picks, claims and routes. Never set a Project field with `gh` outside
+  picks, claims and routes. Shaping also assigns and claims its user-selected
+  glossary documentation Chore as the narrow exception described above.
+  Never set a Project field with `gh` outside
   those skills. Every piece of work is an issue, and its pull request
   says `Closes #<n>`. An epic is a parent issue with its stories as
   sub-issues. Dependencies are "blocked by" links on the story they
