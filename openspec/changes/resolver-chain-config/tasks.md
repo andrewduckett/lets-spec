@@ -20,7 +20,7 @@
 
 ## 4. Specs and docs [depends-on: 3]
 
-- [ ] 4.1 [easy] [parallel] `openspec/specs/delegate-setup/` is deleted, the Purpose of `openspec/specs/delegate-config/spec.md` says the config decides which resolver answers and no longer says it decides the model, and the Purpose of `delegate-default/spec.md` covers the `subagent` entry (verify: `openspec validate resolver-chain-config --strict`)
+- [x] 4.1 [easy] [parallel] `openspec/specs/delegate-setup/` is deleted, the Purpose of `openspec/specs/delegate-config/spec.md` says the config decides which resolver answers and no longer says it decides the model, and the Purpose of `delegate-default/spec.md` covers the `subagent` entry (verify: `openspec validate resolver-chain-config --strict`) (✓ `openspec validate resolver-chain-config --strict` passed: "Change 'resolver-chain-config' is valid")
 - [ ] 4.2 [medium] [parallel] The README's *Set up delegation* section becomes a paragraph that shows a complete `config.yaml` with full absolute paths and `subagent`, says `~` is not expanded, and says that until #58 a T3 entry runs the first catalog model for the family with no fallback; *What a review gets*, *Resolvers* and *The T3 Code and herdr resolvers* describe the chain and name no setup; `contrib/t3-resolver/README.md`, `contrib/herdr-resolver/README.md`, `contrib/subagent-resolver/README.md`, `docs/resolver-contract.md` and the comment in `lets/src/delegate/protocol.ts` say nothing about setup, a PATH lookup, the default answering last, or `lets` sending reviewers (verify: `! grep -rn "delegate setup\|lets-delegate-resolver on\|sends them in the order" README.md contrib/*/README.md docs/resolver-contract.md lets/src`)
 
 ## 5. Integration [depends-on: 4]

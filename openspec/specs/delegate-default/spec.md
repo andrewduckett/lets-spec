@@ -1,7 +1,7 @@
 # delegate-default Specification
 
 ## Purpose
-Says what `lets delegate` does when no resolver is installed or configured and the built-in default answers. The default starts no session and chooses no model family.
+Says when `lets delegate` asks the built-in default, `lets-delegate-subagent`: when there is no config, or where the config's chain lists `subagent`. The default starts no session and chooses no model family.
 
 ## Requirements
 
