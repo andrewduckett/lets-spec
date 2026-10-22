@@ -1,0 +1,23 @@
+## 1. Resolver kit
+
+- [ ] 1.1 [easy] An adapter can give its own decline reason, and the kit declines with it; with none, the kit still declines with `not inside <harness>`, so `lets-delegate-t3` keeps `lets-delegate-t3: not inside T3 Code` (verify: node --test tests/resolver-kit/resolver.test.ts)
+- [ ] 1.2 [medium] The kit's `execFile` writes a given `input` to the child's stdin, and stops the child when it runs past a given timeout, reporting that it timed out (verify: node --test tests/resolver-kit/*.test.ts)
+
+## 2. lets-delegate-cli
+
+- [ ] 2.1 [medium] Rename `contrib/herdr-resolver` to `contrib/cli-resolver`: the package, the program `lets-delegate-cli`, its build, and its tests in `tests/cli-resolver/`, with `package.json`, `tsconfig.json` and `pnpm-lock.yaml` following; no behavior changes yet (verify: pnpm check && node --test tests/cli-resolver/*.test.ts)
+- [ ] 2.2 [easy] `lets-delegate-cli probe` answers `{"resolver":"cli"}` in any terminal or harness where at least one of `codex`, `claude` or `agy` is on PATH, and `probe` and `run` decline with exit 75, empty stdout and `lets-delegate-cli: none of codex, claude or agy is on PATH` when none is (verify: node --test tests/cli-resolver/*.test.ts)
+- [ ] 2.3 [easy] `lets-delegate-cli start` declines with exit 75, empty stdout and `lets-delegate-cli: this resolver only runs headless`, even with every family CLI on PATH (verify: node --test tests/cli-resolver/*.test.ts)
+- [ ] 2.4 [complex] `lets-delegate-cli run` runs the chosen family's CLI as a child process in its read-only mode, as the old default did (`codex exec -s read-only` with the prompt on stdin and its last message written to `.workspace/lets-delegate/<name>.last-message.md`, `claude -p --permission-mode plan` with the prompt on stdin, `agy --mode plan … -p <prompt>`), passes the effort and the reviewer's model, and answers with the final message and a `process` handle; only families whose CLI is on PATH are available, a skipped reviewer reads `<cmd> is not on PATH`, and the herdr tab code is gone (verify: node --test tests/cli-resolver/*.test.ts)
+- [ ] 2.5 [medium] `lets-delegate-cli run` exits 5 when the CLI exits non-zero or ends with an empty message, exits 4 when the CLI cannot start, and stops the CLI and exits 6 when it runs past `timeoutMinutes` (verify: node --test tests/cli-resolver/*.test.ts)
+- [ ] 2.6 [easy] `lets-delegate-cli finish` with its own `process` handle removes the session's files in `.workspace/lets-delegate/` when `ok` is true and keeps them when it is false, and exits 4 with empty stdout for a `thread` handle (verify: node --test tests/cli-resolver/*.test.ts)
+
+## 3. lets delegate verify
+
+- [ ] 3.1 [medium] `lets delegate conformance` becomes `lets delegate verify`, with its source and test renamed and `pnpm conformance` becoming `pnpm verify` over `lets-delegate-cli` instead of `lets-delegate-herdr`; `lets delegate conformance` exits 2 as an unknown command (verify: node --test tests/lets/delegate/verify.test.ts tests/lets/delegate/cli.test.ts && pnpm verify)
+- [ ] 3.2 [easy] With `--live`, a `start` that exits 75 with empty stdout passes and the output says the next resolver answers handoffs, while one that exits 75 and prints on stdout fails (verify: node --test tests/lets/delegate/verify.test.ts)
+
+## 4. Docs and shipping
+
+- [ ] 4.1 [medium] The README, `docs/resolver-contract.md`, every contrib README and `contrib/headless-resolver` name `lets-delegate-cli` and `lets delegate verify`; the README's chain example lists harness resolvers, then `lets-delegate-cli`, then `lets-delegate-subagent`; the "Switching from lets-delegate-resolver" table names `lets-delegate-cli`; ADRs and archived changes stay as they are (verify: ! grep -rn -E 'lets-delegate-herdr|herdr-resolver|delegate conformance|pnpm conformance' README.md docs/resolver-contract.md contrib lets/src tests package.json flake.nix)
+- [ ] 4.2 [medium] The flake packages `lets-delegate-cli` and no `lets-delegate-herdr`, the release folder's `contrib/` holds exactly `headless-resolver`, `lets-delegate-cli`, `lets-delegate-subagent` and `lets-delegate-t3`, the cli bundle copied alone with no family CLI on PATH declines with `lets-delegate-cli: none of codex, claude or agy is on PATH`, and the flake check expects that decline (verify: pnpm test && nix flake check)
