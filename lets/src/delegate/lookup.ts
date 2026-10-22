@@ -67,7 +67,8 @@ export function resolverOnPath(env: Env, io: Io): string | null {
 export async function callResolver<V extends Verb>(
   candidate: Candidate, verb: V, request: Requests[V], { io, timeoutMs }: { io: Io; timeoutMs: number },
 ): Promise<Outcome<V> | null> {
-  const { command, args = [] } = candidate;
+  // name, not command, in messages: the default's command is Node.
+  const { name, command, args = [] } = candidate;
   const failed = (code: number, stderr: string) => ({ code, response: null, stderr });
   const started: { child?: Child } = {};
   const finished = io.execFile(command, [...args, verb], {
@@ -77,19 +78,19 @@ export async function callResolver<V extends Verb>(
   if (result === null) {
     started.child?.kill();
     const wait = timeoutMs >= 60000 ? `${Math.round(timeoutMs / 60000)} minutes` : `${Math.round(timeoutMs / 1000)} seconds`;
-    return failed(EXIT.timeout, `${command} did not answer ${verb} in ${wait}, so it was stopped.`);
+    return failed(EXIT.timeout, `${name} did not answer ${verb} in ${wait}, so it was stopped.`);
   }
-  if (result.code === null) return failed(EXIT.spawn, `cannot run ${command}: ${result.stderr}`);
+  if (result.code === null) return failed(EXIT.spawn, `cannot run ${name}: ${result.stderr}`);
   if (result.code === DECLINE) {
     if (result.stdout.trim() === '') return null;
-    return failed(EXIT.spawn, `${command} declined after printing a response. A resolver must decline before it starts anything.\n${result.stderr}`);
+    return failed(EXIT.spawn, `${name} declined after printing a response. A resolver must decline before it starts anything.\n${result.stderr}`);
   }
-  if (result.code !== 0) return failed(exitFor(result.code), result.stderr.trim() || `${command} exited ${result.code}`);
+  if (result.code !== 0) return failed(exitFor(result.code), result.stderr.trim() || `${name} exited ${result.code}`);
   try {
     return { code: EXIT.ok, response: parseResponse(verb, result.stdout), stderr: result.stderr };
   } catch (error) {
     if (!(error instanceof ContractError)) throw error;
-    return failed(EXIT.spawn, `${command} broke the contract: ${error.message}`);
+    return failed(EXIT.spawn, `${name} broke the contract: ${error.message}`);
   }
 }
 

@@ -219,3 +219,10 @@ test('a default that exits other than 0, 3 or 4 is exit 4 with the install messa
     assert.match(outcome.stderr, /^lets cannot run its default resolver at .*incomplete/, `exit ${code}`);
   }
 });
+
+test('a failing default is named by its path, not by the Node that runs it', async () => {
+  const io = fakeIo({ files: { [SUBAGENT]: '' }, results: [{ stdout: 'not json', stderr: '', code: 0 }] });
+  const { outcome } = await resolve('start', buildRequest('start', { cwd: '/r', name: 'x', prompt: 'P' }), { env: {}, io, cwd: '/r', ...SELF, config: null });
+  assert.match(outcome.stderr, new RegExp(`\n${SUBAGENT} broke the contract`));
+  assert.doesNotMatch(outcome.stderr, /\/bin\/node/);
+});
