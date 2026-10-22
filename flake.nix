@@ -144,8 +144,8 @@
         };
         lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
         lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
-        # The default resolver. lets runs it from beside itself, so it is
-        # never on PATH either.
+        # The default resolver, for lets-cli and dist only. lets runs it from
+        # beside itself, so it is not exported, and no one puts it on PATH.
         lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
 
         # lets, bound to one release.
@@ -183,7 +183,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr lets-delegate-subagent dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
