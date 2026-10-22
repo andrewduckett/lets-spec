@@ -33,50 +33,60 @@ function ioWith(settings: Record<string, string>, onPath: string[] = []): Io {
 }
 
 
-test('the candidates are the override, the resolver on PATH, then the default', () => {
-  const io = fakeIo({ executables: ['/bin/mine'], commands: ['lets-delegate-resolver'] });
+// A config whose chain is resolvers.
+const chain = (...resolvers: string[]) => ({ version: 2 as const, resolvers });
+
+test('with no config, the candidates are the override, then the default', () => {
+  const io = fakeIo({ executables: ['/bin/mine'] });
   const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: null });
-  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', 'lets-delegate-resolver', SUBAGENT]);
-  assert.deepEqual(list.map((c) => c.builtIn === true), [false, false, true]);
+  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', SUBAGENT]);
+  assert.deepEqual(list.map((c) => c.builtIn === true), [false, true]);
 });
 
-// A config that names resolver, and no reviewers.
-const naming = (resolver: string | null) => ({ version: 1 as const, resolver, reviewers: [] });
-
-test('the config\'s resolver comes after the override and before the resolver on PATH', () => {
-  const io = fakeIo({ executables: ['/bin/mine', '/opt/r/resolver'], commands: ['lets-delegate-resolver'] });
-  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: naming('/opt/r/resolver') });
-  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', '/opt/r/resolver', 'lets-delegate-resolver', SUBAGENT]);
+test('the config\'s chain follows the override, in the order listed', () => {
+  const io = fakeIo({ executables: ['/bin/mine'] });
+  const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: chain('/a', 'subagent', '/b') });
+  assert.deepEqual(list.map((c) => c.name), ['/bin/mine', '/a', SUBAGENT, '/b']);
 });
 
-test('a config whose resolver is null adds no candidate', () => {
-  const list = candidates({ env: {}, io: fakeIo(), cwd: '/r', ...SELF, config: naming(null) });
-  assert.deepEqual(list.map((c) => c.name), [SUBAGENT]);
+test('the subagent entry is the default beside lets, run with lets\'s own Node', () => {
+  const [candidate] = candidates({ env: {}, io: fakeIo(), cwd: '/r', ...SELF, config: chain('subagent') });
+  assert.deepEqual(candidate, { name: SUBAGENT, command: '/bin/node', args: [SUBAGENT], builtIn: true });
 });
 
-test('the config\'s resolver is asked once when it is also the resolver on PATH', () => {
-  const io = fakeIo({ executables: ['/opt/r/lets-delegate-resolver'], commands: ['lets-delegate-resolver'] });
-  const config = naming('/opt/r/lets-delegate-resolver');
-  const list = candidates({ env: { PATH: '/usr/bin:/opt/r' }, io, cwd: '/r', ...SELF, config });
-  assert.deepEqual(list.map((c) => c.name), ['/opt/r/lets-delegate-resolver', SUBAGENT]);
+test('a listed path is never the default, even when it is a copy of lets-delegate-subagent', () => {
+  const [candidate] = candidates({ env: {}, io: fakeIo(), cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-subagent') });
+  assert.equal(candidate.builtIn, undefined);
+  assert.equal(candidate.command, '/opt/r/lets-delegate-subagent');
+});
+
+test('an empty chain has no candidates', () => {
+  assert.deepEqual(candidates({ env: {}, io: fakeIo(), cwd: '/r', ...SELF, config: chain() }), []);
+});
+
+test('a resolver on PATH is never a candidate', () => {
+  const io = fakeIo({ executables: ['/usr/bin/lets-delegate-resolver'], commands: ['lets-delegate-resolver'] });
+  const env = { PATH: '/usr/bin' };
+  assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: null }).map((c) => c.name), [SUBAGENT]);
+  assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: chain('/a') }).map((c) => c.name), ['/a']);
 });
 
 test('a configured resolver that is missing stops the lookup with a usage error naming the path and setup', async () => {
-  const io = fakeIo({ commands: ['lets-delegate-resolver'] });
-  const config = naming('/nix/store/gone/bin/lets-delegate-resolver');
+  const io = fakeIo();
+  const config = chain('/nix/store/gone/bin/lets-delegate-t3');
   await assert.rejects(resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config }),
-    (error) => error instanceof UsageError && error.message.includes('/nix/store/gone/bin/lets-delegate-resolver')
+    (error) => error instanceof UsageError && error.message.includes('/nix/store/gone/bin/lets-delegate-t3')
       && error.message.includes('lets delegate setup'));
   assert.deepEqual(io.calls, [], 'no later resolver was asked');
 });
 
 test('an override that answers is not stopped by a missing configured resolver', async () => {
   const io = ioWith({});
-  const { candidate } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SELF, config: naming('/no/such') });
+  const { candidate } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SELF, config: chain('/no/such') });
   assert.equal(candidate.name, FAKE);
 });
 
-test('without an override or a resolver on PATH, only the default is a candidate', () => {
+test('an empty override is no candidate', () => {
   assert.deepEqual(candidates({ env: { LETS_SPEC_RESOLVER: '' }, io: fakeIo(), cwd: '/r', ...SELF, config: null }).map((c) => c.name), [SUBAGENT]);
 });
 
@@ -93,7 +103,7 @@ test('an override that is missing or not executable is a usage error that names 
 test('the override answers when it does not decline, and is passed the verb and the request on stdin', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'lets-lookup-'));
   const log = join(dir, 'log');
-  const io = ioWith({ FAKE_RESOLVER_LOG: log }, ['lets-delegate-resolver']);
+  const io = ioWith({ FAKE_RESOLVER_LOG: log });
   const { candidate, outcome } = await resolve('run', runRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SELF, config: null });
   assert.equal(candidate.name, FAKE);
   assert.equal(outcome.code, 0);
@@ -108,13 +118,13 @@ test('a decline passes the request to the next candidate', async () => {
   assert.deepEqual(outcome.response, { resolver: 'subagent' });
 });
 
-test('the resolver on PATH is run by name', async () => {
-  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '{"resolver":"t3"}', stderr: '', code: 0 }] });
-  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: null });
-  assert.equal(candidate.name, 'lets-delegate-resolver');
+test('a listed resolver is run by its path', async () => {
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '{"resolver":"t3"}', stderr: '', code: 0 }] });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
+  assert.equal(candidate.name, '/opt/r/lets-delegate-t3');
   assert.deepEqual(outcome.response, { resolver: 't3' });
   const [[cmd, args, opts]] = io.calls;
-  assert.equal(cmd, 'lets-delegate-resolver');
+  assert.equal(cmd, '/opt/r/lets-delegate-t3');
   assert.deepEqual(args, ['probe']);
   assert.equal(opts.cwd, '/r');
   assert.equal(opts.env, undefined, 'a resolver inherits the real env');
@@ -162,10 +172,10 @@ test('a malformed request, a bad response or an unknown exit is exit 4 with the 
 });
 
 test('a resolver that cannot start is exit 4', async () => {
-  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [{ stdout: '', stderr: 'spawn EACCES', code: null }] });
-  const { outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: null });
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '', stderr: 'spawn EACCES', code: null }] });
+  const { outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
   assert.equal(outcome.code, 4);
-  assert.match(outcome.stderr, /cannot run lets-delegate-resolver: spawn EACCES/);
+  assert.match(outcome.stderr, /cannot run \/opt\/r\/lets-delegate-t3: spawn EACCES/);
 });
 
 test('a resolver past the timeout is killed and reported as exit 6', async () => {
@@ -178,8 +188,8 @@ test('a resolver past the timeout is killed and reported as exit 6', async () =>
 });
 
 test('the backstop for run is the session timeout plus one minute', async () => {
-  const io = fakeIo({ commands: ['lets-delegate-resolver'], results: [new Promise(() => {})] });
-  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: null });
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [new Promise(() => {})] });
+  const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
   assert.equal(outcome.code, 6);
   assert.deepEqual(io.sleeps, [16 * 60000]);
   assert.deepEqual(io.killed, [4242]);

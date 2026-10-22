@@ -2,13 +2,12 @@
 // delegate config from that, and write it on request. It starts no session
 // and spends no tokens: it runs only the CLIs' model list commands and looks
 // on PATH. No process access here; everything comes through deps.
-import { dirname, isAbsolute } from 'node:path';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import type { Child, Deps, Io } from '../io.ts';
 import { CONFIG_VERSION, configPath, readConfig } from './config.ts';
 import type { Config } from './config.ts';
 import type { Env } from './env.ts';
 import { EXIT, exitCodeOf, UsageError } from './errors.ts';
-import { resolverOnPath } from './lookup.ts';
 import { FAMILIES } from './protocol.ts';
 import type { Family } from './protocol.ts';
 import { withTimeout } from './wait.ts';
@@ -230,4 +229,12 @@ export function codexModels(stdout: string): string[] {
 export function agyModels(stdout: string): string[] {
   const ids = stdout.split('\n').map((line) => line.split(/\s/)[0]).filter((id) => id.startsWith('gemini-'));
   return [...new Set(ids.map((id) => id.replace(/-(low|medium|high)$/, '')))];
+}
+
+// The path of the lets-delegate-resolver that PATH finds first, or null.
+function resolverOnPath(env: Env, io: Io): string | null {
+  for (const dir of (env.PATH ?? '').split(delimiter)) {
+    if (dir !== '' && io.isExecutable(join(dir, 'lets-delegate-resolver'))) return join(dir, 'lets-delegate-resolver');
+  }
+  return null;
 }

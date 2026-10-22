@@ -8,7 +8,7 @@
 
 ## 2. The lookup [depends-on: 1]
 
-- [ ] 2.1 [medium] `candidates` returns the `LETS_SPEC_RESOLVER` override, then one candidate per `resolvers` entry in order, where `subagent` is the `builtIn` candidate run as `<nodePath> <packageRoot>/contrib/lets-delegate-subagent`; with no config it returns the override, then the `builtIn` candidate; nothing on `PATH` is ever a candidate, and `RESOLVER_COMMAND` and `resolverOnPath` are gone (verify: `node --test tests/lets/delegate/lookup.test.ts`)
+- [x] 2.1 [medium] `candidates` returns the `LETS_SPEC_RESOLVER` override, then one candidate per `resolvers` entry in order, where `subagent` is the `builtIn` candidate run as `<nodePath> <packageRoot>/contrib/lets-delegate-subagent`; with no config it returns the override, then the `builtIn` candidate; nothing on `PATH` is ever a candidate, and `RESOLVER_COMMAND` and `resolverOnPath` are gone (verify: `node --test tests/lets/delegate/lookup.test.ts`) (✓ `node --test tests/lets/delegate/lookup.test.ts` passed, 26 tests)
 - [ ] 2.2 [medium] `resolve` asks each candidate in order and answers with the first that does not decline, so `/a` declining means `/b` answers and `/a` answering means `/b` is never run; a listed absolute path that does not exist or is not an executable file throws a usage error naming the path and the config file when the lookup reaches it, and not before (verify: `node --test tests/lets/delegate/lookup.test.ts`)
 - [ ] 2.3 [easy] When every candidate declines, `resolve` throws a usage error that says every resolver declined and names the config file, so `review` and `handoff` exit 2 with nothing on stdout; a missing or broken `builtIn` copy still exits 4 and says the install is incomplete, through no config and through a `subagent` entry alike (verify: `node --test tests/lets/delegate/lookup.test.ts`)
 
@@ -31,5 +31,6 @@
 
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
 
-- 2026-10-21, task 1.1: from this commit until tasks 3.1 and 3.2, the full suite has 12 failing tests. They test behavior this change removes: the `reviewers` tests in `review.test.ts` and the tests in `setup.test.ts`. Tasks 3.1 and 3.2 replace and delete them. The config error no longer ends with "Run `lets delegate setup`", since setup goes in task 3.2.
+- 2026-10-21, task 1.1: from this commit until tasks 3.1 and 3.2, the full suite has failing tests, 12 at first and 13 from task 1.2. They test behavior this change removes: the `reviewers` tests in `review.test.ts`, the tests in `setup.test.ts`, and, from task 1.2, the handoff test that writes `config.json`, which is now refused. Tasks 3.1 and 3.2 replace and delete them. The config error no longer ends with "Run `lets delegate setup`", since setup goes in task 3.2.
 - 2026-10-21, task 1.3: `lets/build.mjs` also changed. esbuild bundles `yaml`'s CommonJS build, which calls `require` on Node's own modules, and an ES module bundle has no `require`, so the `dist` check failed with "Dynamic require of \"process\" is not supported". The banner now defines `require` with `createRequire`. The release still needs nothing beside Node.
+- 2026-10-21, task 2.1: `resolverOnPath` moved from `lookup.ts` into `setup.ts`, its last user, so the CLI still loads until task 3.2 deletes `setup.ts`.
