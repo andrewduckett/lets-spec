@@ -15,7 +15,7 @@ A stored model name is what fails today. The config pinned `gpt-6-astra`, T3 lis
 - `lets delegate verify` checks the new `probe` answer, and its live run sends a `model`.
 - `docs/resolver-contract.md` and the `headless-resolver` sh example follow the new contract. The protocol number stays 1 (D3).
 - A new decision record supersedes ADR-002's second decision.
-- `lets delegate review` still sends no `model`, so a review on `main` fails until #59 adds `--model`. No release is cut in between (D2).
+- **BREAKING** `lets delegate review` and `lets delegate handoff` take a required `--model <family[/model]>` and pass it to the resolver unchanged (D15). The review skills do not pass it until #59, so a skill's review on `main` fails until then. No release is cut in between (D2).
 
 ## Capabilities
 
@@ -26,16 +26,16 @@ None.
 ### Modified Capabilities
 
 - `contrib-resolvers`: `probe` reports options. `run` and `start` run the model they are given. A refusal is exit 3, and the T3 resolver archives a refused thread. The cli resolver's listing rules apply.
-- `delegate-config`: the requirements on how a resolver walks `reviewers` are removed, because the field goes.
-- `delegate-default`: `lets-delegate-subagent` answers `probe` with an empty `options` list.
+- `delegate-config`: the requirements on how a resolver walks `reviewers` are removed, because the field goes. A request from `lets` carries the model given with `--model`.
+- `delegate-default`: `lets-delegate-subagent` answers `probe` with an empty `options` list, and its review and handoff examples pass `--model`.
 - `delegate-verify`: the check requires `options` in the `probe` answer, and sends `model` in its live run.
 
 ## Impact
 
 - **The kit:** `contrib/resolver-kit/src/protocol.ts`, `families.ts`, `resolver.ts` and `adapter.ts`.
 - **The resolvers:** `contrib/t3-resolver/src/t3.ts`, `contrib/cli-resolver/src/cli.ts`, `contrib/subagent-resolver/src/subagent.ts` and `contrib/headless-resolver`.
-- **`lets`:** `lets/src/delegate/protocol.ts`, which the kit copies, and `verify.ts`.
-- **Tests:** `tests/resolver-kit`, `tests/t3-resolver`, `tests/cli-resolver`, `tests/subagent-resolver`, and `tests/lets/delegate/protocol.test.ts` and `verify.test.ts`.
+- **`lets`:** `lets/src/delegate/protocol.ts`, which the kit copies, `review.ts`, `handoff.ts`, `verify.ts`, and `lets/src/cli.ts` (the `--model` option and the help text).
+- **Tests:** `tests/resolver-kit`, `tests/t3-resolver`, `tests/cli-resolver`, `tests/subagent-resolver`, and `tests/lets/delegate/protocol.test.ts`, `cli.test.ts`, `review.test.ts`, `handoff.test.ts` and `verify.test.ts`.
 - **Docs:** `docs/resolver-contract.md`, and a new ADR that supersedes `docs/decisions/ADR-002-lets-owns-the-delegate-config.md`.
 - **Dependencies:** none. The cli resolver now calls `codex debug models` and `agy models` at `probe` time.
 - **Follow-up:** #61 removes the agy filter once agy lists only Gemini models.

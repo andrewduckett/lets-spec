@@ -21,9 +21,11 @@ https://github.com/sidereal-io/lets-spec/issues/58
 | D12 | What does the cli resolver list when a CLI is on PATH but its listing fails, for example because codex is logged out? | It leaves that family out of `options`, and says why on stderr. | Assumption |
 | D13 | What does the cli resolver list for claude? | The bare family `claude`, because the claude CLI cannot list models. A bare family on `run` means that CLI's default model. | Evidence: #58 Scope |
 | D14 | What does `start` do with `model`? | T3 starts the thread on that model, instead of the project default. The cli resolver still declines `start`, and subagent still hands the prompt back. | Evidence: #58 Scope; `contrib/t3-resolver/src/t3.ts` (`startSelection`) |
+| D15 | How does `lets` send a model while `model` is required, before #59? | `lets delegate review` and `lets delegate handoff` take a required `--model <family[/model]>` and pass it to the resolver unchanged. #59 keeps `lets delegate instructions`, guidance, the stderr line and the skills. | User (settled while writing specs) |
 
 ## Changes from the story
 
 - Added: [#61](https://github.com/sidereal-io/lets-spec/issues/61), a standalone Chore to remove the agy `gemini-` filter once agy lists only Gemini models (D5). It is blocked by #58.
+- Moved from #59: the required `--model` flag on `lets delegate review` and `lets delegate handoff` (D15). #59's scope is updated to match.
 
 Confirmed by user: yes
