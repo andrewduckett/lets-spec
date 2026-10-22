@@ -6,7 +6,10 @@ These rules come from lets-spec, and apply to every agent.
   `openspec/changes/`, specs in `openspec/specs/`, and decision records
   in `docs/decisions/`. A change starts with a brainstorm and ends with
   archive. The schema's instructions say what to do at each step in
-  between. [Routing](#routing) says where each request starts.
+  between. [Routing](#routing) says where each request starts. The narrow
+  exception is a user-selected glossary documentation PR from `lets-shape`:
+  it has its own assigned, In Progress Chore and no implementation change.
+  It still follows commit, check and user-owned merge rules.
 - **One change is one branch and one pull request,** from propose to
   archive. Independent changes branch off the repository's default
   branch. A change that
@@ -20,7 +23,9 @@ These rules come from lets-spec, and apply to every agent.
   has one.
 - **The backlog is the GitHub Project linked to this repository.**
   `lets-shape` sets kind, priority, size and readiness; `lets-build`
-  picks, claims and routes. Never set a Project field with `gh` outside
+  picks, claims and routes. Shaping also assigns and claims its user-selected
+  glossary documentation Chore as the narrow exception described above.
+  Never set a Project field with `gh` outside
   those skills. Every piece of work is an issue, and its pull request
   says `Closes #<n>`. An epic is a parent issue with its stories as
   sub-issues. Dependencies are "blocked by" links on the story they
@@ -49,6 +54,27 @@ These rules come from lets-spec, and apply to every agent.
 | A bug, a chore or a single story with no issue yet, or an issue with no packet | The `lets-shape` skill |
 | Start the next story, or move the current branch's change on | The `lets-build` skill |
 | Set up or check this repository's backlog | The `lets-setup-backlog` skill |
+
+### Domain language
+
+Read the installed shared reference at
+`.agents/skills/lets-shape/references/domain-language.md` when shaping,
+planning, implementing or reviewing. Resolve project vocabulary from the
+planning root: `planningHome.root` for artifacts, `root.path` for apply.
+The shared glossary defaults to `openspec/glossary.md`. Existing free-text
+project context can replace it explicitly:
+
+```yaml
+context: |
+  Shared glossary: docs/requirements/00-glossary.md
+  This replaces the default openspec/glossary.md.
+```
+
+Paths are relative to the planning root. Also load existing ancestor and
+local glossaries under `openspec/specs/<capability-path>/`; nested scopes
+are optional and never silently override shared meanings. Report a missing
+declared target. Confirm meaning and scope before writing agreed terms,
+and preserve domain meaning across code naming and representation choices.
 
 ### Writing
 

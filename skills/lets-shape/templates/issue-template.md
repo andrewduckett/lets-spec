@@ -77,3 +77,29 @@ Title: `<kebab-bug-name> — <one-line outcome>`
 ## Chore issue
 
 Title: `<kebab-chore-name> — <one-line outcome>`. A chore has no template: its body is the one-line outcome.
+
+## Glossary recovery record (optional for every Kind)
+
+Append this section to a parent, story, bug or chore only when shaping has
+owned glossary edits or the packet references their owner. Preserve an
+existing record verbatim when rebuilding any issue body, including when a
+parent becomes a story. Update its confirmed facts without dropping the
+checkpoint history. Omit the section when there is no glossary handoff.
+A dependent packet can link to the complete owner record in **Depends on**
+instead of repeating it, but must retain any unresolved prerequisite.
+
+```markdown
+## Glossary handoff
+
+- **Owner**: <issue and PR, or explicitly undecided>
+- **Owned paths**: <exact project glossary paths>
+- **Starting branch and base**: <branch and full commit>
+- **Remote and branch**: <remote URL and checkpoint branch, or local-only>
+- **Checkpoints**: <ordered full commit IDs and their parents; recorded head>
+- **Publication**: <verified remote head, or unavailable with reason>
+- **Prerequisites**: <dependent stories, confirmed blocker links or declined links with unresolved requirement>
+- **Destination**: <branch, imported commits and PR when available; otherwise pending>
+```
+
+Do not copy definitions into this record. Recover their committed contents
+from the checkpoint before resuming work.

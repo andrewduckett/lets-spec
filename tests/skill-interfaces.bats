@@ -150,3 +150,69 @@ flow_texts() {
 @test "lets-build says a handoff's instructions hold the prompt to carry on by hand" {
   grep -q 'hold the prompt to carry on by hand' "$repo/skills/lets-build/SKILL.md"
 }
+
+# Resolve actual Markdown reference links as an installed skill would.
+# Include source copies in an isolated fixture so a bad relative path fails.
+assert_reference_links() {
+  local text="$1" root="$2" base="${3:-$(dirname "$1")}" link found=0
+  root="$(realpath "$root")"
+  while IFS= read -r link; do
+    found=1
+    [ -f "$base/$link" ] || { echo "unresolved: $text -> $link"; return 1; }
+    case "$(realpath "$base/$link")" in
+      "$root"/*) ;;
+      *) echo "reference escapes installed skills: $text -> $link"; return 1 ;;
+    esac
+  done < <(grep -oE '\]\([^)]*references/[^)]*\.md\)' "$text" | sed -E 's/^\]\(//;s/\)$//')
+  [ "$found" -eq 1 ] || { echo "no reference input: $text"; return 1; }
+}
+
+@test "shaping loads its installed domain-language reference" {
+  assert_reference_links "$repo/skills/lets-shape/SKILL.md" "$repo/skills"
+}
+
+load support/release
+
+@test "planning vocabulary inputs resolve inside each published flow" {
+  local flow schema skill out schemas
+  for flow in standard minimal; do
+    out="$BATS_TEST_TMPDIR/$flow"
+    schemas="$(jq -r --arg flow "$flow" '.flows[$flow].schemas | join(",")' "$repo/flows.json")"
+    build "$out" "$schemas" $(flow_skills "$flow")
+    for skill in lets-shape lets-brainstorm lets-write-specs; do
+      assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
+    done
+    for schema in $(jq -r --arg flow "$flow" '.flows[$flow].schemas[]' "$repo/flows.json"); do
+      (
+        cd "$out/overlay"
+        printf 'schema: %s\n' "$schema" > openspec/config.yaml
+        OPENSPEC_TELEMETRY=0 OPENSPEC_NO_UPDATE_CHECK=1 openspec new change "$schema-demo" </dev/null >/dev/null 2>&1
+        printf '%s\n' '- [ ] 1.1 Fixture implementation' >"openspec/changes/$schema-demo/tasks.md"
+        local artifact
+        for artifact in brainstorm specs apply; do
+          OPENSPEC_TELEMETRY=0 OPENSPEC_NO_UPDATE_CHECK=1 openspec instructions "$artifact" --change "$schema-demo" --json </dev/null >"$out/instructions.json" 2>/dev/null
+          jq -r .instruction "$out/instructions.json" >"$out/instruction.md"
+          # Agents receive CLI text without its schema file location.
+          assert_reference_links "$out/instruction.md" "$out/overlay" "$out/overlay"
+        done
+      )
+    done
+  done
+}
+
+@test "review vocabulary inputs resolve in the published standard flow" {
+  local out="$BATS_TEST_TMPDIR/standard" skill
+  build "$out" lets-standard,lets-minimal $(flow_skills standard)
+  for skill in lets-review-plan lets-review-code; do
+    assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
+  done
+}
+
+@test "installed reference containment accepts a symlinked root" {
+  local real="$BATS_TEST_TMPDIR/real" alias="$BATS_TEST_TMPDIR/alias"
+  mkdir -p "$real/skill/references"
+  printf '# Method\n' >"$real/skill/references/method.md"
+  printf '[Method](references/method.md)\n' >"$real/skill/SKILL.md"
+  ln -s "$real" "$alias"
+  assert_reference_links "$alias/skill/SKILL.md" "$alias"
+}

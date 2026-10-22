@@ -7,7 +7,7 @@ description: Break a large product requirements document (PRD), vision, issue, o
 
 Shape a large idea into a backlog. This is discovery: personas, a journey map, MoSCoW priorities (Must, Should, Could, Won't) and thin vertical stories. It also shapes one bug, chore or story on its own: see [Shape one issue](#shape-one-issue). Run every command below from the repo root.
 
-**Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes two things, and nothing else: no roadmap, release plan or changelog.
+**Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes the map, issues, and agreed project-owned glossary definitions: no roadmap, release plan or changelog.
 
 - `openspec/discovery.md` — the living map: personas and journey map ([templates/discovery-template.md](templates/discovery-template.md)). It outlives every run; see [The map](#the-map).
 - GitHub issues — one **parent issue** per discovery run, and the stories ([templates/issue-template.md](templates/issue-template.md)).
@@ -56,7 +56,7 @@ gh project item-edit <n> --owner <owner> --url <url> --field Size --value S
 gh project item-edit <n> --owner <owner> --url <url> --field Status --value Todo
 ```
 
-An issue is shaped when Kind, Priority and Size are set. Status Todo says nobody has taken it. Set Todo once, right after the other three, whenever you create or reshape a story, bug or chore; the Project's workflows and `lets-build` move it on from there. An epic gets a Kind and nothing else.
+An issue is shaped when Kind, Priority and Size are set. Status Todo says nobody has taken it. The glossary documentation Chore below is the sole exception: assign it and set In Progress. Set Todo once, right after the other three, whenever you create or reshape a story, bug or chore; the Project's workflows and `lets-build` move it on from there. An epic gets a Kind and nothing else.
 
 ## The stance
 
@@ -87,7 +87,7 @@ An issue is shaped when Kind, Priority and Size are set. Status Todo says nobody
 At the start:
 
 1. Run `openspec list --json` and take the OpenSpec root from `root.path`. It must be this repository's root, or a directory inside it: `openspec list` answers with the nearest root, which can be a parent of the repository. If it is outside, stop and say the project has no OpenSpec root. Use the resolved root everywhere below, never a bare `./openspec/`.
-2. Read `<root.path>/openspec/config.yaml` (or `config.yml`) if it exists. Its `context` and `rules` are constraints for you to follow, not content to reproduce.
+2. Read `<root.path>/openspec/config.yaml` (or `config.yml`) if it exists. Its `context` and `rules` are constraints for you to follow, not content to reproduce. Read [Domain language](references/domain-language.md) and resolve the shared glossary from that root and context. Load ancestor and affected-scope glossaries as capabilities emerge, before using their terms.
 3. Find the Project, as in [The Project](#the-project). The map's links need the owner and the name from its `repo`.
 4. Pick the mode, first match wins:
    - **The user brings one bug, chore or small story, or names one issue to shape on its own**: [Shape one issue](#shape-one-issue). An issue that holds a large idea is the input to a discovery run instead. If you cannot tell which the user means, ask.
@@ -97,9 +97,83 @@ At the start:
 
 If any of these fails, stop and show the error. Never write the map anywhere but the resolved root.
 
+## Develop the vocabulary
+
+Use the shared reference in discovery, revision, resume and single-issue
+shaping. Before writing a packet that relies on a term, compare its meaning
+with established vocabulary. For example, distinguish an authentication
+Session from an existing game Session with the user. Keep unresolved terms
+and candidate meanings explicitly tentative in the shaping issue.
+
+Propose meaning and the narrowest scope covering actual uses, checking
+ancestor definitions and siblings. Order used by checkout and fulfillment
+belongs in their common scope; Checkout attempt used only by checkout stays
+local. Confirm meaning and scope with the user, then write the accepted
+entry immediately to its authoritative glossary. Subsequent packets use
+that agreed concept. Qualify conflicting local meanings rather than silently
+overriding shared ones; move newly shared definitions and update references
+without duplicate authoritative copies. A stale declared glossary path must
+be reported and resolved before dependent discussion continues.
+
+## Preserve glossary edits between sessions
+
+Before the first glossary write, record the starting branch and full commit,
+working-tree and index status, and the original contents (or absence) of
+each affected path in `.workspace/<run>-glossary-handoff.md`. Check each
+additional path before writing it. Track exactly which edits this shaping
+run owns. If a glossary already has user edits, resolve ownership with the
+user before touching it. Separate or preserve those edits first; never
+include them in an owned checkpoint merely because they share a path.
+A checkpoint's base must contain the baseline needed to reproduce its patch.
+
+At every confirmed phase checkpoint with glossary changes:
+
+1. Inspect the owned diff against its baseline and the staged diff. Commit
+   only owned glossary paths as a separate `docs:` unit. Use explicit paths
+   (including new files); never `git add -A` or commit unrelated staged work.
+   From the default branch, first create a holding branch named for the
+   shaping issue from the recorded starting commit. Continue shaping there;
+   subsequent checkpoints extend the same branch. Check branch existence
+   before creation and never reset a branch to reuse its name.
+2. If shaping began on an existing change branch, keep glossary checkpoints
+   there as separate `docs:` commits. Do not create a holding branch from
+   unrelated implementation history. Record each exact owned commit and its
+   parent, so build imports only glossary commits with available context.
+3. Publish the checkpoint branch to a chosen writable remote without a PR.
+   Confirm the remote head contains the checkpoint. If no writable remote
+   exists or publication fails, report the limitation, keep the local
+   checkpoint and do not call it available to another checkout.
+4. Update **Glossary handoff** in the shaping issue (or parent): starting
+   branch/base, owned paths, ordered checkpoint commits and their parents,
+   head, remote URL and remote branch, publication state, and owner still
+   undecided. Keep tentative meanings separate. In discovery, record the
+   checkpoint beside the status line too. Do this after each phase, not only
+   at final handoff. The issue is the durable recovery record; scratch files
+   alone are insufficient.
+
+On resume, read the issue's handoff before deciding whether this run has
+vocabulary edits. Fetch its recorded branch and verify the exact checkpoint
+and path-only commit range, then restore that branch and its definitions
+before continuing. Verify the baseline from its recorded base; do not rely
+on conversation history or another checkout's `.workspace/`. Never force a
+checkout or automatically stash unrelated changes. If local edits obstruct
+recovery, preserve them and report the obstruction.
+
+After the final checkpoint, restore owned paths to the recorded starting
+baseline before normal build. Usually switch safely to the starting branch;
+verify tracked owned paths have no diff and newly introduced paths are
+absent. On an existing change branch, the separately committed vocabulary
+stays in its PR; record that destination rather than undoing its commits.
+For an explicit restoration, first compare each path and index with the
+owned checkpoint. Restore only verified owned edits, deleting a newly
+created file only when it still matches the checkpoint. If later user edits
+exist, stop restoration of that path and resolve ownership. Never discard
+those edits, reset the whole tree, or change unrelated paths. Retain the
+checkpoint branch until the destination safely contains its definitions.
+
 ## The phases
 
-**Checkpoint every phase.** When the user confirms a phase, write its result at once, and set the parent issue's status line to the next phase: `personas`, `journey-map`, `moscow`, then `stories`. A revision run that skips personas and the journey map goes from Ingest straight to `moscow`.
+**Checkpoint every phase.** Apply the glossary checkpoint procedure above whenever the phase changed definitions. When the user confirms a phase, write its result at once, and set the parent issue's status line to the next phase: `personas`, `journey-map`, `moscow`, then `stories`. A revision run that skips personas and the journey map goes from Ingest straight to `moscow`.
 
 Personas and the journey map go in `discovery.md`. Everything else goes in the parent issue.
 
@@ -175,7 +249,7 @@ Each story gets a **story packet**: the story template in [templates/issue-templ
 
 **One story or many:**
 
-- **The whole run fits one story.** The parent issue becomes that story. Retitle it `<kebab-story-name> — <one-line outcome>` and replace its body with the story template. Then set Kind `Story`, its Priority, its Size and Status `Todo`, with four `item-edit` commands. Keep the status line and the input reference. Won't calls go in its Scope `out`.
+- **The whole run fits one story.** The parent issue becomes that story. Retitle it `<kebab-story-name> — <one-line outcome>` and replace its body with the story template. Then set Kind `Story`, its Priority, its Size and Status `Todo`, with four `item-edit` commands. Keep the status line, input reference and complete **Glossary handoff** recovery record when replacing the body. Won't calls go in its Scope `out`.
 - **More than one story.** The stories are sub-issues of the parent.
 
 **Checkpoint:** Issues are public, so show the new and changed issues as a table (title, blocked by, MoSCoW, size) and confirm. Put each blocker on the story it blocks, never only on the parent, because `lets-build` cannot see a blocker on a parent issue when it picks the next story. When something blocks every story under the parent, give each story its own `--blocked-by` link. Then create them in dependency order, blockers first:
@@ -198,6 +272,8 @@ For each issue:
 
 Remove the status line from the parent issue. Keep the `Input:` line, so the run always names what it started from. Resolve every open question, or move it to the story it blocks. Link the journey stages in `discovery.md` to the stories that close them. `## Backlog` stays a single link to the repository's issues page, never a list of issues. Show the user the stories as a checklist of issue links.
 
+Run [Glossary handoff](#glossary-handoff) before the ordinary handoff below.
+
 Then hand off:
 
 > The stories are GitHub issues under #<parent>. To start building, run `lets-build` on the default branch: it picks the next story, claims it and plans it. Run this skill again at any time to revise the plan.
@@ -206,20 +282,20 @@ Then hand off:
 
 Use this when the user brings one bug, chore or small story, or names an open issue that has no packet. It shapes that one issue. It never touches `discovery.md` and never starts a discovery run. Another skill can send work here too, such as `lets-brainstorm` when it splits a story; it gives you the issue's parent and what blocks it.
 
-1. **Find or create the issue.** When the user named one, read it with `gh issue view <i> --json title,body,url,parent`. Otherwise search for one first: `gh issue list --state open --search "<words> in:title" --json number,title`. If one matches, ask whether it is the same work. If none does, you create it in step 6. An existing issue that is not on the Project yet joins it with `gh project item-add <n> --owner <owner> --url <url>`.
+1. **Find or create the issue.** When the user named one, read it with `gh issue view <i> --json title,body,url,parent`. Otherwise search for one first: `gh issue list --state open --search "<words> in:title" --json number,title`. If one matches, ask whether it is the same work. If none does, you create it in step 6. If the issue has a **Glossary handoff**, recover its recorded checkpoint before continuing or deciding whether this run has glossary edits. An existing issue that is not on the Project yet joins it with `gh project item-add <n> --owner <owner> --url <url>`.
 2. **Pick the Kind, and confirm it.** A Bug is something that should work and does not. A Chore is work no persona sees, such as a dependency bump, a CI fix or a tidy-up. A Story is something a persona can do once it ships.
-3. **Read the code the issue names**, and search for more. **Relevant code** lists what you find, or `new` when the story builds on nothing that exists.
+3. **Read the code the issue names**, and search for more. Load shared, ancestor and affected-scope vocabulary and develop definitions as above. **Relevant code** lists what you find, or `new` when the story builds on nothing that exists.
 4. **Interview for the Kind's template** in [templates/issue-template.md](templates/issue-template.md), one question at a time: the story template for a Story, the bug template for a Bug. A Chore has no template. It needs only its one-line outcome, and a title in the template's shape. When `discovery.md` exists, use its persona and journey names, but do not edit it.
 5. **Size it** XS, S, M, L or XL. L or XL is too big for one change: say so, offer a discovery run on it instead, and stop.
-6. **Confirm, then write.** The issue is public, so show the user its title, body, Kind, Priority and Size, and get a yes. Write the packet. For an existing issue, use `gh issue edit <i> --title "<title>" --body-file <file>`. For a new one, use `gh issue create --title "<title>" --body-file <file> --project "<project title>" [--parent <p>] [--blocked-by <i>,<i>]`. Then set Kind, Priority, Size and Status `Todo`, in that order, with `item-edit`. A Chore and a Bug get a Priority and a Size too.
+6. **Confirm, then write.** The issue is public, so show the user its title, body, Kind, Priority and Size, and get a yes. Write the packet, retaining any existing **Glossary handoff** recovery record when replacing the body. For an existing issue, use `gh issue edit <i> --title "<title>" --body-file <file>`. For a new one, use `gh issue create --title "<title>" --body-file <file> --project "<project title>" [--parent <p>] [--blocked-by <i>,<i>]`. Then set Kind, Priority, Size and Status `Todo`, in that order, with `item-edit`. A Chore and a Bug get a Priority and a Size too.
 
-Then say that `lets-build` can take it: on the default branch, it picks the next issue, or the user can name this one.
+Checkpoint any glossary edits and run [Glossary handoff](#glossary-handoff). Then say that `lets-build` can take it: on the default branch, it picks the next issue, or the user can name this one.
 
 ## Resume mode
 
 When an open parent issue says `Discovery status: in-progress` (or the user picked one of several):
 
-1. **Read it and `discovery.md`.** The status line records the next phase; the sections already present are confirmed work.
+1. **Read it and `discovery.md`.** Recover any recorded glossary checkpoint as above first. The status line records the next phase; the sections already present are confirmed work.
 2. **Restate where discovery stopped** — a one-paragraph summary of what the parent issue and map already capture — and confirm with the user.
 3. **Continue from the recorded phase.** Do not re-litigate confirmed sections unless the user brings new information; then revisit and update them.
 
@@ -245,6 +321,64 @@ When `discovery.md` exists and no run is in progress:
 2. **Take in what the user brings** — a new PRD, new requirements, changed priorities, learnings from shipped stories. New work is a new run with its own parent issue: Ingest, then MoSCoW and Stories. Revisit Personas and the Journey Map only when the input changes who the product serves or how they use it.
 3. **Priorities of existing stories are revisable too:** update the story's MoSCoW line, with its reason, and set its Priority with `item-edit` in the same step.
 4. **Never silently delete a story.** Close a superseded story as not planned with a one-line reason, so the plan's history stays legible: `gh issue close <n> --reason "not planned" --comment "Superseded by #<m>: <reason>"`.
+
+## Glossary handoff
+
+Compare this run's owned glossary paths and checkpoints with its starting
+baseline, including recovered checkpoints on resume. Unrelated changes do
+not count. If no glossary edits were made, use the ordinary handoff without
+a glossary-specific PR question. Otherwise ask who carries the edits, not
+whether the accepted meanings are accepted again:
+
+- For one story, offer its build branch and PR, or a documentation PR if the
+  user stops after shaping. Do not create that PR unless they choose it.
+- For definitions shared by several stories, offer one selected story's PR
+  or a documentation PR that lands first. Select exactly one owner; do not
+  copy the edits into competing PRs or automatically stack independent work.
+- When shaping on a change branch splits another story, definitions stay in
+  the original change's separate glossary commit unless the user selects a
+  safe alternative. Record that original issue and PR as owner when the
+  split needs those definitions. The ownership question still applies.
+
+Extend **Glossary handoff** in the owner issue or shaping parent with the
+selected owner issue/PR, affected paths, base, remote URL/branch, complete
+ordered checkpoint range and publication state. Reference this record from
+every affected packet's **Depends on** section; do not duplicate definitions
+in issue bodies. Record a pending ownership choice explicitly if the user
+stops before choosing. Such work remains an unresolved prerequisite.
+
+For a documentation PR, confirm its concrete issue and PR content with the
+user. Create a separate Chore issue with a one-line documentation outcome,
+Kind Chore, Priority and Size, assigned to the current user and Status
+In Progress. Use the Project operations above and `gh issue edit <i>
+--add-assignee @me`; do not leave this Chore Todo for another build to pick.
+If assignment or a field update fails, report the incomplete setup and do
+not call the route ready. Resume setup on the same issue, never duplicate it.
+Use the verified glossary-only holding branch (or transfer its owned commits
+to a clean documentation branch) and open a PR with `Closes #<chore>`.
+Never close the implementation story or unfinished parent through that PR.
+
+This glossary documentation PR is a narrow shaping-output exception: it
+creates no OpenSpec implementation change. It still uses separate `docs:`
+commits, the project's checks before push, normal applicable finishing
+rules, and user-owned merge. Never commit to the default branch or merge it
+without the user's instruction. An existing change branch containing code
+cannot become the documentation PR; isolate only verified glossary commits.
+
+Ask for confirmation before adding the owner issue as a `blocked by` link
+to each other story requiring its unmerged definitions. Use the existing
+issue dependency operation, `gh issue edit <dependent> --add-blocked-by <owner>`,
+on each dependent story, never just the parent
+or a relates-to link. If the user declines links, keep **Depends on** explicit:
+owner, required definitions and unresolved prerequisite. Do not declare the
+dependent story ready; build's preclaim glossary check must still stop it.
+Independent stories can use those definitions once their owning PR merges.
+
+Restore owned paths to baseline as described above before normal build.
+Keep the storage branch until the destination safely contains its edits.
+After transfer, record destination branch, commits and PR in the issue's
+handoff. An unpublished or missing checkpoint is a limitation to resolve,
+not permission to recreate competing definitions in a later checkout.
 
 ## Handing off to lets-build
 

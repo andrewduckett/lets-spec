@@ -168,3 +168,15 @@ bundle_alone() {
   [ "$status" -eq 0 ]
   [ "$output" = '{"resolver":"subagent"}' ]
 }
+
+@test "each flow ships the authored domain-language reference" {
+  local flow schemas
+  for flow in standard minimal; do
+    schemas="$(jq -r --arg flow "$flow" '.flows[$flow].schemas | join(",")' "$repo/flows.json")"
+    build "$out/$flow" "$schemas" $(jq -r --arg flow "$flow" '.flows[$flow].skills[]' "$repo/flows.json")
+    cmp "$repo/skills/lets-shape/references/domain-language.md" \
+      "$out/$flow/overlay/.agents/skills/lets-shape/references/domain-language.md"
+    [ ! -e "$out/$flow/init/openspec/glossary.md" ]
+    [ ! -e "$out/$flow/overlay/openspec/glossary.md" ]
+  done
+}

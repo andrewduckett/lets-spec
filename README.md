@@ -263,6 +263,58 @@ sync/archive. Read shared authentication for context, but include its delta
 only if its requirements change. Skills, Git branches and pull requests stay
 shared across the repository.
 
+## Shared domain language
+
+Agents use agreed domain meanings from shaping through specs, implementation
+and reviews in both flows. The shared rules live in
+[`skills/lets-shape/references/domain-language.md`](skills/lets-shape/references/domain-language.md),
+which both releases ship inside the installed shaping skill. Each step
+loads vocabulary afresh; a review receives the actual glossary paths.
+The minimal flow keeps its existing stages.
+
+Project vocabulary is yours. The default shared glossary is
+`openspec/glossary.md`. To use an existing glossary instead, declare it in
+OpenSpec's free-text project context:
+
+```yaml
+context: |
+  Shared glossary: docs/requirements/00-glossary.md
+  This replaces the default openspec/glossary.md.
+```
+
+This is a convention for agents, with no new config parser. Resolve paths
+from the planning root, including a selected planning store. A declared
+missing file is reported rather than silently replaced. Nested glossaries
+still supplement the selected shared source: `backend/checkout` reads any
+existing `openspec/specs/backend/glossary.md` and
+`openspec/specs/backend/checkout/glossary.md`. No scope silently overrides
+another, and flat projects need no folders or empty glossary files.
+
+Shaping and brainstorming confirm each new meaning and its narrowest useful
+scope with you, then write it immediately. Unresolved candidates stay
+explicitly tentative in the issue or brainstorm ledger. When a concept
+becomes shared, its definition moves to the common scope with updated
+references. Code can use its language's naming conventions or a different
+representation while preserving the agreed meaning. A contradiction needs
+investigation and discussion before dependent work proceeds.
+
+Shaping checkpoints owned glossary edits on a branch and publishes that
+branch without a PR so another session can recover it. If shaping changed
+vocabulary, you choose which single story PR carries it, or a documentation
+PR when stopping; definitions shared by stories still have one owner.
+The documentation route has its own assigned, In Progress Chore issue and
+creates no OpenSpec implementation change. It follows normal checks and
+your merge decision. Dependent stories retain an explicit prerequisite
+until the owner's definitions are available, including if you decline
+blocker links. Build verifies the recorded checkpoint before claiming and
+imports only its glossary commits.
+
+`lets sync` neither creates nor overwrites these project-owned glossaries.
+Capability retirement reviews and moves still-used definitions or removes
+obsolete entries explicitly; deleting a spec alone leaves its glossary.
+See [the domain-language guide](docs/domain-language.md) for lookup and
+handoff details.
+
 ## 📋 The backlog
 
 The backlog is the GitHub Project linked to your repository. Every piece

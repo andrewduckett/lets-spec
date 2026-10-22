@@ -7,6 +7,13 @@ artifacts:
     description: Why the change is needed, and a decision ledger from grilling the story with the user, before any spec is written
     template: brainstorm.md
     instruction: |
+      Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+      from the code repository root (not the planning store or change directory).
+      Use `planningHome.root` from this artifact's
+      instructions to read project context, the selected shared glossary, and
+      existing ancestor and affected-scope glossaries. Resolve ambiguity before
+      dependent work. Write agreed definitions outside change delta folders.
+
       Shape the story with the user before any spec is written. One change
       delivers one story. Run the `lets-brainstorm` skill: it says how to
       question the user, how to fill the ledger and when to split the story.
@@ -43,6 +50,13 @@ artifacts:
     description: Detailed specifications for the change
     template: spec.md
     instruction: |
+      Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+      from the code repository root (not the planning store or change directory).
+      Use `planningHome.root` from this artifact's
+      instructions to read project context, the selected shared glossary, and
+      existing ancestor and affected-scope glossaries. Resolve ambiguity before
+      dependent work. Write agreed definitions outside change delta folders.
+
       Write one spec file per capability this change adds, or whose
       requirements it changes. The ledger in brainstorm.md says which. The
       `lets-write-specs` skill says what belongs in a requirement, how to write a
@@ -120,6 +134,17 @@ apply:
   requires: [ tasks ]
   tracks: tasks.md
   instruction: |
+    Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+    from the code repository root (not the planning store or change directory).
+    Use `root.path` from this apply instruction's
+    JSON to resolve project config context, the selected shared glossary, and
+    existing ancestor and affected-scope glossaries. Read them again before
+    implementation, including in a separate planning store. Preserve domain
+    meaning across code representations; investigate apparent contradictions
+    and pause dependent work for discussion. Unrelated work may continue.
+    Review glossary definitions when retiring a capability; spec deletion
+    alone must not remove its glossary. Add no review stage to a flow.
+
     Read brainstorm.md, the specs and tasks.md. Then work through the pending
     tasks yourself, in order: no subagents.
 

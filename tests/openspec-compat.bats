@@ -338,3 +338,69 @@ archive_guidance() {
   [ "$(apply_state)" = all_done ]
   [ "$(archive_guidance)" = "$(yq -o json -I0 .operations.archive.guidance "$standard_config")" ]
 }
+
+# Project vocabulary is deliberately outside change deltas. Discovery and
+# archive must leave these bytes to the author, including after retirement.
+seed_glossaries() {
+  local path
+  for path in openspec/glossary.md openspec/specs/identity/glossary.md openspec/specs/identity/user-auth/glossary.md; do
+    mkdir -p "$(dirname "$path")"
+    printf 'Project definition at %s\n' "$path" >"$path"
+  done
+}
+
+assert_glossaries() {
+  local path
+  for path in openspec/glossary.md openspec/specs/identity/glossary.md openspec/specs/identity/user-auth/glossary.md; do
+    [ "$(cat "$path")" = "Project definition at $path" ]
+  done
+}
+
+@test "glossaries do not change grouped capability discovery" {
+  local schema
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    seed_glossaries
+    openspec list --specs --json </dev/null >"$BATS_TEST_TMPDIR/specs.json" 2>/dev/null
+    [ "$(jq -r '.specs | map(.id) | sort[]' "$BATS_TEST_TMPDIR/specs.json")" = $'billing/user-auth\nidentity/user-auth\nshared/auth' ]
+    assert_glossaries
+  done
+}
+
+@test "grouped delta archive preserves project glossary bytes" {
+  local schema
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    seed_glossaries
+    write_modified_spec identity/user-auth identity-new
+    run openspec archive demo --yes </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    grep -Fq 'return "identity-new"' openspec/specs/identity/user-auth/spec.md
+    assert_glossaries
+  done
+}
+
+@test "retiring a capability leaves glossary cleanup to its author" {
+  local schema
+  for schema in "${schemas[@]}"; do
+    new_grouped_change "$schema"
+    seed_glossaries
+    printf 'schema: %s\nretire_capabilities: true\n' "$schema" >"$change/.openspec.yaml"
+    mkdir -p "$change/specs/identity/user-auth"
+    cat >"$change/specs/identity/user-auth/spec.md" <<'DELTA'
+## REMOVED Requirements
+
+### Requirement: Respond to a request
+**Reason**: This capability is retired.
+**Migration**: Use billing authentication instead.
+
+### Requirement: Reject unauthenticated requests
+**Reason**: This capability is retired.
+**Migration**: Use billing authentication instead.
+DELTA
+    run openspec archive demo --yes </dev/null
+    [ "$status" -eq 0 ] || { echo "$schema: $output"; false; }
+    [ ! -e openspec/specs/identity/user-auth/spec.md ]
+    assert_glossaries
+  done
+}

@@ -383,3 +383,35 @@ edit_copy() {
   [[ "$output" == *"error: LETS_SPEC_SKILLS must be committed or ignored, got 'tracked'."* ]]
   [ ! -e AGENTS.md ]
 }
+
+@test "sync preserves project vocabulary while installing the real reference" {
+  local flow mode schemas path
+  for flow in standard minimal; do
+    schemas="$(jq -r --arg flow "$flow" '.flows[$flow].schemas | join(",")' "$repo/flows.json")"
+    build "$BATS_TEST_TMPDIR/$flow-release" "$schemas" $(jq -r --arg flow "$flow" '.flows[$flow].skills[]' "$repo/flows.json")
+    for mode in committed ignored; do
+      mkdir -p "$BATS_TEST_TMPDIR/$flow-$mode"
+      cd "$BATS_TEST_TMPDIR/$flow-$mode"
+      git init --quiet
+      WORKFLOW_RELEASE="$BATS_TEST_TMPDIR/$flow-release" LETS_SPEC_SKILLS="$mode" run sync_project
+      [ "$status" -eq 0 ]
+      [ ! -e openspec/glossary.md ]
+      mkdir -p openspec/specs/backend/checkout docs
+      for path in openspec/glossary.md openspec/specs/backend/glossary.md openspec/specs/backend/checkout/glossary.md docs/vocabulary.md; do
+        printf 'Project-owned %s\n' "$path" >"$path"
+      done
+      WORKFLOW_RELEASE="$BATS_TEST_TMPDIR/$flow-release" LETS_SPEC_SKILLS="$mode" run sync_project
+      [ "$status" -eq 0 ]
+      cmp "$repo/skills/lets-shape/references/domain-language.md" .agents/skills/lets-shape/references/domain-language.md
+      for path in openspec/glossary.md openspec/specs/backend/glossary.md openspec/specs/backend/checkout/glossary.md docs/vocabulary.md; do
+        [ "$(cat "$path")" = "Project-owned $path" ]
+      done
+      if [ "$mode" = ignored ]; then
+        git check-ignore -q .agents/skills/lets-shape/references/domain-language.md
+      else
+        git add .agents/skills/lets-shape/references/domain-language.md
+        [ -n "$(git ls-files .agents/skills/lets-shape/references/domain-language.md)" ]
+      fi
+    done
+  done
+}

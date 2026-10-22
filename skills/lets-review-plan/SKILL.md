@@ -24,7 +24,7 @@ Find who wrote the plan. First answer wins:
 
 ## Run the review
 
-1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
+1. Resolve vocabulary as below, then write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
 2. Run this from the repo root. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
 
    ```bash
@@ -56,6 +56,15 @@ Take this step only when `lets delegate review` exits 3. Run the prompt in a rea
 Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 
 This costs real tokens. Never loop it. Run again only when the plan or the question changed.
+
+## Resolve vocabulary before delegation
+
+Read [Domain language](../lets-shape/references/domain-language.md), including
+its **Delegated review inputs** section. Resolve the affected glossaries by
+the full capability paths in the plan or main specs, using the lookup and
+root rules there. Before delegating, put the concrete glossary paths, the
+shared method reference, and every semantic/trust-boundary check from that
+section into the actual prompt file. Do not assume reviewers inherit context.
 
 ## The prompt
 

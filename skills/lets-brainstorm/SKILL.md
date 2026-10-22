@@ -9,6 +9,26 @@ Reach one shared understanding of a story with the user before anyone plans
 it. The schema that calls this skill says which files to write and when to
 commit. This skill says how to question, what to record and when to split.
 
+## Read and maintain domain language
+
+Read [Domain language](../lets-shape/references/domain-language.md) before
+using domain terms. Resolve project vocabulary from `planningHome.root` in
+OpenSpec's artifact instructions, including a selected planning store. Read
+the context-selected shared glossary plus existing ancestor and local
+glossaries for all affected full capability paths. Do not assume an earlier
+session loaded them. Missing optional files need no empty replacements;
+a missing declared pointer needs discussion before dependent work proceeds.
+
+Question ambiguous or conflicting meanings before relying on them. Confirm
+the meaning and narrowest scope against ancestors and actual sibling uses.
+Write each agreed definition immediately to its authoritative glossary and
+commit those edits on the current change branch as their own `docs:` unit,
+protecting preexisting edits. For a separate store, commit in that planning
+repository. Keep candidate meanings explicitly tentative in the brainstorm
+ledger until the user agrees. Never put glossary deltas in change `specs/`.
+A split story uses shaping's glossary ownership handoff rather than copying
+shared definitions into another PR.
+
 ## The stance
 
 Be a thinking partner, not a form to fill in.
