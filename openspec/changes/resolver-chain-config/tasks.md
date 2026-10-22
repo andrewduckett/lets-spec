@@ -25,7 +25,7 @@
 
 ## 5. Integration [depends-on: 4]
 
-- [ ] 5.1 [easy] The whole suite and every flow build pass: the Node tests, the type check, the conformance check, the bats tests, and the flake's checks that run `lets delegate handoff` with no config from the Nix package and the release tarball (verify: `pnpm test && nix flake check`)
+- [x] 5.1 [easy] The whole suite and every flow build pass: the Node tests, the type check, the conformance check, the bats tests, and the flake's checks that run `lets delegate handoff` with no config from the Nix package and the release tarball (verify: `pnpm test && nix flake check`) (✓ `pnpm test` passed, 274 Node tests plus type check, conformance and bats; `nix flake check` printed "all checks passed!" on x86_64-linux)
 
 ## Deviations Ledger
 
