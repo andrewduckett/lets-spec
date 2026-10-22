@@ -115,9 +115,65 @@ overriding shared ones; move newly shared definitions and update references
 without duplicate authoritative copies. A stale declared glossary path must
 be reported and resolved before dependent discussion continues.
 
+## Preserve glossary edits between sessions
+
+Before the first glossary write, record the starting branch and full commit,
+working-tree and index status, and the original contents (or absence) of
+each affected path in `.workspace/<run>-glossary-handoff.md`. Check each
+additional path before writing it. Track exactly which edits this shaping
+run owns. If a glossary already has user edits, resolve ownership with the
+user before touching it. Separate or preserve those edits first; never
+include them in an owned checkpoint merely because they share a path.
+A checkpoint's base must contain the baseline needed to reproduce its patch.
+
+At every confirmed phase checkpoint with glossary changes:
+
+1. Inspect the owned diff against its baseline and the staged diff. Commit
+   only owned glossary paths as a separate `docs:` unit. Use explicit paths
+   (including new files); never `git add -A` or commit unrelated staged work.
+   From the default branch, first create a holding branch named for the
+   shaping issue from the recorded starting commit. Continue shaping there;
+   subsequent checkpoints extend the same branch. Check branch existence
+   before creation and never reset a branch to reuse its name.
+2. If shaping began on an existing change branch, keep glossary checkpoints
+   there as separate `docs:` commits. Do not create a holding branch from
+   unrelated implementation history. Record each exact owned commit and its
+   parent, so build imports only glossary commits with available context.
+3. Publish the checkpoint branch to a chosen writable remote without a PR.
+   Confirm the remote head contains the checkpoint. If no writable remote
+   exists or publication fails, report the limitation, keep the local
+   checkpoint and do not call it available to another checkout.
+4. Update **Glossary handoff** in the shaping issue (or parent): starting
+   branch/base, owned paths, ordered checkpoint commits and their parents,
+   head, remote URL and remote branch, publication state, and owner still
+   undecided. Keep tentative meanings separate. In discovery, record the
+   checkpoint beside the status line too. Do this after each phase, not only
+   at final handoff. The issue is the durable recovery record; scratch files
+   alone are insufficient.
+
+On resume, read the issue's handoff before deciding whether this run has
+vocabulary edits. Fetch its recorded branch and verify the exact checkpoint
+and path-only commit range, then restore that branch and its definitions
+before continuing. Verify the baseline from its recorded base; do not rely
+on conversation history or another checkout's `.workspace/`. Never force a
+checkout or automatically stash unrelated changes. If local edits obstruct
+recovery, preserve them and report the obstruction.
+
+After the final checkpoint, restore owned paths to the recorded starting
+baseline before normal build. Usually switch safely to the starting branch;
+verify tracked owned paths have no diff and newly introduced paths are
+absent. On an existing change branch, the separately committed vocabulary
+stays in its PR; record that destination rather than undoing its commits.
+For an explicit restoration, first compare each path and index with the
+owned checkpoint. Restore only verified owned edits, deleting a newly
+created file only when it still matches the checkpoint. If later user edits
+exist, stop restoration of that path and resolve ownership. Never discard
+those edits, reset the whole tree, or change unrelated paths. Retain the
+checkpoint branch until the destination safely contains its definitions.
+
 ## The phases
 
-**Checkpoint every phase.** When the user confirms a phase, write its result at once, and set the parent issue's status line to the next phase: `personas`, `journey-map`, `moscow`, then `stories`. A revision run that skips personas and the journey map goes from Ingest straight to `moscow`.
+**Checkpoint every phase.** Apply the glossary checkpoint procedure above whenever the phase changed definitions. When the user confirms a phase, write its result at once, and set the parent issue's status line to the next phase: `personas`, `journey-map`, `moscow`, then `stories`. A revision run that skips personas and the journey map goes from Ingest straight to `moscow`.
 
 Personas and the journey map go in `discovery.md`. Everything else goes in the parent issue.
 
@@ -237,7 +293,7 @@ Then say that `lets-build` can take it: on the default branch, it picks the next
 
 When an open parent issue says `Discovery status: in-progress` (or the user picked one of several):
 
-1. **Read it and `discovery.md`.** The status line records the next phase; the sections already present are confirmed work.
+1. **Read it and `discovery.md`.** Recover any recorded glossary checkpoint as above first. The status line records the next phase; the sections already present are confirmed work.
 2. **Restate where discovery stopped** — a one-paragraph summary of what the parent issue and map already capture — and confirm with the user.
 3. **Continue from the recorded phase.** Do not re-litigate confirmed sections unless the user brings new information; then revisit and update them.
 
