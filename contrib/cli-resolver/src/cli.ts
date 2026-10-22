@@ -1,6 +1,6 @@
 // In any terminal or harness: each review runs headless, as a child process
-// of the family's CLI in its read-only mode. Revived from lets's old built-in
-// default resolver, with the reviewer's model added.
+// of the family's CLI in its read-only mode, on the model the request names.
+// Revived from lets's old built-in default resolver.
 //
 // A handoff needs a session a person can work in, so start declines and the
 // next resolver in the chain answers it.
@@ -10,7 +10,7 @@
 import { join } from 'node:path';
 import type { Adapter, Session } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
-import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from 'resolver-kit/families.ts';
 import type { Io } from 'resolver-kit/io.ts';
 import { FAMILIES, normalizeName } from 'resolver-kit/protocol.ts';
@@ -118,14 +118,22 @@ export function createAdapter(io: Io): Adapter {
       io.mkdirp(join(cwd, SCRATCH));
       const timeoutMinutes = Math.ceil(timeoutMs / 60000);
       const { cmd, args, input, readResultFrom } = runCommand({ family, model, effort, prompt, timeoutMinutes, lastMessagePath: lastMessagePath(cwd, name) });
+      // A file from an earlier run with this name would hide a refusal.
+      if (readResultFrom !== 'stdout' && io.exists(readResultFrom)) io.removeFile(readResultFrom);
       const result = await io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input, timeoutMs }).catch((error: Error) => {
-        throw new SpawnError(error.message);
+        throw new Refused(error.message);
       });
       if (result.timedOut) throw new TimeoutError(`${cmd} did not finish in ${timeoutMinutes} minutes`);
-      if (result.code !== 0) throw new SessionFailed(`${cmd} failed: exit ${result.code}: ${result.stderr.slice(-500)}`);
+      const text = readResultFrom === 'stdout' ? result.stdout : (io.exists(readResultFrom) ? io.readFile(readResultFrom) : '');
+      if (result.code !== 0) {
+        // Nothing printed means the CLI or the account said no before the
+        // model gave any output, such as a model it cannot run.
+        const printed = result.stdout.trim() !== '' || text.trim() !== '';
+        const why = `exit ${result.code}: ${result.stderr.slice(-500)}`;
+        throw printed ? new SessionFailed(`${cmd} failed: ${why}`) : new Refused(`${cmd} refused: ${why}`);
+      }
       // The kit turns an empty message, or a missing file, into a failed session.
-      if (readResultFrom === 'stdout') return { text: result.stdout };
-      return { text: io.exists(readResultFrom) ? io.readFile(readResultFrom) : '' };
+      return { text };
     },
 
     // Removes the session's files on ok. The handle's id is the session's

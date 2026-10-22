@@ -23,7 +23,7 @@
   - a listing that fails or runs past 20 seconds: the bare family, with a warning on stderr.
 
   The listings run in parallel (design D-5) (verify: node --test tests/cli-resolver/*.test.ts)
-- [ ] 4.2 [medium] `lets-delegate-cli run` runs the given model: `-m`/`--model` with its id, no model flag for a bare family, and the effort added to a Gemini id. A CLI that cannot start, or that exits non-zero having printed nothing, is exit 3. It removes an old last-message file before it starts codex (design D-3) (verify: node --test tests/cli-resolver/*.test.ts)
+- [x] 4.2 [medium] `lets-delegate-cli run` runs the given model: `-m`/`--model` with its id, no model flag for a bare family, and the effort added to a Gemini id. A CLI that cannot start, or that exits non-zero having printed nothing, is exit 3. It removes an old last-message file before it starts codex (design D-3) (verify: node --test tests/cli-resolver/*.test.ts) (✓ node --test tests/cli-resolver/*.test.ts passed)
 
 ## 5. lets [depends-on: 1]
 
