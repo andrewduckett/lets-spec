@@ -5,7 +5,7 @@
 // is looked up on PATH. No process access here; everything comes through io.
 import { join, resolve as resolvePath } from 'node:path';
 import type { Child, Io } from '../io.ts';
-import { SUBAGENT_ENTRY } from './config.ts';
+import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
 import type { Env } from './env.ts';
 import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
@@ -100,12 +100,12 @@ const incompleteInstall = (problem: 'find' | 'run', path: string) =>
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
-// it reaches a configured resolver that is missing or cannot be run, and a
+// it reaches a listed resolver that is missing or cannot be run, and a
 // SpawnError when the default is missing.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
     if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
-      throw new UsageError(`your delegate config names the resolver ${candidate.command}, which does not exist or is not executable. Run \`lets delegate setup\` again.`);
+      throw new UsageError(`${configPath(deps)} lists the resolver ${candidate.command}, which does not exist or is not an executable file.`);
     }
     if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });

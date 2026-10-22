@@ -71,16 +71,39 @@ test('a resolver on PATH is never a candidate', () => {
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: chain('/a') }).map((c) => c.name), ['/a']);
 });
 
-test('a configured resolver that is missing stops the lookup with a usage error naming the path and setup', async () => {
+const CONFIG_FILE = '/home/u/.config/lets-delegate/config.yaml';
+const decline = { stdout: '', stderr: '', code: 75 };
+const answer = (resolver: string) => ({ stdout: JSON.stringify({ resolver }), stderr: '', code: 0 });
+
+test('when the first listed resolver declines, the next one answers', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [decline, answer('b')] });
+  const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/a', '/b') });
+  assert.equal(candidate.name, '/b');
+  assert.deepEqual(outcome.response, { resolver: 'b' });
+});
+
+test('when the first listed resolver answers, the next one is never run', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [answer('a'), answer('b')] });
+  await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/a', '/b') });
+  assert.deepEqual(io.calls.map(([cmd]) => cmd), ['/a']);
+});
+
+test('a listed resolver that is missing stops the lookup with a usage error naming the path and the config file', async () => {
   const io = fakeIo();
-  const config = chain('/nix/store/gone/bin/lets-delegate-t3');
+  const config = chain('/nix/store/gone/bin/lets-delegate-t3', 'subagent');
   await assert.rejects(resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config }),
     (error) => error instanceof UsageError && error.message.includes('/nix/store/gone/bin/lets-delegate-t3')
-      && error.message.includes('lets delegate setup'));
+      && error.message.includes(CONFIG_FILE) && !error.message.includes('setup'));
   assert.deepEqual(io.calls, [], 'no later resolver was asked');
 });
 
-test('an override that answers is not stopped by a missing configured resolver', async () => {
+test('a listed resolver that answers is not stopped by a missing path later in the chain', async () => {
+  const io = fakeIo({ executables: ['/a'], results: [answer('a')] });
+  const { candidate } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/a', '/no/such') });
+  assert.equal(candidate.name, '/a');
+});
+
+test('an override that answers is not stopped by a missing listed resolver', async () => {
   const io = ioWith({});
   const { candidate } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SELF, config: chain('/no/such') });
   assert.equal(candidate.name, FAKE);
