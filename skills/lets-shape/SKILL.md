@@ -7,7 +7,7 @@ description: Break a large product requirements document (PRD), vision, issue, o
 
 Shape a large idea into a backlog. This is discovery: personas, a journey map, MoSCoW priorities (Must, Should, Could, Won't) and thin vertical stories. It also shapes one bug, chore or story on its own: see [Shape one issue](#shape-one-issue). Run every command below from the repo root.
 
-**Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes two things, and nothing else: no roadmap, release plan or changelog.
+**Discovery plans; it does not build.** Read files, search code and investigate the codebase. Never write application code, and never create a change. Discovery writes the map, issues, and agreed project-owned glossary definitions: no roadmap, release plan or changelog.
 
 - `openspec/discovery.md` — the living map: personas and journey map ([templates/discovery-template.md](templates/discovery-template.md)). It outlives every run; see [The map](#the-map).
 - GitHub issues — one **parent issue** per discovery run, and the stories ([templates/issue-template.md](templates/issue-template.md)).
@@ -87,7 +87,7 @@ An issue is shaped when Kind, Priority and Size are set. Status Todo says nobody
 At the start:
 
 1. Run `openspec list --json` and take the OpenSpec root from `root.path`. It must be this repository's root, or a directory inside it: `openspec list` answers with the nearest root, which can be a parent of the repository. If it is outside, stop and say the project has no OpenSpec root. Use the resolved root everywhere below, never a bare `./openspec/`.
-2. Read `<root.path>/openspec/config.yaml` (or `config.yml`) if it exists. Its `context` and `rules` are constraints for you to follow, not content to reproduce.
+2. Read `<root.path>/openspec/config.yaml` (or `config.yml`) if it exists. Its `context` and `rules` are constraints for you to follow, not content to reproduce. Read [Domain language](references/domain-language.md) and resolve the shared glossary from that root and context. Load ancestor and affected-scope glossaries as capabilities emerge, before using their terms.
 3. Find the Project, as in [The Project](#the-project). The map's links need the owner and the name from its `repo`.
 4. Pick the mode, first match wins:
    - **The user brings one bug, chore or small story, or names one issue to shape on its own**: [Shape one issue](#shape-one-issue). An issue that holds a large idea is the input to a discovery run instead. If you cannot tell which the user means, ask.
@@ -96,6 +96,24 @@ At the start:
    - **Otherwise**: [Revision mode](#revision-mode).
 
 If any of these fails, stop and show the error. Never write the map anywhere but the resolved root.
+
+## Develop the vocabulary
+
+Use the shared reference in discovery, revision, resume and single-issue
+shaping. Before writing a packet that relies on a term, compare its meaning
+with established vocabulary. For example, distinguish an authentication
+Session from an existing game Session with the user. Keep unresolved terms
+and candidate meanings explicitly tentative in the shaping issue.
+
+Propose meaning and the narrowest scope covering actual uses, checking
+ancestor definitions and siblings. Order used by checkout and fulfillment
+belongs in their common scope; Checkout attempt used only by checkout stays
+local. Confirm meaning and scope with the user, then write the accepted
+entry immediately to its authoritative glossary. Subsequent packets use
+that agreed concept. Qualify conflicting local meanings rather than silently
+overriding shared ones; move newly shared definitions and update references
+without duplicate authoritative copies. A stale declared glossary path must
+be reported and resolved before dependent discussion continues.
 
 ## The phases
 
@@ -208,7 +226,7 @@ Use this when the user brings one bug, chore or small story, or names an open is
 
 1. **Find or create the issue.** When the user named one, read it with `gh issue view <i> --json title,body,url,parent`. Otherwise search for one first: `gh issue list --state open --search "<words> in:title" --json number,title`. If one matches, ask whether it is the same work. If none does, you create it in step 6. An existing issue that is not on the Project yet joins it with `gh project item-add <n> --owner <owner> --url <url>`.
 2. **Pick the Kind, and confirm it.** A Bug is something that should work and does not. A Chore is work no persona sees, such as a dependency bump, a CI fix or a tidy-up. A Story is something a persona can do once it ships.
-3. **Read the code the issue names**, and search for more. **Relevant code** lists what you find, or `new` when the story builds on nothing that exists.
+3. **Read the code the issue names**, and search for more. Load shared, ancestor and affected-scope vocabulary and develop definitions as above. **Relevant code** lists what you find, or `new` when the story builds on nothing that exists.
 4. **Interview for the Kind's template** in [templates/issue-template.md](templates/issue-template.md), one question at a time: the story template for a Story, the bug template for a Bug. A Chore has no template. It needs only its one-line outcome, and a title in the template's shape. When `discovery.md` exists, use its persona and journey names, but do not edit it.
 5. **Size it** XS, S, M, L or XL. L or XL is too big for one change: say so, offer a discovery run on it instead, and stop.
 6. **Confirm, then write.** The issue is public, so show the user its title, body, Kind, Priority and Size, and get a yes. Write the packet. For an existing issue, use `gh issue edit <i> --title "<title>" --body-file <file>`. For a new one, use `gh issue create --title "<title>" --body-file <file> --project "<project title>" [--parent <p>] [--blocked-by <i>,<i>]`. Then set Kind, Priority, Size and Status `Todo`, in that order, with `item-edit`. A Chore and a Bug get a Priority and a Size too.

@@ -150,3 +150,22 @@ flow_texts() {
 @test "lets-build says a handoff's instructions hold the prompt to carry on by hand" {
   grep -q 'hold the prompt to carry on by hand' "$repo/skills/lets-build/SKILL.md"
 }
+
+# Resolve actual Markdown reference links as an installed skill would.
+# Include source copies in an isolated fixture so a bad relative path fails.
+assert_reference_links() {
+  local text="$1" root="$2" link found=0
+  while IFS= read -r link; do
+    found=1
+    [ -f "$(dirname "$text")/$link" ] || { echo "unresolved: $text -> $link"; return 1; }
+    case "$(realpath "$(dirname "$text")/$link")" in
+      "$root"/*) ;;
+      *) echo "reference escapes installed skills: $text -> $link"; return 1 ;;
+    esac
+  done < <(grep -oE '\]\([^)]*references/[^)]*\.md\)' "$text" | sed -E 's/^\]\(//;s/\)$//')
+  [ "$found" -eq 1 ] || { echo "no reference input: $text"; return 1; }
+}
+
+@test "shaping loads its installed domain-language reference" {
+  assert_reference_links "$repo/skills/lets-shape/SKILL.md" "$repo/skills"
+}
