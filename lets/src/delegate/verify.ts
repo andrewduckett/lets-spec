@@ -5,7 +5,7 @@
 import type { Child, Deps } from '../io.ts';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
-import { buildRequest, DECLINE, FAMILIES, parseResponse, PROTOCOL } from './protocol.ts';
+import { buildRequest, DECLINE, parseResponse, PROTOCOL } from './protocol.ts';
 import type { Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
@@ -17,9 +17,8 @@ const LIVE_RUN_MINUTES = 5;
 const LIVE_TIMEOUT_MS = (LIVE_RUN_MINUTES + 1) * 60000;
 const NAME = 'lets-verify';
 const NEVER_ISSUED = { kind: 'lets-verify', id: 'never-issued' };
-// The live run lists every family with its default model, so a resolver that
-// walks the list can run one, and one that ignores it still passes.
-const LIVE_REVIEWERS = FAMILIES.map((family) => ({ family, model: null }));
+// The model a live start runs when the resolver lists none.
+const START_MODEL = 'claude';
 
 type Call = { code: number | null; stdout: string; stderr: string };
 
@@ -60,7 +59,8 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
   }
   const probe = (fields = {}) => JSON.stringify({ ...buildRequest('probe', { cwd }), ...fields });
 
-  report('probe answers { resolver } or declines with 75', checkProbe(await call('probe', probe())));
+  const probed = await call('probe', probe());
+  report('probe answers { resolver, options } or declines with 75', checkProbe(probed));
   report('an unknown verb exits 2', exits(await call('lets-verify-verb', probe()), [2]));
   report('a request that is not JSON exits 2', exits(await call('probe', 'not json'), [2]));
   report(`protocol 99 exits 2 (this is protocol ${PROTOCOL})`, exits(await call('probe', probe({ protocol: 99 })), [2]));
@@ -69,14 +69,30 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
   if (live) {
     const before = await treeStatus(cwd, deps.io);
-    const runRequest = buildRequest('run', {
-      cwd, name: NAME, prompt: 'Reply with the single word ready and stop.', sourceFamily: 'claude', effort: 'low', timeoutMinutes: LIVE_RUN_MINUTES,
-      reviewers: LIVE_REVIEWERS,
-    });
-    const ran = await call('run', JSON.stringify(runRequest), LIVE_TIMEOUT_MS);
-    const response = parsed('run', ran);
+    const listed = parsed('probe', probed);
+    const options = typeof listed === 'string' ? [] : listed.options;
+    // Try the options in order until one is not refused, so the check does
+    // not depend on which comes first. A probe that failed gives none, and
+    // its failure is the run's.
+    const refusals: string[] = [];
+    let response: Responses['run'] | string | null = typeof listed === 'string' ? listed : null;
+    for (const model of options) {
+      const runRequest = buildRequest('run', {
+        cwd, name: NAME, prompt: 'Reply with the single word ready and stop.', sourceFamily: 'claude', effort: 'low', timeoutMinutes: LIVE_RUN_MINUTES, model,
+      });
+      const ran = await call('run', JSON.stringify(runRequest), LIVE_TIMEOUT_MS);
+      if (ran.code === EXIT.noSession) {
+        refusals.push(`${model}: ${ran.stderr.trim().split('\n').at(-1) ?? 'refused'}`);
+        continue;
+      }
+      response = parsed('run', ran);
+      break;
+    }
+    if (response === null && refusals.length > 0) response = `every option was refused: ${refusals.join('; ')}`;
     report('run answers with text, a known family and resolver', typeof response === 'string' ? response : null);
-    if (typeof response !== 'string') {
+    if (response === null) {
+      deps.stdout('      the resolver lists no model to run, so no run was sent\n');
+    } else if (typeof response !== 'string') {
       deps.stdout(`      ${response.resolver} answered as ${response.family}: ${JSON.stringify(response.text.trim().slice(0, 80))}\n`);
       report('run leaves the tree unchanged', (await isTreeClean(cwd, deps.io, before)) ? null : 'files outside .workspace/ changed');
       if (response.handle) {
@@ -87,7 +103,8 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
     // A resolver that only runs headless declines start, and the next
     // resolver in the chain answers the handoff.
-    const started = await call('start', JSON.stringify(buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.' })));
+    const startRequest = buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.', model: options[0] ?? START_MODEL });
+    const started = await call('start', JSON.stringify(startRequest));
     const declined = started.code === DECLINE;
     const answer = declined ? silent(started) : parsed('start', started);
     report('start answers with a handle or instructions, or declines', typeof answer === 'string' ? answer : null);

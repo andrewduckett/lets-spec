@@ -7,6 +7,8 @@
 //   FAKE_RESOLVER_EXIT      the exit code; default 0
 //   FAKE_RESOLVER_SLEEP_MS  how long to wait before answering
 //   FAKE_RESOLVER_FAMILY    the family a run answers with; default gpt
+//   FAKE_RESOLVER_REFUSE    models, comma-separated, that a run refuses with
+//                           exit 3 and "refused <model>" on stderr
 //   FAKE_RESOLVER_LOG       a file to append one line per call to: the
 //                           verb, a tab, and the request as read
 const { appendFileSync } = await import('node:fs');
@@ -26,6 +28,11 @@ for await (const chunk of process.stdin) input += chunk;
 if (process.env.FAKE_RESOLVER_LOG) appendFileSync(process.env.FAKE_RESOLVER_LOG, `${verb}\t${input.replace(/\n/g, ' ')}\n`);
 const sleepMs = Number(setting('SLEEP_MS') ?? 0);
 if (sleepMs > 0) await new Promise((resolve) => setTimeout(resolve, sleepMs));
+
+if (verb === 'run' && (setting('REFUSE') ?? '').split(',').includes(JSON.parse(input).model)) {
+  process.stderr.write(`refused ${JSON.parse(input).model}\n`);
+  process.exit(3);
+}
 
 const stdout = setting('STDOUT') ?? (verb in RESPONSES ? JSON.stringify(RESPONSES[verb]) : '');
 if (stdout !== '') process.stdout.write(`${stdout}\n`);
