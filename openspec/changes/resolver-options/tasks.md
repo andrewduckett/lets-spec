@@ -33,7 +33,7 @@
 ## 6. Contract docs and the whole build [depends-on: 2, 3, 4, 5]
 
 - [x] 6.1 [easy] The `headless-resolver` example speaks protocol 2, as design D-9 says. `docs/resolver-contract.md` documents `options`, `model`, protocol 2 and the new exit 3 and exit 4, and drops `reviewers`. The `delegate-config` main spec's Purpose no longer mentions `reviewers` (verify: pnpm verify) (✓ pnpm verify passed)
-- [ ] 6.2 [easy] Every test, the type check, the verify runs, the bats tests and the flake build pass, and the release copies' `probe` matches the specs (verify: pnpm test && nix flake check)
+- [x] 6.2 [easy] Every test, the type check, the verify runs, the bats tests and the flake build pass, and the release copies' `probe` matches the specs (verify: pnpm test && nix flake check) (✓ pnpm test && nix flake check passed)
 
 ## Deviations Ledger
 
