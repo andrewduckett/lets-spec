@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/handoff.ts';
 import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE } from './fixtures/command-deps.ts';
 
-const options = { name: 'Fix Login', promptFile: 'p.md' };
+const options = { name: 'Fix Login', promptFile: 'p.md', model: 'claude' };
 
 test('a handoff prints the resolver and its handle as one JSON line', async () => {
   const t = commandDeps();
@@ -16,7 +16,7 @@ test('the start request has readOnly false and interactive true', async () => {
   const t = commandDeps();
   await run(options, t.deps);
   assert.deepEqual(t.resolverCalls(), [['start', {
-    protocol: 1, cwd: '/repo', name: 'fix-login', prompt: 'PROMPT TEXT', readOnly: false, interactive: true,
+    protocol: 2, cwd: '/repo', name: 'fix-login', prompt: 'PROMPT TEXT', readOnly: false, interactive: true, model: 'claude',
   }]]);
 });
 
@@ -64,7 +64,7 @@ test('a leftover config.json is exit 2, naming both files', async () => {
 
 test('with no resolver, the default hands back the prompt and where it is saved', async () => {
   const t = commandDeps({ resolver: false, files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
-  assert.equal(await run({ name: 'build-x', promptFile: 'p.md' }, t.deps), 0);
+  assert.equal(await run({ name: 'build-x', promptFile: 'p.md', model: 'claude' }, t.deps), 0);
   const { resolver, handle, instructions } = JSON.parse(t.stdout());
   assert.equal(resolver, 'subagent');
   assert.equal(handle, null);
@@ -99,8 +99,15 @@ test('a null handle with no instructions is exit 4', async () => {
   assert.equal(t.stdout(), '');
 });
 
-test('any failure of the resolver is exit 4', async () => {
-  for (const resolverExit of ['3', '5', '6', '2', '1']) {
+test('a refusal is exit 3, with the resolver\'s reason', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_EXIT_START: '3', FAKE_RESOLVER_STDOUT_START: '', FAKE_RESOLVER_STDERR: 't3 has no project' } });
+  assert.equal(await run(options, t.deps), 3);
+  assert.match(t.stderr(), /t3 has no project/);
+  assert.equal(t.stdout(), '');
+});
+
+test('any other failure of the resolver is exit 4', async () => {
+  for (const resolverExit of ['5', '6', '2', '1']) {
     const t = commandDeps({ settings: { FAKE_RESOLVER_EXIT_START: resolverExit, FAKE_RESOLVER_STDOUT_START: '', FAKE_RESOLVER_STDERR: 'harness said no' } });
     assert.equal(await run(options, t.deps), 4, `resolver exit ${resolverExit}`);
     assert.match(t.stderr(), /harness said no/);

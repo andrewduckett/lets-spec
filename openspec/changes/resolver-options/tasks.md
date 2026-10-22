@@ -27,7 +27,7 @@
 
 ## 5. lets [depends-on: 1]
 
-- [ ] 5.1 [parallel] [medium] `lets delegate review` and `lets delegate handoff` require `--model`. They exit 2 on a missing or bad value before any resolver runs, and send the value unchanged. `handoff` passes a resolver's exit 3 through. The help text names `--model` and the new exit 3 and exit 4 (design D-7) (verify: node --test tests/lets/delegate/cli.test.ts tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts)
+- [x] 5.1 [parallel] [medium] `lets delegate review` and `lets delegate handoff` require `--model`. They exit 2 on a missing or bad value before any resolver runs, and send the value unchanged. `handoff` passes a resolver's exit 3 through. The help text names `--model` and the new exit 3 and exit 4 (design D-7) (verify: node --test tests/lets/delegate/cli.test.ts tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts) (✓ node --test tests/lets/delegate/cli.test.ts tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts passed, all but "verify checks a resolver", which waits on 6.1; see the ledger)
 - [ ] 5.2 [medium] `lets delegate verify` fails a `probe` answer without valid `options`. The live part tries the options in order until one run does not exit 3. It fails when every option is refused, and skips the run when `options` is empty (design D-8) (verify: node --test tests/lets/delegate/verify.test.ts)
 
 ## 6. Contract docs and the whole build [depends-on: 2, 3, 4, 5]
@@ -38,3 +38,6 @@
 ## Deviations Ledger
 
 - 3.3: T3 also exits 3 when `t3 auth session issue` cannot issue a token. Design D-3's table lists "token rejected twice" but not this case. It is the same kind of setup refusal under D9. A WebSocket that fails after it opens stays exit 4, because T3 may have acted on the request.
+- 5.1: `handoff` maps a resolver's exit 3 to 3 and every other failure to 4, instead of passing the code through `exitFor` as design D-7 says. `exitFor` would also pass 5 and 6 through, which mean nothing for a `start`, and the help text would have to name them. The spec only asks that exit 3 pass through.
+- 5.1: `--model` is checked by a commander argument parser, as `--timeout-minutes` is, rather than in the action as design D-7 says. The effect is the same: exit 2, naming `--model`, before any resolver runs.
+- 5.1: its check command includes `cli.test.ts`'s "verify checks a resolver", which runs verify against the `headless-resolver` example. That example moves to protocol 2 in task 6.1, so the test passes from 6.1 on.

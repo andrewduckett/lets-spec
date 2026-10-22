@@ -15,7 +15,7 @@ const verb = process.argv[2] ?? '';
 const setting = (name) => process.env[`FAKE_RESOLVER_${name}_${verb.toUpperCase()}`] ?? process.env[`FAKE_RESOLVER_${name}`];
 
 const RESPONSES = {
-  probe: { resolver: 'fake' },
+  probe: { resolver: 'fake', options: ['gpt/fake-model'] },
   run: { resolver: 'fake', text: 'FINDINGS', family: setting('FAMILY') ?? 'gpt', model: 'fake-model', handle: { kind: 'fake', id: 'f-1', extra: 'kept' } },
   start: { resolver: 'fake', handle: { kind: 'fake', id: 'f-1' } },
   finish: {},

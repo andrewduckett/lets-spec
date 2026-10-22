@@ -14,8 +14,8 @@ function lets(...args: string[]): Promise<{ stdout: string; stderr: string; code
   });
 }
 
-const REVIEW = ['delegate', 'review', '--name', 'x', '--prompt-file', 'p.md', '--source-family', 'claude', '--effort', 'low'];
-const HANDOFF = ['delegate', 'handoff', '--name', 'x', '--prompt-file', 'p.md'];
+const REVIEW = ['delegate', 'review', '--name', 'x', '--prompt-file', 'p.md', '--source-family', 'claude', '--effort', 'low', '--model', 'gpt'];
+const HANDOFF = ['delegate', 'handoff', '--name', 'x', '--prompt-file', 'p.md', '--model', 'claude'];
 
 test('every old command is rejected by name', async () => {
   for (const command of ['critique', 'detect', 'setup', 'conformance']) {
@@ -33,7 +33,7 @@ test('verify checks a resolver', async () => {
 });
 
 test('every old flag is rejected by name', async () => {
-  const flags = ['--author', '--source', '--code-review', '--base', '--model', '--unattended', '--timeout', '--prompt'];
+  const flags = ['--author', '--source', '--code-review', '--base', '--unattended', '--timeout', '--prompt'];
   const runs = flags.flatMap((flag) => [REVIEW, HANDOFF].map(async (argv) => {
     const { code, stderr } = await lets(...argv, flag, 'v');
     assert.equal(code, 2, `${argv[1]} ${flag}`);
@@ -55,6 +55,24 @@ test('a bad family, effort or timeout is a usage error that names it', async () 
   }));
 });
 
+test('review and handoff without --model are usage errors that name it', async () => {
+  for (const argv of [REVIEW, HANDOFF]) {
+    const { code, stderr } = await lets(...argv.slice(0, -2));
+    assert.equal(code, 2, argv[1]);
+    assert.match(stderr, /--model/, argv[1]);
+  }
+});
+
+test('a --model that is not <family> or <family>/<model> is a usage error that names it', async () => {
+  for (const argv of [REVIEW, HANDOFF]) {
+    for (const model of ['llama/llama-4', 'gpt/', 'GPT']) {
+      const { code, stderr } = await lets(...argv.slice(0, -2), '--model', model);
+      assert.equal(code, 2, `${argv[1]} ${model}`);
+      assert.match(stderr, /--model/, `${argv[1]} ${model}`);
+    }
+  }
+});
+
 test('a missing option is a usage error that names it', async () => {
   const { code, stderr } = await lets('delegate', 'review', '--name', 'x');
   assert.equal(code, 2);
@@ -68,10 +86,13 @@ test('review --help lists the exit codes', async () => {
   assert.match(stdout, /7 {2}the session changed files outside \.workspace\//);
 });
 
-test('review --help says exit 3 means no fresh session can run here', async () => {
-  const { stdout } = await lets('delegate', 'review', '--help');
-  assert.match(stdout.replace(/\s+/g, ' '),
-    /3 no fresh session can run here: no resolver started one, or none of its families is available/);
+test('review --help and handoff --help name --model, and say exit 3 is a refusal and exit 4 an unknown outcome', async () => {
+  for (const argv of [['delegate', 'review', '--help'], ['delegate', 'handoff', '--help']]) {
+    const text = (await lets(...argv)).stdout.replace(/\s+/g, ' ');
+    assert.match(text, /--model <family\[\/model\]>/, argv.join(' '));
+    assert.match(text, /3 no fresh session can run here: the harness or the account said no/, argv.join(' '));
+    assert.match(text, /4 the resolver broke the contract, or the outcome is unknown/, argv.join(' '));
+  }
 });
 
 test('neither delegate --help nor review --help says the default runs codex, claude or agy', async () => {

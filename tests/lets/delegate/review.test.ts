@@ -5,7 +5,7 @@ import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
 import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
-  ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', ...over });
+  ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', model: 'gpt/gpt-6-luna', ...over });
 
 const finishes = (calls: [string, Record<string, unknown>][]) => calls.filter(([verb]) => verb === 'finish').map(([, request]) => request);
 
@@ -25,8 +25,8 @@ test('the run request carries the need, with readOnly true and interactive false
   const [[verb, request]] = t.resolverCalls();
   assert.equal(verb, 'run');
   assert.deepEqual(request, {
-    protocol: 1, cwd: '/repo', name: 'x-plan-review', prompt: 'PROMPT TEXT', sourceFamily: 'claude',
-    readOnly: true, interactive: false, effort: 'high', timeoutMinutes: 45,
+    protocol: 2, cwd: '/repo', name: 'x-plan-review', prompt: 'PROMPT TEXT', sourceFamily: 'claude',
+    readOnly: true, interactive: false, effort: 'high', timeoutMinutes: 45, model: 'gpt/gpt-6-luna',
   });
 });
 
@@ -73,7 +73,7 @@ test('the timeout is the one given, else the default by effort', async () => {
 test('finish gets the handle whole, with ok true after a clean tree', async () => {
   const t = commandDeps();
   await run(options(), t.deps);
-  assert.deepEqual(finishes(t.resolverCalls()), [{ protocol: 1, cwd: '/repo', handle: { kind: 'fake', id: 'f-1', extra: 'kept' }, ok: true }]);
+  assert.deepEqual(finishes(t.resolverCalls()), [{ protocol: 2, cwd: '/repo', handle: { kind: 'fake', id: 'f-1', extra: 'kept' }, ok: true }]);
 });
 
 test('a family equal to the source is not independent, and still a success', async () => {
@@ -90,6 +90,14 @@ test('a family missing or unknown is exit 4, and finish is not sent', async () =
     assert.equal(t.stdout(), '');
     assert.deepEqual(finishes(t.resolverCalls()), []);
   }
+});
+
+test('a refusal is exit 3, with the resolver\'s reason, and no later resolver is asked', async () => {
+  const t = commandDeps({ resolver: false, config: `version: 2\nresolvers: [${FAKE_RESOLVER}, subagent]\n`,
+    settings: { FAKE_RESOLVER_EXIT_RUN: '3', FAKE_RESOLVER_STDOUT_RUN: '', FAKE_RESOLVER_STDERR: 'codex refused gpt-6-astra' } });
+  assert.equal(await run(options({ model: 'gpt/gpt-6-astra' }), t.deps), 3);
+  assert.match(t.stderr(), /codex refused gpt-6-astra/);
+  assert.equal(t.io.calls.some(([cmd]) => cmd === NODE), false, 'the default was not asked');
 });
 
 test('a resolver\'s exit 3, 5 and 6 pass through; a usage error or any other code is 4', async () => {
