@@ -22,9 +22,12 @@
 
 ## 5. Docs and the whole check [depends-on: 3, 4]
 
-- [ ] 5.1 [easy] The README, `docs/resolver-contract.md` and the T3 and herdr READMEs name `lets-delegate-subagent` and its name `subagent` where they describe the default, and a new `contrib/subagent-resolver/README.md` says what it does and that `lets` ships it (verify: grep -q lets-delegate-subagent README.md && grep -q lets-delegate-subagent docs/resolver-contract.md && test -f contrib/subagent-resolver/README.md)
+- [x] 5.1 [easy] The README, `docs/resolver-contract.md` and the T3 and herdr READMEs name `lets-delegate-subagent` and its name `subagent` where they describe the default, and a new `contrib/subagent-resolver/README.md` says what it does and that `lets` ships it (verify: grep -q lets-delegate-subagent README.md && grep -q lets-delegate-subagent docs/resolver-contract.md && test -f contrib/subagent-resolver/README.md) (✓ the three greps and the test passed)
 - [ ] 5.2 [easy] The whole project passes its checks (verify: pnpm test && nix flake check)
 
 ## Deviations Ledger
 
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
+
+- 2026-10-21, task 2.3: `tests/lets/delegate/conformance.test.ts` also used the deleted fixture. It now checks `contrib/subagent-resolver/bin/lets-delegate-subagent`.
+- 2026-10-21, task 5.1: the `lets delegate` help text and the setup summary also said "the built-in default". They now name `lets-delegate-subagent` too. ADR-001 keeps its wording, as a decision record.

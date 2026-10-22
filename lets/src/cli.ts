@@ -60,9 +60,10 @@ The Nix wrapper sets WORKFLOW_RELEASE.`;
 const DELEGATE_HELP = `
 A resolver turns each request into a real session. lets asks, in order:
 the executable LETS_SPEC_RESOLVER names, the resolver your delegate config
-names, lets-delegate-resolver on PATH, then the built-in default. The first
-that does not decline answers. The default starts no session: a review
-exits 3, and a handoff gives back the prompt to carry on by hand.
+names, lets-delegate-resolver on PATH, then the default,
+lets-delegate-subagent, which ships with lets. The first that does not
+decline answers. The default starts no session: a review exits 3, and a
+handoff gives back the prompt to carry on by hand.
 
 Run lets delegate setup once per machine. It finds what your machine can
 run, and proposes the config: which resolver to ask, and which families and
@@ -102,7 +103,7 @@ default runs.
 The proposal has one reviewer per available family, in the order gpt,
 claude, gemini, each with the first model its account lists. Its resolver
 is lets-delegate-resolver on PATH when t3 or herdr is installed; else none,
-and the built-in default answers.
+and the default, lets-delegate-subagent, answers.
 
 Nothing is written without --write. The config is
 $XDG_CONFIG_HOME/lets-delegate/config.json, or
@@ -203,7 +204,7 @@ delegate
   .option('--json', 'print the findings, the current config and the proposal as one JSON object')
   .option('--order <families>', 'the reviewers, in order, comma-separated; a family left out is dropped')
   .option('--model <family=model>', 'the model for one family; give it once per family', (value: string, list: string[] = []) => [...list, value])
-  .option('--resolver <path|none>', 'the resolver to name, or none for the built-in default')
+  .option('--resolver <path|none>', 'the resolver to name, or none for the default, lets-delegate-subagent')
   .addHelpText('after', SETUP_HELP)
   .action(async (options: SetupOptions) => {
     process.exitCode = await setup(options, realDeps());

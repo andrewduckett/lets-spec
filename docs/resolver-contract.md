@@ -34,7 +34,11 @@ The code that checks the contract is
    ships any more, so name your resolver in the config instead, with
    `lets delegate setup --resolver <path> --write`. Issue #49 removes
    this step.
-4. The built-in default, which never declines.
+4. The default, `lets-delegate-subagent`, which never declines. It
+   ships with `lets`, which runs it from `contrib/lets-delegate-subagent`
+   beside itself with its own Node, and it answers as `subagent`. When
+   that file is missing or Node cannot run it, `lets` exits 4 and says
+   its install is incomplete.
 
 Only `lets` reads the config. A resolver learns the user's reviewers from
 the `reviewers` field of the `run` request.
@@ -136,8 +140,8 @@ To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
 Here is a complete one in `sh`,
 [`contrib/headless-resolver`](../contrib/headless-resolver). It runs `claude`
-headless and read-only. It declines `start`, so the built-in default
-handles handoffs.
+headless and read-only. It declines `start`, so the default,
+`lets-delegate-subagent`, handles handoffs.
 
 ```sh
 #!/bin/sh

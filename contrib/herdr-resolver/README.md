@@ -7,7 +7,7 @@ work.
 | You work in | A review runs as | A handoff starts |
 |---|---|---|
 | herdr | A new tab, closed when the review succeeds | A new tab |
-| Anything else | It declines, and the built-in default answers | It declines, and the built-in default answers |
+| Anything else | It declines, and the default, `lets-delegate-subagent`, answers | It declines, and the default, `lets-delegate-subagent`, answers |
 
 It counts as inside herdr only when `HERDR_ENV` is `1` and `herdr` is on
 your `PATH`. When it declines, it says
@@ -87,11 +87,11 @@ then runs the first of those models that herdr can start.
 
 Pass `--resolver` again each time you run setup with `--write`. Setup does
 not find `lets-delegate-herdr` by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the built-in default.
+with no resolver, and reviews fall to the default, `lets-delegate-subagent`.
 
 The config names one resolver. If you also work in T3 Code, name the
 resolver for the harness you review from most. Reviews in the other
-harness fall to the built-in default.
+harness fall to the default, `lets-delegate-subagent`.
 
 ## Check that it works
 
