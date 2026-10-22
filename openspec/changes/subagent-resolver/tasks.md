@@ -1,6 +1,6 @@
 ## 1. The kit's verb layer
 
-- [ ] 1.1 [medium] A program built on the kit's new verb layer prints its `answer`'s response as one JSON line, prints nothing when `answer` returns `null`, and maps the kit's errors to exit codes with `<program>: ` before stderr; `runResolver(createAdapter)` keeps its signature and sits on that layer, so the T3 and herdr programs answer exactly as before (design D4) (verify: node --test tests/resolver-kit/*.test.ts tests/t3-resolver/*.test.ts tests/herdr-resolver/*.test.ts)
+- [x] 1.1 [medium] A program built on the kit's new verb layer prints its `answer`'s response as one JSON line, prints nothing when `answer` returns `null`, and maps the kit's errors to exit codes with `<program>: ` before stderr; `runResolver(createAdapter)` keeps its signature and sits on that layer, so the T3 and herdr programs answer exactly as before (design D4) (verify: node --test tests/resolver-kit/*.test.ts tests/t3-resolver/*.test.ts tests/herdr-resolver/*.test.ts) (✓ node --test tests/resolver-kit/*.test.ts tests/t3-resolver/*.test.ts tests/herdr-resolver/*.test.ts passed, 76 tests)
 
 ## 2. The lets-delegate-subagent program [depends-on: 1]
 
