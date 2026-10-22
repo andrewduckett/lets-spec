@@ -169,3 +169,20 @@ assert_reference_links() {
 @test "shaping loads its installed domain-language reference" {
   assert_reference_links "$repo/skills/lets-shape/SKILL.md" "$repo/skills"
 }
+
+load support/release
+
+@test "planning vocabulary inputs resolve inside each published flow" {
+  local flow schema skill out schemas
+  for flow in standard minimal; do
+    out="$BATS_TEST_TMPDIR/$flow"
+    schemas="$(jq -r --arg flow "$flow" '.flows[$flow].schemas | join(",")' "$repo/flows.json")"
+    build "$out" "$schemas" $(flow_skills "$flow")
+    for skill in lets-shape lets-brainstorm lets-write-specs; do
+      assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
+    done
+    for schema in $(jq -r --arg flow "$flow" '.flows[$flow].schemas[]' "$repo/flows.json"); do
+      assert_reference_links "$out/overlay/openspec/schemas/$schema/schema.yaml" "$out/overlay"
+    done
+  done
+}

@@ -8,6 +8,27 @@ description: Use when writing or changing an OpenSpec spec. Says what belongs in
 A spec is a behavior contract, not an implementation plan. It says what the
 system does as seen from outside. The design says how.
 
+## Read and maintain domain language
+
+Read [Domain language](../lets-shape/references/domain-language.md) before
+using domain terms. Resolve project vocabulary from `planningHome.root` in
+OpenSpec's artifact instructions, including a selected planning store. Read
+the context-selected shared glossary plus existing ancestor and local
+glossaries for all affected full capability paths. Do not assume an earlier
+session loaded them. Missing optional files need no empty replacements;
+a missing declared pointer needs discussion before dependent work proceeds.
+
+Use the agreed concepts consistently in requirements and scenarios. Surface
+semantic contradictions before writing dependent requirements; qualify
+explicit scoped meanings instead of letting a local definition override an
+ancestor. If new meaning is needed, settle it with the user and update the
+authoritative glossary outside change deltas as a separate `docs:` unit.
+When retiring a capability, review actual remaining uses: move surviving
+definitions to the appropriate remaining scope, update references, and
+remove obsolete definitions explicitly. Spec retirement does not authorize
+deleting its glossary. Use the pinned CLI's explicit retirement option
+when removing a capability's final requirement.
+
 ## What belongs in a spec
 
 - Observable behavior that users or downstream systems rely on.
