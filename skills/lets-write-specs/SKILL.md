@@ -26,8 +26,10 @@ authoritative glossary outside change deltas as a separate `docs:` unit.
 When retiring a capability, review actual remaining uses: move surviving
 definitions to the appropriate remaining scope, update references, and
 remove obsolete definitions explicitly. Spec retirement does not authorize
-deleting its glossary. Use the pinned CLI's explicit retirement option
-when removing a capability's final requirement.
+deleting its glossary. When removing a capability's final requirement, set
+`retire_capabilities: true` alongside `schema:` in the change's
+`.openspec.yaml` before archive. Glossary cleanup remains an explicit author
+decision; this option retires the spec, not its glossary.
 
 ## What belongs in a spec
 
