@@ -488,53 +488,47 @@ Run `lets delegate review --help` for the options and the exit codes.
 
 ### Set up delegation
 
-Run this once on each machine, and again after you install a harness, a
-CLI or a resolver:
+With no config, `lets` asks only the default resolver,
+`lets-delegate-subagent`, so every review runs in a subagent of your own
+harness. To have reviews run as fresh sessions, write the config by hand,
+once on each machine. It lists the resolvers to ask, in order, and is
+`~/.config/lets-delegate/config.yaml`, or
+`$XDG_CONFIG_HOME/lets-delegate/config.yaml` when that is set:
 
-```bash
-lets delegate setup
+```yaml
+version: 2
+resolvers:
+  - /home/you/.nix-profile/bin/lets-delegate-t3
+  - /home/you/.nix-profile/bin/lets-delegate-herdr
+  - subagent
 ```
 
-If you use `lets-delegate-t3` or `lets-delegate-herdr`, pass
-`--resolver <path>` each time you run it with `--write`. Setup does not
-find either program by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the default resolver,
-`lets-delegate-subagent`.
+Write each resolver as a full absolute path: `lets` does not expand `~`
+or `$HOME`. `command -v lets-delegate-t3` prints the path to use.
+`subagent` names the default that ships with `lets`. Leave it out, and a
+review where every resolver declines fails with exit 2 instead of running
+a subagent. `version` is the number `2`. A `config.json` from an earlier
+release is no longer read: when it is there and `config.yaml` is not,
+`lets delegate` stops and names both files.
 
-It shows what your machine offers: the harness it runs in (T3 Code,
-herdr or none), the family CLIs on your `PATH` (`codex`, `claude`, `agy`),
-and the models each account can run. Then it proposes a config. It starts
-no session and spends no tokens.
-
-The config names the resolver to ask, and lists the reviewers in the
-order a review should try them. Each reviewer is a family and a model, or
-`null` for the CLI's default. A review takes the first reviewer from a
-family other than the author's that the harness can run.
-
-Setup writes nothing until you add `--write`. Change the proposal first
-with these flags:
-
-| Flag | What it changes |
-|---|---|
-| `--order gemini,gpt` | The reviewers' order. A family you leave out is dropped. |
-| `--model gpt=gpt-5.6-terra` | One family's model. Give it once per family. |
-| `--resolver <path>` or `--resolver none` | The resolver to ask, or none for the default, `lets-delegate-subagent` |
-
-The config is `~/.config/lets-delegate/config.json`, or
-`$XDG_CONFIG_HOME/lets-delegate/config.json` when that is set. To limit a
-reviewer to some efforts, add `"efforts": ["high"]` to its entry. Add
-`--json` for output an agent can read. Without a config, `lets` works as
-before.
+> [!WARNING]
+> Until [#58](https://github.com/andrewduckett/lets-spec/issues/58)
+> lands, a `lets-delegate-t3` entry runs the first model in T3 Code's
+> catalog for the family it picks, whether or not your account can run
+> it. If T3 Code refuses that model, the review fails, and the `subagent`
+> entry after it does not run, because a refusal is not a decline. If that
+> happens, list `subagent` alone until #58 lands.
 
 ### What a review gets
 
 A review gets the best of these that your machine offers. `lets` tries
-rung 1. The review skill takes rung 2 when no resolver starts a session,
-and `lets delegate review` exits 3.
+rung 1 with the resolvers your [config](#set-up-delegation) lists. The
+review skill takes rung 2 when the default answers, which starts no
+session, and `lets delegate review` exits 3.
 
 | Rung | What runs | Fresh context | Independent | Needs |
 |---|---|---|---|---|
-| 1 | A session a resolver starts | yes | when the resolver picks another family | a resolver you installed |
+| 1 | A session a resolver starts | yes | when the resolver picks another family | a resolver your config lists |
 | 2 | A read-only subagent in your current harness | yes | no | nothing |
 
 `review.md` records how the review ran: `fresh context, other family`,
@@ -546,16 +540,21 @@ A resolver is the program that turns a request into a real session.
 `lets` asks these in order, and the first that does not decline answers:
 
 1. The executable that `LETS_SPEC_RESOLVER` names, when it is set.
-2. The resolver your [delegate config](#set-up-delegation) names. If it is
-   missing, `lets` exits 2 and says to run `lets delegate setup` again.
-3. `lets-delegate-resolver` on your `PATH`. No program by that name
-   ships any more, so name your resolver in the config instead.
-4. The default, `lets-delegate-subagent`, which never declines.
+2. Each resolver your [delegate config](#set-up-delegation) lists, in
+   order. When `lets` reaches one that is missing or not an executable
+   file, it exits 2 and names the path and the config file.
+
+With no config, the default, `lets-delegate-subagent`, takes the place of
+step 2. `lets` looks for nothing on your `PATH`: a resolver is asked only
+when the config lists it or `LETS_SPEC_RESOLVER` names it. When every
+resolver declines, `lets delegate` exits 2, says so, and names the config
+file.
 
 The default is a program that ships with `lets`, in the release tarball,
 the Nix package and this repository's source tree alike. `lets` runs it
 from `contrib/lets-delegate-subagent` beside itself, with its own Node,
-so you never install or link it. It answers as `subagent`.
+both with no config and for the `subagent` entry, so you never install or
+link it. It answers as `subagent`.
 
 The default starts no session, and picks no model family. For a review,
 it runs nothing: `lets delegate review` exits 3, and the review skill
@@ -585,23 +584,20 @@ inside its own harness, and declines anywhere else:
 
 Install the one for your harness once for your user, with home-manager, a
 Nix profile or the release tarball. It is never part of a project: it
-answers for your machine. Its README gives the steps. Then name it in your
-delegate config, so reviews use it and the models your accounts can run:
+answers for your machine. Its README gives the steps. Then add its path to
+`resolvers` in your [delegate config](#set-up-delegation), before
+`subagent`.
 
-```sh
-lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
-```
-
-The config names one resolver. If you work in both harnesses, name the one
-you review from most. Reviews in the other harness fall to the default,
-`lets-delegate-subagent`.
+Each declines outside its own harness, so if you work in both, list both.
+The one for the harness you are in answers.
 
 #### Switching from lets-delegate-resolver
 
-`lets-delegate-resolver`, which served both harnesses, is gone. Install
-the resolver for your harness in its place, then name it with
-`lets delegate setup --resolver <path> --write`. Until you do, reviews fall
-to the default, `lets-delegate-subagent`.
+`lets-delegate-resolver`, which served both harnesses, is gone, and `lets`
+no longer looks on your `PATH` for it. Install the resolver for your
+harness in its place, then list its path in your
+[delegate config](#set-up-delegation). Until you do, reviews fall to the
+default, `lets-delegate-subagent`.
 
 | You installed it with | Do this |
 |---|---|

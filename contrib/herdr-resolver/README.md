@@ -20,7 +20,7 @@ contract](../../docs/resolver-contract.md).
 This page covers:
 
 - [Install it](#install-it)
-- [Name it in your delegate config](#name-it-in-your-delegate-config)
+- [List it in your delegate config](#list-it-in-your-delegate-config)
 - [Check that it works](#check-that-it-works)
 
 ## Install it
@@ -73,25 +73,27 @@ ln -sf "$PWD/contrib/herdr-resolver/bin/lets-delegate-herdr" ~/.local/bin/
 
 Run `pnpm install` in the checkout first.
 
-## Name it in your delegate config
+## List it in your delegate config
 
-`lets` does not look for `lets-delegate-herdr` on your `PATH`. Name it in
-your delegate config after you install it:
+`lets` does not look for `lets-delegate-herdr` on your `PATH`. After you
+install it, add its full absolute path to `resolvers` in
+`~/.config/lets-delegate/config.yaml`, before `subagent`:
 
-```sh
-lets delegate setup --resolver "$(command -v lets-delegate-herdr)" --write
+```yaml
+version: 2
+resolvers:
+  - /home/you/.nix-profile/bin/lets-delegate-herdr
+  - subagent
 ```
 
-This records the resolver, with the models your accounts can run. A review
-then runs the first of those models that herdr can start.
+`command -v lets-delegate-herdr` prints the path to use. `lets` does not
+expand `~`. The README's
+[Set up delegation](../../README.md#set-up-delegation) section explains
+the file.
 
-Pass `--resolver` again each time you run setup with `--write`. Setup does
-not find `lets-delegate-herdr` by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the default, `lets-delegate-subagent`.
-
-The config names one resolver. If you also work in T3 Code, name the
-resolver for the harness you review from most. Reviews in the other
-harness fall to the default, `lets-delegate-subagent`.
+It declines outside herdr. If you also work in T3 Code, list the
+resolver for that harness too: the one for the harness you are in
+answers.
 
 ## Check that it works
 

@@ -21,7 +21,7 @@ contract](../../docs/resolver-contract.md).
 This page covers:
 
 - [Install it](#install-it)
-- [Name it in your delegate config](#name-it-in-your-delegate-config)
+- [List it in your delegate config](#list-it-in-your-delegate-config)
 - [Before the first review in T3 Code](#before-the-first-review-in-t3-code)
 - [Check that it works](#check-that-it-works)
 - [After a t3 update](#after-a-t3-update)
@@ -74,25 +74,33 @@ ln -sf "$PWD/contrib/t3-resolver/bin/lets-delegate-t3" ~/.local/bin/
 
 Run `pnpm install` in the checkout first.
 
-## Name it in your delegate config
+## List it in your delegate config
 
-`lets` does not look for `lets-delegate-t3` on your `PATH`. Name it in your
-delegate config after you install it:
+`lets` does not look for `lets-delegate-t3` on your `PATH`. After you
+install it, add its full absolute path to `resolvers` in
+`~/.config/lets-delegate/config.yaml`, before `subagent`:
 
-```sh
-lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
+```yaml
+version: 2
+resolvers:
+  - /home/you/.nix-profile/bin/lets-delegate-t3
+  - subagent
 ```
 
-This records the resolver, with the models your accounts can run. A review
-then runs the first of those models that T3 Code can start.
+`command -v lets-delegate-t3` prints the path to use. `lets` does not
+expand `~`. The README's
+[Set up delegation](../../README.md#set-up-delegation) section explains
+the file.
 
-Pass `--resolver` again each time you run setup with `--write`. Setup does
-not find `lets-delegate-t3` by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the default, `lets-delegate-subagent`.
+It declines outside T3 Code. If you also work in herdr, list the
+resolver for that harness too: the one for the harness you are in
+answers.
 
-The config names one resolver. If you also work in herdr, name the
-resolver for the harness you review from most. Reviews in the other
-harness fall to the default, `lets-delegate-subagent`.
+Until [#58](https://github.com/andrewduckett/lets-spec/issues/58) lands,
+a review runs the first model in T3 Code's catalog for the family it
+picks. If your account cannot run that model, the review fails, and the
+`subagent` entry after it does not run. List `subagent` alone until #58
+lands if that happens.
 
 ## Before the first review in T3 Code
 
