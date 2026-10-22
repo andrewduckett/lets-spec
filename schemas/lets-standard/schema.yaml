@@ -7,8 +7,9 @@ artifacts:
     description: Decision ledger from grilling the story with the user, before any plan is written
     template: brainstorm.md
     instruction: |
-      Read [Domain language](../../../.agents/skills/lets-shape/references/domain-language.md)
-      from the installed workflow. Use `planningHome.root` from this artifact's
+      Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+      from the code repository root (not the planning store or change directory).
+      Use `planningHome.root` from this artifact's
       instructions to read project context, the selected shared glossary, and
       existing ancestor and affected-scope glossaries. Resolve ambiguity before
       dependent work. Write agreed definitions outside change delta folders.
@@ -86,8 +87,9 @@ artifacts:
     description: Detailed specifications for the change
     template: spec.md
     instruction: |
-      Read [Domain language](../../../.agents/skills/lets-shape/references/domain-language.md)
-      from the installed workflow. Use `planningHome.root` from this artifact's
+      Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+      from the code repository root (not the planning store or change directory).
+      Use `planningHome.root` from this artifact's
       instructions to read project context, the selected shared glossary, and
       existing ancestor and affected-scope glossaries. Resolve ambiguity before
       dependent work. Write agreed definitions outside change delta folders.
@@ -277,8 +279,9 @@ apply:
   requires: [ tasks ]
   tracks: tasks.md
   instruction: |
-    Read [Domain language](../../../.agents/skills/lets-shape/references/domain-language.md)
-    from the installed workflow. Use `root.path` from this apply instruction's
+    Read [Domain language](.agents/skills/lets-shape/references/domain-language.md)
+    from the code repository root (not the planning store or change directory).
+    Use `root.path` from this apply instruction's
     JSON to resolve project config context, the selected shared glossary, and
     existing ancestor and affected-scope glossaries. Read them again before
     implementation, including in a separate planning store. Preserve domain

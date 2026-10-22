@@ -154,11 +154,11 @@ flow_texts() {
 # Resolve actual Markdown reference links as an installed skill would.
 # Include source copies in an isolated fixture so a bad relative path fails.
 assert_reference_links() {
-  local text="$1" root="$2" link found=0
+  local text="$1" root="$2" base="${3:-$(dirname "$1")}" link found=0
   while IFS= read -r link; do
     found=1
-    [ -f "$(dirname "$text")/$link" ] || { echo "unresolved: $text -> $link"; return 1; }
-    case "$(realpath "$(dirname "$text")/$link")" in
+    [ -f "$base/$link" ] || { echo "unresolved: $text -> $link"; return 1; }
+    case "$(realpath "$base/$link")" in
       "$root"/*) ;;
       *) echo "reference escapes installed skills: $text -> $link"; return 1 ;;
     esac
@@ -182,7 +182,19 @@ load support/release
       assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
     done
     for schema in $(jq -r --arg flow "$flow" '.flows[$flow].schemas[]' "$repo/flows.json"); do
-      assert_reference_links "$out/overlay/openspec/schemas/$schema/schema.yaml" "$out/overlay"
+      (
+        cd "$out/overlay"
+        printf 'schema: %s\n' "$schema" > openspec/config.yaml
+        OPENSPEC_TELEMETRY=0 OPENSPEC_NO_UPDATE_CHECK=1 openspec new change "$schema-demo" </dev/null >/dev/null 2>&1
+        printf '%s\n' '- [ ] 1.1 Fixture implementation' >"openspec/changes/$schema-demo/tasks.md"
+        local artifact
+        for artifact in brainstorm specs apply; do
+          OPENSPEC_TELEMETRY=0 OPENSPEC_NO_UPDATE_CHECK=1 openspec instructions "$artifact" --change "$schema-demo" --json </dev/null >"$out/instructions.json" 2>/dev/null
+          jq -r .instruction "$out/instructions.json" >"$out/instruction.md"
+          # Agents receive CLI text without its schema file location.
+          assert_reference_links "$out/instruction.md" "$out/overlay" "$out/overlay"
+        done
+      )
     done
   done
 }
