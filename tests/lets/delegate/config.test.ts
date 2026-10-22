@@ -57,3 +57,16 @@ test('an invalid config is a usage error that names the file and the bad value',
       (error) => error instanceof UsageError && error.message.includes(HOME_CONFIG) && error.message.includes(named), text);
   }
 });
+
+const HOME_JSON = '/home/u/.config/lets-delegate/config.json';
+
+test('a leftover config.json with no config.yaml is a usage error that names both files', () => {
+  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: '{"version":1}' } }) };
+  assert.throws(() => readConfig(deps), (error) => error instanceof UsageError
+    && error.message.includes(HOME_JSON) && error.message.includes(HOME_CONFIG) && error.message.includes('now config.yaml'));
+});
+
+test('a config.json beside a config.yaml is ignored', () => {
+  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: 'not json', [HOME_CONFIG]: 'version: 2\nresolvers: [subagent]\n' } }) };
+  assert.deepEqual(readConfig(deps), { version: 2, resolvers: ['subagent'] });
+});

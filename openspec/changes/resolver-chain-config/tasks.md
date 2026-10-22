@@ -3,7 +3,7 @@
 ## 1. The config file
 
 - [x] 1.1 [medium] `readConfig` reads `config.yaml` under `XDG_CONFIG_HOME` or `~/.config`, through the `yaml` package added to `lets/package.json`, and returns `{ version: 2, resolvers }` where each entry is an absolute path or the word `subagent`; it ignores unknown keys, and exits 2 naming the file and the bad value for a non-number `version`, a `resolvers` that is not such a list, or a document that is not YAML (verify: `node --test tests/lets/delegate/config.test.ts`) (✓ `node --test tests/lets/delegate/config.test.ts` passed, 7 tests)
-- [ ] 1.2 [easy] When `config.yaml` is missing and `config.json` exists beside it, `readConfig` throws a usage error that names both files and says the config is now `config.yaml`; when both exist, it reads `config.yaml` and ignores the JSON (verify: `node --test tests/lets/delegate/config.test.ts`)
+- [x] 1.2 [easy] When `config.yaml` is missing and `config.json` exists beside it, `readConfig` throws a usage error that names both files and says the config is now `config.yaml`; when both exist, it reads `config.yaml` and ignores the JSON (verify: `node --test tests/lets/delegate/config.test.ts`) (✓ `node --test tests/lets/delegate/config.test.ts` passed, 9 tests)
 - [ ] 1.3 [easy] `nix flake check` builds with the new dependency: refresh the `pnpmDeps` hash in `flake.nix` as its comment says, after `pnpm install` updates `pnpm-lock.yaml` (verify: `nix flake check`)
 
 ## 2. The lookup [depends-on: 1]
