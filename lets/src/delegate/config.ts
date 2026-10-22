@@ -45,7 +45,7 @@ export function parseConfig(text: string, path: string): Config {
   try {
     value = parse(text);
   } catch (error) {
-    throw fail(`is not YAML: ${(error as Error).message.split('\n')[0]}`);
+    throw fail(`is not YAML: ${(error as Error).message.split('\n')[0].replace(/:$/, '')}`);
   }
   if (!isObject(value)) throw fail(`must be a mapping with version and resolvers, got ${show(value)}`);
   if (value.version !== CONFIG_VERSION) throw fail(`version must be ${CONFIG_VERSION}, got ${show(value.version)}`);

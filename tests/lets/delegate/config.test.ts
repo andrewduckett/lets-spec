@@ -70,3 +70,8 @@ test('a config.json beside a config.yaml is ignored', () => {
   const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: 'not json', [HOME_CONFIG]: 'version: 2\nresolvers: [subagent]\n' } }) };
   assert.deepEqual(readConfig(deps), { version: 2, resolvers: ['subagent'] });
 });
+
+test('a config that is not YAML says where the parser stopped, in one sentence', () => {
+  assert.throws(() => readConfig(depsWith('version: 2\nresolvers: [/x\n')),
+    (error) => error instanceof UsageError && /line 3, column 1\.$/.test(error.message));
+});
