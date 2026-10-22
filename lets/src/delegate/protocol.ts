@@ -55,7 +55,8 @@ export type FinishRequest = { protocol: typeof PROTOCOL; cwd: string; handle: Ha
 export type Requests = { probe: ProbeRequest; run: RunRequest; start: StartRequest; finish: FinishRequest };
 export type Request = Requests[Verb];
 
-export type ProbeResponse = { resolver: string };
+// options: the models this resolver can run now, in the harness's order.
+export type ProbeResponse = { resolver: string; options: ModelString[] };
 export type RunResponse = { resolver: string; text: string; family: Family; model?: string | null; handle?: Handle | null };
 export type StartResponse = { resolver: string; handle: Handle } | { resolver: string; handle: null; instructions: string };
 export type FinishResponse = Record<string, unknown>;
@@ -123,6 +124,7 @@ export function parseResponse<V extends Verb>(verb: V, text: string): Responses[
   const check = checker(response, 'the response', (message) => new ContractError(message));
   if (verb === 'finish') return response as Responses[V];
   check.text('resolver');
+  if (verb === 'probe') check.models('options');
   if (verb === 'run') {
     if (typeof response.text !== 'string') throw new ContractError('the response has no text');
     check.oneOf('family', FAMILIES);
@@ -212,6 +214,13 @@ function checker(object: Json, what: string, fail: (message: string) => Error) {
     },
     model(field: string) {
       if (typeof object[field] !== 'string' || parseModel(object[field]) === null) throw bad(field, MODEL_FORMAT);
+    },
+    // A list of model strings, which may be empty.
+    models(field: string) {
+      const value = object[field];
+      if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string' && parseModel(entry) !== null)) {
+        throw bad(field, `a list of ${MODEL_FORMAT}`);
+      }
     },
     // nullable: the field may be null or absent.
     handle(field: string, nullable: boolean) {

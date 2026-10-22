@@ -125,9 +125,23 @@ test('parseResponse requires resolver, and a handle or instructions, for start',
   throwsWith(() => parseResponse('start', '{"resolver":"r"}'), ContractError, /instructions/);
 });
 
-test('parseResponse requires resolver for probe, and an object or nothing for finish', () => {
-  assert.deepEqual(parseResponse('probe', '{"resolver":"herdr"}'), { resolver: 'herdr' });
-  throwsWith(() => parseResponse('probe', '{}'), ContractError, /resolver/);
+test('parseResponse requires resolver for probe', () => {
+  throwsWith(() => parseResponse('probe', '{"options":[]}'), ContractError, /resolver/);
+});
+
+test('parseResponse accepts a probe whose options are model strings, or none', () => {
+  assert.deepEqual(parseResponse('probe', '{"resolver":"cli","options":["gpt/gpt-6-luna","claude"]}'),
+    { resolver: 'cli', options: ['gpt/gpt-6-luna', 'claude'] });
+  assert.deepEqual(parseResponse('probe', '{"resolver":"subagent","options":[]}'), { resolver: 'subagent', options: [] });
+});
+
+test('parseResponse rejects a probe without a list of model strings, naming options', () => {
+  for (const options of [undefined, 'gpt', {}, [7], ['llama/llama-4'], ['gpt/']]) {
+    throwsWith(() => parseResponse('probe', JSON.stringify({ resolver: 'x', options })), ContractError, /options/);
+  }
+});
+
+test('parseResponse accepts an object or nothing for finish', () => {
   assert.deepEqual(parseResponse('finish', '{}'), {});
   assert.deepEqual(parseResponse('finish', ''), {});
   throwsWith(() => parseResponse('finish', '[]'), ContractError, /not a JSON object/);
@@ -135,7 +149,7 @@ test('parseResponse requires resolver for probe, and an object or nothing for fi
 
 test('parseResponse rejects text that is not one JSON object', () => {
   throwsWith(() => parseResponse('probe', ''), ContractError, /not JSON/);
-  throwsWith(() => parseResponse('probe', '{"resolver":"a"}\n{"resolver":"b"}'), ContractError, /not JSON/);
+  throwsWith(() => parseResponse('probe', '{"resolver":"a","options":[]}\n{"resolver":"b","options":[]}'), ContractError, /not JSON/);
 });
 
 test('exitFor maps a resolver exit to the exit lets gives', () => {

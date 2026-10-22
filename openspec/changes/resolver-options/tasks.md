@@ -1,7 +1,7 @@
 ## 1. The contract
 
 - [x] 1.1 [medium] A `run` or `start` request at protocol 2 needs a `model` of `<family>` or `<family>/<id>`, and `parseRequest` exits 2 and names `model` when it is missing or bad. `parseModel` splits it, and `reviewers` is gone. The change goes in `lets/src/delegate/protocol.ts` and its kit copy (design D-1) (verify: node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts) (✓ node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts passed)
-- [ ] 1.2 [easy] `parseResponse('probe')` requires `options`, a list of model strings, which may be empty. The change goes in both copies (verify: node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts)
+- [x] 1.2 [easy] `parseResponse('probe')` requires `options`, a list of model strings, which may be empty. The change goes in both copies (verify: node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts) (✓ node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts passed)
 - [ ] 1.3 [medium] The kit answers `probe` with the adapter's `options`, and passes the parsed model to `spawn`. `Refused`, exit 3, replaces `NoFamilyError` in both `errors.ts` copies. When `waitForResult` throws `Refused`, the kit calls `finish(handle, true)`, then exits 3. `pickFamily`, `pickReviewer`, `familiesFromExecutors` and `Available` go (design D-2, D-3, D-4) (verify: node --test tests/resolver-kit/*.test.ts)
 
 ## 2. The subagent resolver [depends-on: 1]
