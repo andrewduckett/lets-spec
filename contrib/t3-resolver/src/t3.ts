@@ -41,8 +41,8 @@ export const T3_INSTANCE: Record<Family, string> = { gpt: 'codex', claude: 'clau
 // Each t3 provider names its effort option differently. Gemini carries the
 // effort in the model id instead.
 const T3_EFFORT_OPTION: Record<Family, string | null> = { gpt: 'reasoningEffort', claude: 'effort', gemini: null };
-// The model a start uses when the project has no default.
-const START_MODEL = 'claude-opus-5-5';
+// A start has no effort, and a gemini model needs one.
+const START_EFFORT: Effort = 'medium';
 
 export type ModelSelection = { instanceId: string; model: string | null; options: { id: string; value: string }[] };
 type Manifest = {
@@ -51,7 +51,7 @@ type Manifest = {
     providers?: Record<string, { defaults?: { chat?: string } | null } | undefined>;
   };
 };
-type Project = { project_id: string; title: string; workspace_root: string; default_model_selection_json: string | null };
+type Project = { project_id: string; title: string; workspace_root: string };
 
 // The models t3 can run, as <family>/<model>: each provider in the
 // manifest's order, its default chat model first. t3 lists gemini once per
@@ -72,18 +72,19 @@ export function optionsFromT3Manifest(manifest: Manifest): ModelString[] {
 }
 
 // The provider's default chat model in the manifest, or null when it has none.
-// gemini's default names an effort, which is dropped, so the review's own
-// effort is added in its place.
-export function defaultModel(manifest: Manifest, family: Family): string | null {
+// gemini's default names an effort. A run drops it, so the review's own
+// effort is added in its place; a start keeps it.
+export function defaultModel(manifest: Manifest, family: Family, { keepEffort = false } = {}): string | null {
   const model = manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
-  return family === 'gemini' && model !== null ? withoutEffort(model) : model;
+  return family === 'gemini' && model !== null && !keepEffort ? withoutEffort(model) : model;
 }
 
 // A gemini model takes the effort as a suffix, unless it already has one.
-export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort }): ModelSelection {
+// A null effort is a start's: no effort option, and medium for gemini.
+export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort | null }): ModelSelection {
   const option = T3_EFFORT_OPTION[family];
-  const id = family === 'gemini' && model !== null ? withEffort(model, effort) : model;
-  return { instanceId: T3_INSTANCE[family], model: id, options: option ? [{ id: option, value: effort }] : [] };
+  const id = family === 'gemini' && model !== null ? withEffort(model, effort ?? START_EFFORT) : model;
+  return { instanceId: T3_INSTANCE[family], model: id, options: option && effort !== null ? [{ id: option, value: effort }] : [] };
 }
 
 export function baseDir(env: Io['env'], homedir: string): string {
@@ -117,7 +118,7 @@ export function isAncestor(io: Io, ancestorPid: number): boolean {
 
 export function findProject(db: Db, repoRoot: string): Project {
   const projects = db.prepare(
-    'select project_id, title, workspace_root, default_model_selection_json from projection_projects where deleted_at is null',
+    'select project_id, title, workspace_root from projection_projects where deleted_at is null',
   ).all() as Project[];
   const project = projects.find((p) => p.workspace_root === repoRoot);
   if (!project) {
@@ -329,12 +330,6 @@ export function createAdapter(io: Io): Adapter {
     return stdout.trim();
   }
 
-  // A start runs with the project's default model, else START_MODEL.
-  function startSelection(project: Project): ModelSelection {
-    if (project.default_model_selection_json) return JSON.parse(project.default_model_selection_json);
-    return { instanceId: T3_INSTANCE.claude, model: START_MODEL, options: [] };
-  }
-
   // The running server. finish sends the token only here, never to an
   // origin a handle names.
   function runningServer() {
@@ -366,9 +361,9 @@ export function createAdapter(io: Io): Adapter {
       const project = withDb((db) => findProject(db, repoRoot));
       const branch = (await git(cwd, ['branch', '--show-current'])) || null;
       // A null model is the provider's default; with none, t3 picks its own.
-      const manifest = model === null && kind === 'run' ? readManifest() : null;
-      const runModel = model ?? (manifest === null ? null : defaultModel(manifest, family));
-      const modelSelection = kind === 'run' ? t3ModelSelection({ family, model: runModel, effort: effort! }) : startSelection(project);
+      const manifest = model === null ? readManifest() : null;
+      const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: kind === 'start' }));
+      const modelSelection = t3ModelSelection({ family, model: chosen, effort });
       const token = await readToken(io);
       const { threadId } = await launch(io, { origin, token }, buildLaunch({
         threadId: randomUUID(),
