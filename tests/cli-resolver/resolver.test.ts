@@ -38,6 +38,25 @@ test('start declines with every family CLI on PATH, starting nothing', async () 
   assert.deepEqual(io.calls, []);
 });
 
+test('a review with codex answers codex\'s final message on gpt, with a process handle', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude'], results: [(cmd, args) => {
+    io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS\n');
+    return { stdout: '', stderr: '', code: 0 };
+  }] });
+  const answer = await handle('run', runRequest, createAdapter(io));
+  assert.equal(answer.code, 0);
+  assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'cli', text: 'FINDINGS\n', family: 'gpt', model: null, handle: { kind: 'process', id: 'x' } });
+});
+
+test('a reviewer whose CLI is not on PATH is skipped, and says so', async () => {
+  const request = JSON.stringify({ ...JSON.parse(runRequest), reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }] });
+  const io = fakeIo({ commands: ['claude'] });
+  const answer = await handle('run', request, createAdapter(io));
+  assert.equal(answer.code, 3);
+  assert.match(answer.stderr, /gpt\/gpt-6-luna: codex is not on PATH/);
+  assert.deepEqual(io.calls, []);
+});
+
 test('finish refuses a thread handle with exit 4', async () => {
   const request = JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'thread', id: 'T' }, ok: true }));
   const answer = await handle('finish', request, createAdapter(fakeIo({ commands: ['claude'] })));
