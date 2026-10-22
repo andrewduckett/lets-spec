@@ -24,7 +24,7 @@ For instruction changes, interface checks verify referenced paths, command names
 ## 3. Acceptance [depends-on: 2]
 
 - [x] 3.1 [medium] Confirm the workflow meets the spec: record acceptance evidence for all 30 scenarios, including cross-checkout recovery, declined blockers, preexisting edits, and transfer cleanup; distinguish manual instruction walkthroughs from automated boundary coverage, then run the complete project test suite (✓ deli -- nix develop --command pnpm test passed: Node tests, typecheck, four resolver conformance suites and 111 Bats tests; all 30 scenario walkthroughs and Git rehearsal limits recorded below).
-- [ ] 3.2 [easy] Confirm every release flow builds and ships its references with no project-owned glossary changes (verify: deli -- nix flake check).
+- [x] 3.2 [easy] Confirm every release flow builds and ships its references with no project-owned glossary changes (✓ deli -- nix flake check passed on x86_64-linux: node-tests, commands, flows, flake-module and dist; release/sync regressions preserve project glossary ownership; other platforms not built locally).
 
 ## Acceptance Evidence
 
