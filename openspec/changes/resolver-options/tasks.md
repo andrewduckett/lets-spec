@@ -6,7 +6,7 @@
 
 ## 2. The subagent resolver [depends-on: 1]
 
-- [ ] 2.1 [parallel] [easy] `lets-delegate-subagent probe` prints `{"resolver":"subagent","options":[]}`. `run` still exits 3, and `start` with any valid `model` still hands the prompt back (verify: node --test tests/subagent-resolver/*.test.ts)
+- [x] 2.1 [parallel] [easy] `lets-delegate-subagent probe` prints `{"resolver":"subagent","options":[]}`. `run` still exits 3, and `start` with any valid `model` still hands the prompt back (verify: node --test tests/subagent-resolver/*.test.ts) (✓ node --test tests/subagent-resolver/*.test.ts passed)
 
 ## 3. The T3 resolver [depends-on: 1]
 

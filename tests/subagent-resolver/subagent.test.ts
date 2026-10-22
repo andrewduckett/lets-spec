@@ -10,11 +10,11 @@ import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 import type { FakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const ask = (io: FakeIo, verb: Verb, request: object) => respond(PROGRAM, verb, JSON.stringify(request), createAnswer(io));
-const runRequest = () => buildRequest('run', { cwd: '/r', name: 'x', prompt: 'PROMPT', sourceFamily: 'claude', effort: 'high' });
+const runRequest = () => buildRequest('run', { cwd: '/r', name: 'x', prompt: 'PROMPT', sourceFamily: 'claude', effort: 'high', model: 'gpt' });
 
-test('probe outside any harness answers subagent', async () => {
+test('probe outside any harness answers subagent with no options', async () => {
   const io = fakeIo({ env: {} });
-  assert.deepEqual(await ask(io, 'probe', buildRequest('probe', { cwd: '/r' })), { code: 0, stdout: '{"resolver":"subagent"}\n', stderr: '' });
+  assert.deepEqual(await ask(io, 'probe', buildRequest('probe', { cwd: '/r' })), { code: 0, stdout: '{"resolver":"subagent","options":[]}\n', stderr: '' });
 });
 
 test('run exits 3 with nothing on stdout', async () => {
@@ -39,7 +39,7 @@ test('run starts no process, even with every executor on PATH', async () => {
 
 const TRICKY = 'Say "hi".\nIt\'s fine.';
 const DIR = '/r/.workspace/lets-delegate';
-const startRequest = () => buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: TRICKY });
+const startRequest = (model = 'claude') => buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: TRICKY, model });
 
 test('start saves the prompt in .workspace/lets-delegate under the cwd', async () => {
   const io = fakeIo();
@@ -55,6 +55,18 @@ test('start hands the prompt back with where it is saved, and no handle', async 
     handle: null,
     instructions: `Start any agent in /r and give it this prompt, which is also saved in .workspace/lets-delegate/fix-login.prompt.md:\n\n${TRICKY}`,
   });
+});
+
+test('start answers the same whichever valid model it is given', async () => {
+  const bare = await ask(fakeIo(), 'start', startRequest());
+  for (const model of ['gpt/gpt-6-luna', 'gemini']) assert.deepEqual(await ask(fakeIo(), 'start', startRequest(model)), bare, model);
+});
+
+test('start with an unknown family is exit 2, naming model', async () => {
+  const answer = await ask(fakeIo(), 'start', startRequest('llama/llama-4'));
+  assert.equal(answer.code, 2);
+  assert.equal(answer.stdout, '');
+  assert.match(answer.stderr, /model/);
 });
 
 test('start answers the same, and starts no process, whichever CLIs are on PATH', async () => {
