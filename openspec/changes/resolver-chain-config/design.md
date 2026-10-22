@@ -9,7 +9,7 @@ Nix fetches the workspace's npm dependencies from `pnpm-lock.yaml` into a fixed-
 ## Goals / Non-Goals
 
 **Goals:**
-- One lookup rule, with no special case for the default and nothing read from `PATH`.
+- One lookup order, read from the config, with nothing read from `PATH` and nothing appended. The default keeps one difference, which decision 3 names: `lets` runs its own copy with its own Node.
 - A config a person can write by hand, in the file the later guidance blocks (#59) will share.
 - Every failure path names the file or the path at fault and exits 2.
 - Nothing about models in `lets`: no `reviewers`, no listing, no setup.
@@ -22,8 +22,8 @@ Nix fetches the workspace's npm dependencies from `pnpm-lock.yaml` into a fixed-
 
 ## Test Seams
 
-- **Primary test seam:** the delegate unit tests under `tests/lets/delegate/`, through `pnpm test`. `config.test.ts` proves the file rules against the fake `Io`'s file map. `lookup.test.ts` proves the order, the stop, the missing path and the all-declined error against `fixtures/fake-resolver`, which declines or answers as its environment says. `review.test.ts` and `handoff.test.ts` prove the request carries no `reviewers` and the no-config path. `cli.test.ts` proves `setup` is gone and the help text describes the chain.
-- **Existing seams reused:** the release checks in `flake.nix` and `tests/release-build.bats` for the no-config default; `tests/lets/delegate/source-tree.test.ts` for the source tree's `contrib/` link.
+- **Primary test seam:** the delegate unit tests under `tests/lets/delegate/`, through `pnpm test`. `config.test.ts` proves the file rules against the fake `Io`'s file map. `lookup.test.ts` proves the order, the stop, the missing path, the `subagent` entry and the all-declined error against `fixtures/fake-resolver`, which declines or answers as its environment says. `review.test.ts` and `handoff.test.ts` prove the request carries no `reviewers` and the no-config path. `cli.test.ts` proves `setup` is gone and the help text describes the chain. `fixtures/command-deps.ts` writes `config.yaml` instead of `config.json`, and keeps routing the Node-run subagent call to the real program.
+- **Existing seams reused:** the checks in `flake.nix` that run `lets delegate handoff` from the Nix package and the release tarball with nothing configured; `tests/lets/delegate/source-tree.test.ts` for the source tree's `contrib/` link.
 
 ## Scrutiny Tier & Blast Radius
 
@@ -34,17 +34,17 @@ Nix fetches the workspace's npm dependencies from `pnpm-lock.yaml` into a fixed-
 
 1. **YAML through the `yaml` package, not a hand-written subset.** Alternatives: keep JSON, which is painful for the prose blocks #59 adds and the user asked for a file written by hand; or parse a subset by hand, which would break the first time someone writes a flow scalar or a comment. `yaml` is pure JavaScript, has no dependencies, and `build.mjs` bundles it, so the release still needs nothing beside Node. Cost: a lockfile change and a new `pnpmDeps` hash in `flake.nix`.
 
-2. **The parser accepts exactly `version` and `resolvers`, and nothing else is an error.** A stricter parser than the proposal needs, so that a typo such as `resolver:` or `reviewers:` left from the old file is refused rather than silently ignored. #59 adds `delegations` to the accepted keys. Alternative: ignore unknown keys, which is how most configs behave, but here every unknown key is a stale one.
+2. **The parser reads `version` and `resolvers`, and ignores every other key.** One user-level file serves every project on the machine, and each project pins its own `lets`. The next story adds `delegations` to the same file; a parser that refused unknown keys would break every project still pinned to this one the day that key is written. Alternative: refuse unknown keys, so that a stale `resolver:` or `reviewers:` from the old file is caught. The `version` check catches the old file as a whole, and a stale key beside a valid `resolvers` does no harm.
 
-3. **No config means a two-entry list built in `candidates()`: the override, then the release's subagent.** The `builtIn` flag and the "incomplete install" message stay for that one path, because the kept requirement "A missing or broken default fails the request" still needs them. With a config, no candidate is `builtIn`: a listed subagent is a path like any other, and a missing one is "A missing configured resolver stops the command". Alternative: drop the `builtIn` branch too and treat the no-config subagent as a listed path, which would turn a broken install into "run setup", the message we are removing.
+3. **The default is named `subagent` in the chain, and `lets` runs its own copy with its own Node.** `candidates()` builds the `builtIn` candidate, `nodePath` plus `<packageRoot>/contrib/lets-delegate-subagent`, in two cases: there is no config, where it is the only entry after the override; and the chain holds the word `subagent`, where it takes that position. The `builtIn` flag and the "incomplete install" message stay for both, because the copy is `lets`'s own and a missing one is a broken install, not a wrong config. A listed absolute path is never `builtIn`, even when it points at some other copy of the program. Alternatives: list the default by absolute path, like any other resolver, which fails on Nix because the copy sits at a store path that moves with every update, the Nix wrapper puts only `git` on `PATH`, and the program's `#!/usr/bin/env node` then finds no Node; or install the default under a stable path, which is the deferred setup's job and would make this change install something.
 
 4. **Every listed path is checked when reached, not up front.** As today for the one configured resolver: a chain where the first answers never looks at the second, so a stale path later in the list does not break a machine where it is never needed. The spec's "An earlier listed resolver answers first" scenario fixes this.
 
-5. **Every resolver declining is a `UsageError`.** Exit 2, naming the config file, because the only way to reach it is a config that leaves the subagent out or lists resolvers that answer nowhere here, and the fix is to edit that file. Today's `throw new Error('every resolver declined, the default included')` was a bug guard; it becomes a user-facing path.
+5. **Every resolver declining is a `UsageError`: exit 2, naming the config file.** The only way to reach it is a chain that leaves `subagent` out, or lists resolvers that answer nowhere here, and the fix is to edit that file. Exit 3 would tell the review skills to run a subagent, which is what listing `subagent` asks for; a chain without it is the user's way to say "fail instead". The help text for `review` and `handoff` names the case under exit 2. Today's `throw new Error('every resolver declined, the default included')` was a bug guard; it becomes a user-facing path.
 
 6. **`config.json` is refused only when `config.yaml` is missing.** A file nobody reads any more should not block a machine that has moved on, but one that is still the only config there means the user has not, and the message names the new file. Checked in `readConfig()` before the YAML path is read.
 
-7. **`reviewers` leaves `lets` now, not in #59.** The ledger's D2 says nothing about models is stored. Carrying `reviewers` into a brand-new file format only to delete it in the next story would mean writing a parser, tests and spec text for a dead field. `review.ts` sends no `reviewers`, and the resolver's own choice applies, which the kept requirement "No list keeps the resolver's own choice" already describes. The conformance check still sends `reviewers` through its own request, so the resolver-side requirements and the kit stay.
+7. **`reviewers` leaves `lets` now, not in #59.** The ledger's D2 says nothing about models is stored. Carrying `reviewers` into a brand-new file format only to delete it in the next story would mean writing a parser, tests and spec text for a dead field. `review.ts` sends no `reviewers`, and the resolver's own choice applies, which the kept requirement "No list keeps the resolver's own choice" already describes. The conformance check still sends `reviewers` through its own request, so the resolver-side requirements and the kit stay. This reverses the part of ADR-002 that says `lets` sends the reviewers; the note on ADR-002 and the manifest record that, and the record for what replaces it belongs to the change that makes resolvers report what they can run.
 
 8. **Setup is deleted, not disabled.** The module, its tests, the command, its help text and the `delegate-setup` main spec go. A disabled command that prints "removed" would still have to be documented and tested, and the reshaped setup will not share its shape.
 
@@ -54,9 +54,10 @@ Nix fetches the workspace's npm dependencies from `pnpm-lock.yaml` into a fixed-
 
 - [The `pnpmDeps` hash in `flake.nix` goes stale when `yaml` is added, and `nix flake check` fails until it is refreshed] → The task that adds the dependency refreshes the hash as the comment in `flake.nix` says, and `nix flake check` is in the pre-push checks.
 - [A user with the old `config.json` and no `config.yaml` is stopped by every `lets delegate` command] → The message names both files; there are no users yet, and the README's new paragraph shows the file to write.
-- [With `reviewers` gone, a review from T3 again picks the first catalog entry for the family, which is the `gpt-6-astra` failure] → That is today's behavior for a config with no reviewers, and #58 fixes it at its root. It is recorded in #58's packet, which supersedes #34.
+- [With `reviewers` gone, a review from T3 picks the first catalog entry for the family, which is the `gpt-6-astra` failure] → That is today's behavior for a machine with no config, which is every machine so far. #58 fixes it at its root, and its packet supersedes #34.
 - [The release's README and resolver READMEs tell users to run `lets delegate setup`] → Every mention is listed in the proposal's Impact and replaced in one task.
 - [Removing the `delegate-setup` main spec by deleting the folder leaves no REMOVED record in the specs] → The proposal records the withdrawal, and the git history keeps the spec.
+- [A project pinned to an older `lets` runs `lets delegate setup --write` and writes `config.json` beside a machine's `config.yaml`] → `lets` reads `config.yaml` when it exists and ignores the JSON file; only a machine with no `config.yaml` is stopped, with a message that names both files.
 
 ## Migration & Rollback
 

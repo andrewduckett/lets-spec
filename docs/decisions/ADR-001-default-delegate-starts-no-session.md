@@ -8,7 +8,7 @@ description: Architecture decision record (ADR) for the built-in default delegat
 
 # ADR-001: The built-in default delegate starts no session
 
-> Amended by ADR-005: the default answers when the user has no config, or where the config lists it. Nothing is installed or found on `PATH` any more; the chain in the config decides.
+> Amended by ADR-005: the default answers when the user has no config, or where the config's chain lists `subagent`. `lets` no longer looks for a resolver on `PATH`; the chain decides.
 
 ## Context
 
