@@ -52,7 +52,7 @@
         # so the hash is the same on each. pnpm fetches only the host's
         # unless told.
         pnpmInstallFlags = [ "--os=linux,darwin" "--cpu=x64,arm64" ];
-        hash = "sha256-qx8RTpo/oR00t8b5kQcOg1noEyPLgBLlIwsytgGyF5I=";
+        hash = "sha256-AWK0RKZy8BxSAkvWvlzw8CN2JPzBoorwrEfeUtnvnws=";
       };
 
       app = pkgs: name: description: {

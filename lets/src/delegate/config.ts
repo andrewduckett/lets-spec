@@ -1,67 +1,62 @@
-// The user's delegate config: which resolver answers, and which families and
-// models may run a review. `lets delegate setup` writes it; lets is the only
-// reader, and passes the reviewers to a resolver in the run request.
-import { isAbsolute, join } from 'node:path';
+// The user's delegate config: the chain, the resolvers lets asks, in order.
+// The user writes it by hand, and lets is the only reader. Keys this lets
+// does not know are ignored, so a later lets can add one beside them.
+import { dirname, isAbsolute, join } from 'node:path';
+import { parse } from 'yaml';
 import type { Io } from '../io.ts';
 import type { Env } from './env.ts';
 import { UsageError } from './errors.ts';
-import { EFFORTS, FAMILIES } from './protocol.ts';
-import type { Effort, Family } from './protocol.ts';
 
-export const CONFIG_VERSION = 1;
+export const CONFIG_VERSION = 2;
+// The entry in the chain that names the default, lets-delegate-subagent,
+// which ships beside the running lets.
+export const SUBAGENT_ENTRY = 'subagent';
 
-// A reviewer as the config holds it. Without efforts it serves every effort.
-export type ConfigReviewer = { family: Family; model: string | null; efforts?: Effort[] };
-export type Config = { version: typeof CONFIG_VERSION; resolver: string | null; reviewers: ConfigReviewer[] };
+// Each resolver is an absolute path, or SUBAGENT_ENTRY.
+export type Config = { version: typeof CONFIG_VERSION; resolvers: string[] };
 
 export type ConfigDeps = { env: Env; io: Io };
 
-// $XDG_CONFIG_HOME/lets-delegate/config.json, or ~/.config/... when it is unset.
+// $XDG_CONFIG_HOME/lets-delegate/config.yaml, or ~/.config/... when it is unset.
 export function configPath({ env, io }: ConfigDeps): string {
   const base = env.XDG_CONFIG_HOME ? env.XDG_CONFIG_HOME : join(io.homedir(), '.config');
-  return join(base, 'lets-delegate', 'config.json');
+  return join(base, 'lets-delegate', 'config.yaml');
 }
 
 // The config, or null when there is no file. Throws a UsageError that names
-// the file and the bad value when the file is not a valid config.
+// the file and the bad value when the file is not a valid config, and one
+// that names both files when only the old config.json is there.
 export function readConfig(deps: ConfigDeps): Config | null {
   const path = configPath(deps);
   const text = deps.io.readFile(path);
-  if (text === null) return null;
-  return parseConfig(text, path);
+  if (text !== null) return parseConfig(text, path);
+  const old = join(dirname(path), 'config.json');
+  if (deps.io.exists(old)) {
+    throw new UsageError(`${old} is no longer read: the delegate config is now config.yaml. Write ${path} instead, then remove ${old}.`);
+  }
+  return null;
 }
 
 // The config in text, read from path. Throws as readConfig does.
 export function parseConfig(text: string, path: string): Config {
-  const fail = (message: string) => new UsageError(`${path}: ${message}. Run \`lets delegate setup\` to write it again.`);
-  const show = (value: unknown) => JSON.stringify(value);
+  const fail = (message: string) => new UsageError(`${path}: ${message}.`);
+  const show = (value: unknown) => JSON.stringify(value) ?? String(value);
   let value: unknown;
   try {
-    value = JSON.parse(text);
-  } catch {
-    throw fail('is not JSON');
+    value = parse(text);
+  } catch (error) {
+    throw fail(`is not YAML: ${(error as Error).message.split('\n')[0].replace(/:$/, '')}`);
   }
-  if (!isObject(value)) throw fail('is not a JSON object');
+  if (!isObject(value)) throw fail(`must be a mapping with version and resolvers, got ${show(value)}`);
   if (value.version !== CONFIG_VERSION) throw fail(`version must be ${CONFIG_VERSION}, got ${show(value.version)}`);
-  if (value.resolver !== null && (typeof value.resolver !== 'string' || !isAbsolute(value.resolver))) {
-    throw fail(`resolver must be an absolute path or null, got ${show(value.resolver)}`);
-  }
-  if (!Array.isArray(value.reviewers)) throw fail(`reviewers must be a list, got ${show(value.reviewers)}`);
-  value.reviewers.forEach((reviewer: unknown, i: number) => {
-    const at = `reviewers[${i}]`;
-    if (!isObject(reviewer)) throw fail(`${at} must be an object, got ${show(reviewer)}`);
-    if (!(FAMILIES as readonly unknown[]).includes(reviewer.family)) {
-      throw fail(`${at}.family must be one of ${FAMILIES.join(', ')}, got ${show(reviewer.family)}`);
-    }
-    if (reviewer.model !== null && typeof reviewer.model !== 'string') {
-      throw fail(`${at}.model must be a string or null, got ${show(reviewer.model)}`);
-    }
-    const { efforts } = reviewer;
-    if (efforts !== undefined && (!Array.isArray(efforts) || !efforts.every((e) => (EFFORTS as readonly unknown[]).includes(e)))) {
-      throw fail(`${at}.efforts must be a list of ${EFFORTS.join(', ')}, got ${show(efforts)}`);
+  const { resolvers } = value;
+  if (!Array.isArray(resolvers)) throw fail(`resolvers must be a list, got ${show(resolvers)}`);
+  resolvers.forEach((entry: unknown, i: number) => {
+    if (entry !== SUBAGENT_ENTRY && (typeof entry !== 'string' || !isAbsolute(entry))) {
+      throw fail(`resolvers[${i}] must be an absolute path or ${SUBAGENT_ENTRY}, got ${show(entry)}`);
     }
   });
-  return value as Config;
+  return { version: CONFIG_VERSION, resolvers };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

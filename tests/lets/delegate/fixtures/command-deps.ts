@@ -9,8 +9,11 @@
 //   gitBefore: what `git status -z` prints before the session
 //   gitAfter:  what it prints after; default gitBefore
 //   commands:  the commands on PATH
+//   executables: more paths that are executable files, beside the fake
+//              resolver; they answer from results when run
 //   results:   answers for any other command, in order
 //   files:     the files there are; default the prompt file /repo/p.md
+//   config:    the text of the delegate config, CONFIG, when there is one
 //   subagent:  false when lets's own default is missing; default true
 import { mkdtempSync, readFileSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -22,6 +25,7 @@ import { fakeIo } from './fake-io.ts';
 
 export const FAKE_RESOLVER = fileURLToPath(new URL('fake-resolver', import.meta.url));
 export const PROMPT_FILE = '/repo/p.md';
+export const CONFIG = '/home/u/.config/lets-delegate/config.yaml';
 // The Node that runs lets, and the default beside it, as the deps name them.
 export const NODE = '/nix/node';
 export const SUBAGENT = '/pkg/contrib/lets-delegate-subagent';
@@ -33,20 +37,23 @@ type Options = {
   gitBefore?: string;
   gitAfter?: string;
   commands?: string[];
+  executables?: string[];
   results?: ExecResult[];
   files?: Record<string, string>;
+  config?: string;
   subagent?: boolean;
 };
 
 export function commandDeps({
-  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, commands = [], results = [],
-  files = { [PROMPT_FILE]: 'PROMPT TEXT' }, subagent = true,
+  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, commands = [], executables = [], results = [],
+  files = { [PROMPT_FILE]: 'PROMPT TEXT' }, config, subagent = true,
 }: Options = {}) {
   const log = join(mkdtempSync(join(tmpdir(), 'lets-delegate-')), 'calls');
   // Where the real default writes what it would write under /repo.
   const repo = realpathSync(mkdtempSync(join(tmpdir(), 'lets-delegate-repo-')));
   const real = realIo();
-  const io = fakeIo({ files: subagent ? { ...files, [SUBAGENT]: '' } : files, commands, executables: [FAKE_RESOLVER] });
+  const all = { ...files, ...(config === undefined ? {} : { [CONFIG]: config }), ...(subagent ? { [SUBAGENT]: '' } : {}) };
+  const io = fakeIo({ files: all, commands, executables: [FAKE_RESOLVER, ...executables] });
   // The fake resolver is a real process, so its deadlines are real too.
   io.sleep = real.sleep;
   let statusCalls = 0;

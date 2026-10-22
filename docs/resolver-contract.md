@@ -24,24 +24,24 @@ The code that checks the contract is
 
 1. The executable that `LETS_SPEC_RESOLVER` names, when it is set. If the
    path is missing or not executable, `lets` exits 2.
-2. The resolver the user's delegate config names: `resolver` in
-   `~/.config/lets-delegate/config.json`, or under `XDG_CONFIG_HOME`.
-   `lets delegate setup` writes it. When the lookup reaches this
-   resolver and it is missing or not executable, `lets` exits 2 and asks
-   no later one.
-3. `lets-delegate-resolver` on your `PATH`. When it is the same file as
-   the configured resolver, it is asked once. No program by that name
-   ships any more, so name your resolver in the config instead, with
-   `lets delegate setup --resolver <path> --write`. Issue #49 removes
-   this step.
-4. The default, `lets-delegate-subagent`, which never declines. It
-   ships with `lets`, which runs it from `contrib/lets-delegate-subagent`
-   beside itself with its own Node, and it answers as `subagent`. When
-   that file is missing or Node cannot run it, `lets` exits 4 and says
-   its install is incomplete.
+2. Each resolver in the chain: the `resolvers` list in the user's
+   delegate config, `~/.config/lets-delegate/config.yaml`, or under
+   `XDG_CONFIG_HOME`. Each entry is an absolute path, or the word
+   `subagent` for the default. When the lookup reaches a path that is
+   missing or not an executable file, `lets` exits 2 and asks no later
+   one.
 
-Only `lets` reads the config. A resolver learns the user's reviewers from
-the `reviewers` field of the `run` request.
+With no config, the default takes the place of the chain. The default,
+`lets-delegate-subagent`, never declines. It ships with `lets`, which runs
+it from `contrib/lets-delegate-subagent` beside itself with its own Node,
+and it answers as `subagent`. When that file is missing or Node cannot run
+it, `lets` exits 4 and says its install is incomplete.
+
+`lets` asks nothing it finds on `PATH`. When every resolver declines,
+`lets` exits 2 and names the config file.
+
+Only `lets` reads the config. `lets` sends no `reviewers` in a `run`
+request, so a resolver picks the family and model itself.
 
 ## How `lets` runs a resolver
 
@@ -73,7 +73,7 @@ verb.
 | `interactive` | `run`, `start` | `false` for `run`, `true` for `start` |
 | `effort` | `run` | `low`, `medium` or `high` |
 | `timeoutMinutes` | `run` | A whole number. By default 15 for `low` and `medium`, and 45 for `high`. |
-| `reviewers` | `run`, optional | The families and models the user allows for this effort, in their order: a list of `{ family, model }`, where `model` is a string or `null` for the tool's default. It is absent when the user has no delegate config, and may be empty. A resolver may ignore it. |
+| `reviewers` | `run`, optional | A list of `{ family, model }` to try, in order, where `model` is a string or `null` for the tool's default. `lets` never sends it; the conformance check does. It may be empty. A resolver may ignore it. |
 | `handle` | `finish` | A handle this resolver returned |
 | `ok` | `finish` | `true` when the review succeeded, `false` when the session should stay for a person to read |
 
@@ -130,10 +130,14 @@ picks the family itself.
 ## Write your own
 
 A resolver is any executable file. Its shebang picks the language. Write
-one for the harness you use, then name it in your delegate config:
+one for the harness you use, then add its absolute path to `resolvers` in
+your delegate config, before `subagent`:
 
-```sh
-lets delegate setup --resolver <path> --write
+```yaml
+version: 2
+resolvers:
+  - /home/you/bin/my-resolver
+  - subagent
 ```
 
 To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.

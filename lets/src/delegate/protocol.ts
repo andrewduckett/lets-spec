@@ -24,7 +24,7 @@ export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium
 export type Handle = { kind: string; id: string; [field: string]: unknown };
 
 // A family and model a review may run on. A null model is the tool's own
-// default. lets sends them in the order the user's delegate config gives.
+// default. lets never sends them; the conformance check does.
 export type Reviewer = { family: Family; model: string | null };
 
 export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string };

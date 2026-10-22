@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/review.ts';
 import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
-import { commandDeps, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
+import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
   ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', ...over });
@@ -30,35 +30,35 @@ test('the run request carries the need, with readOnly true and interactive false
   });
 });
 
-const CONFIG = '/home/u/.config/lets-delegate/config.json';
-// commandDeps with a delegate config that holds reviewers.
-const withReviewers = (reviewers: object[]) => commandDeps({
-  files: { [PROMPT_FILE]: 'PROMPT TEXT', [CONFIG]: JSON.stringify({ version: 1, resolver: null, reviewers }) },
-});
+// commandDeps with no override, and a config that lists the fake resolver.
+const listingFake = (over: Parameters<typeof commandDeps>[0] = {}) =>
+  commandDeps({ resolver: false, config: `version: 2\nresolvers:\n  - ${FAKE_RESOLVER}\n`, ...over });
 
-test('the run request carries the config\'s reviewers that serve the effort, as family and model', async () => {
-  const t = withReviewers([{ family: 'gpt', model: 'gpt-6-luna', efforts: ['high'] }, { family: 'gpt', model: 'gpt-5.6-luna' }]);
-  await run(options({ effort: 'low' }), t.deps);
-  assert.deepEqual(t.resolverCalls()[0][1].reviewers, [{ family: 'gpt', model: 'gpt-5.6-luna' }]);
-});
-
-test('when no reviewer serves the effort, stderr names the config file and the effort', async () => {
-  const t = withReviewers([{ family: 'gpt', model: 'gpt-6-luna', efforts: ['high'] }]);
-  await run(options({ effort: 'low' }), t.deps);
-  assert.deepEqual(t.resolverCalls()[0][1].reviewers, []);
-  assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
-});
-
-test('a config with no reviewers at all also names the file and the effort on stderr', async () => {
-  const t = withReviewers([]);
-  await run(options({ effort: 'low' }), t.deps);
-  assert.match(t.stderr(), new RegExp(`no reviewer in ${CONFIG} serves effort low`));
+test('the run request has no reviewers, whatever the config holds', async () => {
+  const config = `version: 2\nresolvers: [${FAKE_RESOLVER}]\nreviewers:\n  - family: gpt\n    model: gpt-6-luna\n`;
+  const t = listingFake({ config });
+  assert.equal(await run(options(), t.deps), 0);
+  assert.equal('reviewers' in t.resolverCalls()[0][1], false);
 });
 
 test('an invalid config is exit 2, naming the file and the bad value', async () => {
-  const t = withReviewers([{ family: 'mistral', model: null }]);
+  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers:\n  - bin/lets-delegate-t3\n' });
   assert.equal(await run(options(), t.deps), 2);
-  assert.match(t.stderr(), new RegExp(`${CONFIG}.*mistral`));
+  assert.match(t.stderr(), new RegExp(`${CONFIG}.*bin/lets-delegate-t3`));
+});
+
+test('when every listed resolver declines, a review is exit 2 with nothing on stdout', async () => {
+  const t = listingFake({ settings: { FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' } });
+  assert.equal(await run(options(), t.deps), 2);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), new RegExp(`every resolver declined.*${CONFIG}`));
+});
+
+test('a listed resolver that answers comes before the subagent entry', async () => {
+  const t = commandDeps({ resolver: false, config: `version: 2\nresolvers: [${FAKE_RESOLVER}, subagent]\n` });
+  assert.equal(await run(options(), t.deps), 0);
+  assert.equal(t.stdout(), 'FINDINGS\n');
+  assert.equal(t.io.calls.some(([cmd]) => cmd === NODE), false, 'the default was not asked');
 });
 
 test('the timeout is the one given, else the default by effort', async () => {

@@ -1,7 +1,8 @@
 # lets-delegate-subagent
 
-The default resolver. When no other resolver answers a `lets delegate`
-request, this one does. It never declines, and it starts no session.
+The default resolver. `lets` asks it when you have no delegate config, or
+where your config's `resolvers` lists `subagent`. It never declines, and it
+starts no session.
 
 You do not install it. `lets` ships it and runs it for you.
 
@@ -14,14 +15,18 @@ You do not install it. `lets` ships it and runs it for you.
 
 To get a fresh session in another model family, install the resolver for
 your harness, such as [`lets-delegate-t3`](../t3-resolver/README.md) or
-[`lets-delegate-herdr`](../herdr-resolver/README.md). Every resolver keeps
+[`lets-delegate-herdr`](../herdr-resolver/README.md), and list it in your
+delegate config before `subagent`. Every resolver keeps
 [the resolver contract](../../docs/resolver-contract.md).
 
 ## Where lets finds it
 
-`lets` runs it as the last resolver it asks, from
-`contrib/lets-delegate-subagent` beside itself, with the same Node that
-runs `lets`. Each way of getting `lets` carries a copy there:
+`lets` runs it from `contrib/lets-delegate-subagent` beside itself, with
+the same Node that runs `lets`: with no config, after the resolver
+`LETS_SPEC_RESOLVER` names, if any; or at the place in the chain where
+your config lists `subagent`. A path to some other copy of the program in
+the config is just another resolver to `lets`. Each way of getting `lets`
+carries a copy there:
 
 | You run lets from | The copy is |
 |---|---|

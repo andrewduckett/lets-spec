@@ -1,10 +1,11 @@
 // Which resolver answers a request. In order: the executable LETS_SPEC_RESOLVER
-// names, the resolver the user's delegate config names, lets-delegate-resolver
-// on PATH, then the default, lets-delegate-subagent, which ships beside lets.
-// The first that does not decline answers. No process access here;
-// everything comes through io.
-import { delimiter, join, resolve as resolvePath } from 'node:path';
+// names, then the chain, the resolvers the user's delegate config lists. With
+// no config, the default, lets-delegate-subagent, which ships beside lets,
+// stands in for the chain. The first that does not decline answers. Nothing
+// is looked up on PATH. No process access here; everything comes through io.
+import { join, resolve as resolvePath } from 'node:path';
 import type { Child, Io } from '../io.ts';
+import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
 import type { Env } from './env.ts';
 import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
@@ -12,7 +13,6 @@ import { DECLINE, exitFor, parseResponse } from './protocol.ts';
 import type { Requests, Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
 
-export const RESOLVER_COMMAND = 'lets-delegate-resolver';
 // The default resolver, relative to the folder lets runs from.
 export const DEFAULT_RESOLVER = 'contrib/lets-delegate-subagent';
 // How long lets waits past a run's own timeout before it stops the resolver.
@@ -20,10 +20,10 @@ export const BACKSTOP_MINUTES = 1;
 // How long lets waits on any verb but run. None of them waits on a session.
 export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
 
-// A resolver to ask: lets runs `<command> [...args] <verb>`. configured: the
-// user's delegate config names it, and it is checked only when the lookup
-// reaches it. builtIn: it is the default that ships with lets, at name.
-export type Candidate = { name: string; command: string; args?: string[]; configured?: true; builtIn?: true };
+// A resolver to ask: lets runs `<command> [...args] <verb>`. listed: the
+// user's delegate config lists it by path, and it is checked only when the
+// lookup reaches it. builtIn: it is the default that ships with lets, at name.
+export type Candidate = { name: string; command: string; args?: string[]; listed?: true; builtIn?: true };
 
 // What a verb came to: the exit lets gives, the response, if any, and what
 // the resolver said on stderr.
@@ -45,21 +45,13 @@ export function candidates({ env, io, cwd, config, packageRoot, nodePath }: Look
     }
     list.push({ name: command, command });
   }
-  const configured = config?.resolver ?? null;
-  if (configured !== null) list.push({ name: configured, command: configured, configured: true });
-  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
   // The default runs with lets's own Node, so it needs no node on PATH.
   const subagent = join(packageRoot, DEFAULT_RESOLVER);
-  list.push({ name: subagent, command: nodePath, args: [subagent], builtIn: true });
-  return list;
-}
-
-// The path of the RESOLVER_COMMAND that PATH finds first, or null.
-export function resolverOnPath(env: Env, io: Io): string | null {
-  for (const dir of (env.PATH ?? '').split(delimiter)) {
-    if (dir !== '' && io.isExecutable(join(dir, RESOLVER_COMMAND))) return join(dir, RESOLVER_COMMAND);
+  const builtIn: Candidate = { name: subagent, command: nodePath, args: [subagent], builtIn: true };
+  for (const entry of config?.resolvers ?? [SUBAGENT_ENTRY]) {
+    list.push(entry === SUBAGENT_ENTRY ? builtIn : { name: entry, command: entry, listed: true });
   }
-  return null;
+  return list;
 }
 
 // Ask one candidate. null means it declined. The outcome's code is the exit
@@ -108,12 +100,12 @@ const incompleteInstall = (problem: 'find' | 'run', path: string) =>
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
-// it reaches a configured resolver that is missing or cannot be run, and a
-// SpawnError when the default is missing.
+// it reaches a listed resolver that is missing or cannot be run, or when
+// every resolver declines, and a SpawnError when the default is missing.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
-    if (candidate.configured && !deps.io.isExecutable(candidate.command)) {
-      throw new UsageError(`your delegate config names the resolver ${candidate.command}, which does not exist or is not executable. Run \`lets delegate setup\` again.`);
+    if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
+      throw new UsageError(`${configPath(deps)} lists the resolver ${candidate.command}, which does not exist or is not an executable file.`);
     }
     if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
@@ -125,6 +117,7 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
     }
     if (outcome !== null) return { candidate, outcome };
   }
-  // The default is last, and it never declines.
-  throw new Error('every resolver declined, the default included');
+  // Only a config can get here: with none, the default is last, and it
+  // never declines.
+  throw new UsageError(`every resolver declined. ${configPath(deps)} lists the resolvers to ask; add subagent to fall back to a subagent.`);
 }
