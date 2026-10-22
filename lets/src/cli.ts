@@ -10,8 +10,6 @@ import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
 import { run as review } from './delegate/review.ts';
-import { run as setup } from './delegate/setup.ts';
-import type { SetupOptions } from './delegate/setup.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
@@ -59,15 +57,23 @@ The Nix wrapper sets WORKFLOW_RELEASE.`;
 
 const DELEGATE_HELP = `
 A resolver turns each request into a real session. lets asks, in order:
-the executable LETS_SPEC_RESOLVER names, the resolver your delegate config
-names, lets-delegate-resolver on PATH, then the default,
-lets-delegate-subagent, which ships with lets. The first that does not
-decline answers. The default starts no session: a review exits 3, and a
-handoff gives back the prompt to carry on by hand.
+the executable LETS_SPEC_RESOLVER names, then each resolver your delegate
+config lists under resolvers. It stops at the first that does not
+decline. Nothing on PATH is asked.
 
-Run lets delegate setup once per machine. It finds what your machine can
-run, and proposes the config: which resolver to ask, and which families and
-models a review may use.
+The config is $XDG_CONFIG_HOME/lets-delegate/config.yaml, or
+~/.config/lets-delegate/config.yaml when XDG_CONFIG_HOME is unset. You
+write it by hand:
+
+  version: 2
+  resolvers:
+    - /absolute/path/to/lets-delegate-t3
+    - subagent
+
+Each entry is an absolute path, or subagent: the default,
+lets-delegate-subagent, which ships with lets. With no config, only the
+default is asked. The default starts no session: a review exits 3, and a
+handoff gives back the prompt to carry on by hand.
 
 Run lets delegate from the repo root.`;
 
@@ -79,7 +85,7 @@ answered is not the source family.
 
 Exit codes:
   0  the final message is on stdout
-  2  usage error
+  2  usage error, or every resolver in the config declined
   3  no fresh session can run here: no resolver started one, or none of
      its families is available
   4  the harness refused the session, or the resolver broke the contract
@@ -91,27 +97,10 @@ const HANDOFF_HELP = `
 stdout: one JSON line, { resolver, handle }. When no session could be
 started, handle is null and instructions holds the text to show the user.
 
-Exit codes: 0 ok, 2 usage error, 4 the session could not start.`;
-
-const SETUP_HELP = `
-It starts no session and spends no tokens. It looks on PATH for t3, herdr,
-lets-delegate-resolver, and each family's CLI: codex (gpt), claude and agy
-(gemini). It asks codex and agy which models the account can run, with
-\`codex debug models\` and \`agy models\`. claude has no list, so its CLI's
-default runs.
-
-The proposal has one reviewer per available family, in the order gpt,
-claude, gemini, each with the first model its account lists. Its resolver
-is lets-delegate-resolver on PATH when t3 or herdr is installed; else none,
-and the default, lets-delegate-subagent, answers.
-
-Nothing is written without --write. The config is
-$XDG_CONFIG_HOME/lets-delegate/config.json, or
-~/.config/lets-delegate/config.json when XDG_CONFIG_HOME is unset.
---write replaces it. To limit a reviewer to some efforts, add
-"efforts": ["low", "medium", "high"] to its entry by hand.
-
-Exit codes: 0 ok, 2 usage error.`;
+Exit codes:
+  0  ok
+  2  usage error, or every resolver in the config declined
+  4  the session could not start`;
 
 const CONFORMANCE_HELP = `
 It prints one line per check, and exits 1 if any fails.
@@ -194,20 +183,6 @@ delegate
   .addHelpText('after', HANDOFF_HELP)
   .action(async (options: HandoffOptions) => {
     process.exitCode = await handoff(options, realDeps());
-  });
-
-delegate
-  .command('setup')
-  .summary('find what this machine can run, and propose a delegate config')
-  .description('Find the harness, the family CLIs and the models each account can run, and propose a delegate config. Writes it only with --write.')
-  .option('--write', 'write the proposed config, replacing the current one')
-  .option('--json', 'print the findings, the current config and the proposal as one JSON object')
-  .option('--order <families>', 'the reviewers, in order, comma-separated; a family left out is dropped')
-  .option('--model <family=model>', 'the model for one family; give it once per family', (value: string, list: string[] = []) => [...list, value])
-  .option('--resolver <path|none>', 'the resolver to name, or none for the default, lets-delegate-subagent')
-  .addHelpText('after', SETUP_HELP)
-  .action(async (options: SetupOptions) => {
-    process.exitCode = await setup(options, realDeps());
   });
 
 delegate

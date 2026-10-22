@@ -18,7 +18,7 @@ const REVIEW = ['delegate', 'review', '--name', 'x', '--prompt-file', 'p.md', '-
 const HANDOFF = ['delegate', 'handoff', '--name', 'x', '--prompt-file', 'p.md'];
 
 test('every old command is rejected by name', async () => {
-  for (const command of ['critique', 'detect']) {
+  for (const command of ['critique', 'detect', 'setup']) {
     const { code, stderr } = await lets('delegate', command);
     assert.equal(code, 2, command);
     assert.match(stderr, new RegExp(`unknown command '${command}'`));
@@ -75,14 +75,19 @@ test('neither delegate --help nor review --help says the default runs codex, cla
   }
 });
 
-test('setup with a flag that names an unknown family is a usage error that names it', async () => {
-  const { code, stderr } = await lets('delegate', 'setup', '--model', 'mistral=large');
-  assert.equal(code, 2);
-  assert.match(stderr, /mistral/);
+test('delegate --help describes the chain in config.yaml, and names neither setup nor a PATH lookup', async () => {
+  const { stdout } = await lets('delegate', '--help');
+  const text = stdout.replace(/\s+/g, ' ');
+  assert.match(text, /config\.yaml/);
+  assert.match(text, /resolvers/);
+  assert.match(text, /\bsubagent\b/);
+  assert.doesNotMatch(text, /setup/);
+  assert.doesNotMatch(text, /lets-delegate-resolver/);
 });
 
-test('setup --help names --write, --json, --order, --model and --resolver', async () => {
-  const { code, stdout } = await lets('delegate', 'setup', '--help');
-  assert.equal(code, 0);
-  for (const flag of ['--write', '--json', '--order', '--model', '--resolver']) assert.match(stdout, new RegExp(flag));
+test('review --help and handoff --help say exit 2 covers every resolver in the config declining', async () => {
+  for (const argv of [['delegate', 'review', '--help'], ['delegate', 'handoff', '--help']]) {
+    const { stdout } = await lets(...argv);
+    assert.match(stdout.replace(/\s+/g, ' '), /2 usage error, or every resolver in the config declined/, argv.join(' '));
+  }
 });
