@@ -8,7 +8,7 @@ For instruction changes, interface checks verify referenced paths, command names
 
 ## 1. Shared reference and compatibility
 
-- [ ] 1.1 [medium] Make the domain-language reference available through both published flows: add `skills/lets-shape/references/domain-language.md` with the reviewed lookup, context-pointer, scope, semantic-consistency, and lifecycle rules; prove real nested-file distribution through release and sync fixtures in committed and ignored modes, without initializing or overwriting project glossaries (verify: deli -- nix develop --command bats tests/release-build.bats tests/sync-skills.bats).
+- [x] 1.1 [medium] Make the domain-language reference available through both published flows: add `skills/lets-shape/references/domain-language.md` with the reviewed lookup, context-pointer, scope, semantic-consistency, and lifecycle rules; prove real nested-file distribution through release and sync fixtures in committed and ignored modes, without initializing or overwriting project glossaries (✓ deli -- nix develop --command bats tests/release-build.bats tests/sync-skills.bats passed: 48 tests; new reference tests first failed on the absent file).
 - [ ] 1.2 [medium] Preserve project-owned glossary files across OpenSpec operations: extend `tests/openspec-compat.bats` for both schemas with unchanged capability IDs, grouped delta archive, and capability retirement leaving glossary cleanup to the author (verify: deli -- nix develop --command bats tests/openspec-compat.bats).
 
 ## 2. Workflow integration [depends-on: 1]
