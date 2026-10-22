@@ -23,7 +23,7 @@ export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
 // A resolver to ask: lets runs `<command> [...args] <verb>`. configured: the
 // user's delegate config names it, and it is checked only when the lookup
 // reaches it. builtIn: it is the default that ships with lets, at name.
-export type Candidate = { kind: 'external'; name: string; command: string; args?: string[]; configured?: true; builtIn?: true };
+export type Candidate = { name: string; command: string; args?: string[]; configured?: true; builtIn?: true };
 
 // What a verb came to: the exit lets gives, the response, if any, and what
 // the resolver said on stderr.
@@ -43,14 +43,14 @@ export function candidates({ env, io, cwd, config, packageRoot, nodePath }: Look
     if (!io.isExecutable(command)) {
       throw new UsageError(`LETS_SPEC_RESOLVER is ${command}, which does not exist or is not executable.`);
     }
-    list.push({ kind: 'external', name: command, command });
+    list.push({ name: command, command });
   }
   const configured = config?.resolver ?? null;
-  if (configured !== null) list.push({ kind: 'external', name: configured, command: configured, configured: true });
-  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
+  if (configured !== null) list.push({ name: configured, command: configured, configured: true });
+  if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
   // The default runs with lets's own Node, so it needs no node on PATH.
   const subagent = join(packageRoot, DEFAULT_RESOLVER);
-  list.push({ kind: 'external', name: subagent, command: nodePath, args: [subagent], builtIn: true });
+  list.push({ name: subagent, command: nodePath, args: [subagent], builtIn: true });
   return list;
 }
 
@@ -112,7 +112,7 @@ const incompleteInstall = (problem: 'find' | 'run', path: string) =>
 // SpawnError when the default is missing.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
-    if (candidate.kind === 'external' && candidate.configured && !deps.io.isExecutable(candidate.command)) {
+    if (candidate.configured && !deps.io.isExecutable(candidate.command)) {
       throw new UsageError(`your delegate config names the resolver ${candidate.command}, which does not exist or is not executable. Run \`lets delegate setup\` again.`);
     }
     if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));

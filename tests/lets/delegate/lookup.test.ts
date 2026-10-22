@@ -32,13 +32,12 @@ function ioWith(settings: Record<string, string>, onPath: string[] = []): Io {
   };
 }
 
-const kinds = (list: { kind: string }[]) => list.map(({ kind }) => kind);
 
 test('the candidates are the override, the resolver on PATH, then the default', () => {
   const io = fakeIo({ executables: ['/bin/mine'], commands: ['lets-delegate-resolver'] });
   const list = candidates({ env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: null });
   assert.deepEqual(list.map((c) => c.name), ['/bin/mine', 'lets-delegate-resolver', SUBAGENT]);
-  assert.deepEqual(kinds(list), ['external', 'external', 'external']);
+  assert.deepEqual(list.map((c) => c.builtIn === true), [false, false, true]);
 });
 
 // A config that names resolver, and no reviewers.
@@ -170,7 +169,7 @@ test('a resolver that cannot start is exit 4', async () => {
 });
 
 test('a resolver past the timeout is killed and reported as exit 6', async () => {
-  const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r', ...SELF, config: null }).filter((c) => c.kind === 'external');
+  const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r', ...SELF, config: null });
   const started = Date.now();
   const outcome = await callResolver(candidate, 'probe', probeRequest, { io: ioWith({ FAKE_RESOLVER_SLEEP_MS: '30000' }), timeoutMs: 200 });
   assert.equal(outcome?.code, 6);
