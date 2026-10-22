@@ -22,6 +22,7 @@ import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
 import type { ExecResult, Io } from 'resolver-kit/io.ts';
+import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Family } from 'resolver-kit/protocol.ts';
 
 const READ_LINES = '2000';
@@ -67,11 +68,13 @@ export function createAdapter(io: Io): Adapter {
   const herdr = (args: string[]) => io.execFile('herdr', args, { env: scrubbedEnv(io.env) });
 
   return {
-    name: 'herdr',
+    name: 'cli',
     program: 'lets-delegate-cli',
-    harness: 'herdr',
+    harness: 'this resolver',
     handleKind: 'tab',
-    detect: () => io.env.HERDR_ENV === '1' && io.commandExists('herdr'),
+    // Any terminal or harness will do, as long as one family's CLI is on PATH.
+    detect: () => FAMILIES.some((family) => io.commandExists(HEADLESS_EXECUTOR[family])),
+    whyDeclined: () => 'none of codex, claude or agy is on PATH',
     availableFamilies: () => familiesFromExecutors(io.commandExists),
     whyNot: (family) => `${HEADLESS_EXECUTOR[family]} is not on PATH`,
 

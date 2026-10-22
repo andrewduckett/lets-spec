@@ -304,8 +304,8 @@
             grep -q 'schema: lets-minimal' openspec/config.yaml
             git add -A
             node ${dist}/bin/lets sync --check
-            # Outside its harness each resolver declines, with no node_modules,
-            # and says which harness it needs.
+            # Each resolver declines here, with no node_modules, and says why:
+            # the sandbox is not T3 Code, and has none of codex, claude or agy.
             declines() {
               status=0
               echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
@@ -313,7 +313,7 @@
               [ "$(cat stderr)" = "$2" ]
             }
             declines lets-delegate-t3 'lets-delegate-t3: not inside T3 Code'
-            declines lets-delegate-cli 'lets-delegate-cli: not inside herdr'
+            declines lets-delegate-cli 'lets-delegate-cli: none of codex, claude or agy is on PATH'
             # The default never declines. A copy alone answers for itself.
             mkdir ../alone
             cp ${dist}/contrib/lets-delegate-subagent ../alone/

@@ -155,11 +155,14 @@ bundle_alone() {
   [ "$output" = 'lets-delegate-t3: not inside T3 Code' ]
 }
 
-@test "the herdr resolver bundle declines outside herdr with no node_modules beside it" {
+@test "the cli resolver bundle declines with no family CLI on PATH and no node_modules beside it" {
   bundle_alone cli-resolver lets-delegate-cli
-  run env -u HERDR_ENV node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  # A PATH with node on it, and none of codex, claude or agy.
+  mkdir "$BATS_TEST_TMPDIR/node-only"
+  ln -s "$(command -v node)" "$BATS_TEST_TMPDIR/node-only/node"
+  run env PATH="$BATS_TEST_TMPDIR/node-only" node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
-  [ "$output" = 'lets-delegate-cli: not inside herdr' ]
+  [ "$output" = 'lets-delegate-cli: none of codex, claude or agy is on PATH' ]
 }
 
 @test "the subagent resolver bundle answers subagent with no node_modules beside it" {

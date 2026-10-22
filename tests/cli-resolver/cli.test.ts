@@ -36,12 +36,8 @@ test('a start prompt with quotes and a newline is one argv element', () => {
   assert.equal(args({ kind: 'start', family: 'claude', effort: null, prompt: TRICKY }).at(-1), TRICKY);
 });
 
-test('detect needs HERDR_ENV=1 and herdr on PATH', () => {
-  assert.equal(createAdapter(fakeIo({ commands: ['herdr'], env: { HERDR_ENV: '1' } })).detect(), true);
-  assert.equal(createAdapter(fakeIo({ commands: [], env: { HERDR_ENV: '1' } })).detect(), false);
-  assert.equal(createAdapter(fakeIo({ commands: ['herdr'], env: {} })).detect(), false);
+test('the families available are those whose CLI is on PATH', () => {
   const adapter = createAdapter(fakeIo({ commands: ['herdr', 'codex'] }));
-  assert.equal(adapter.name, 'herdr');
   assert.deepEqual(adapter.availableFamilies({ effort: 'low' }), { gpt: [null], claude: [], gemini: [] });
 });
 
