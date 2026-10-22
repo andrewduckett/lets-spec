@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import type { Adapter, Session } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
+import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
 import type { Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
@@ -76,8 +77,14 @@ export function createAdapter(io: Io): Adapter {
       io.mkdirp(join(cwd, SCRATCH));
       const timeoutMinutes = Math.ceil(timeoutMs / 60000);
       const { cmd, args, input, readResultFrom } = runCommand({ family, model, effort, prompt, timeoutMinutes, lastMessagePath: lastMessagePath(cwd, name) });
-      const result = await io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input, timeoutMs });
-      return { text: readResultFrom === 'stdout' ? result.stdout : io.readFile(readResultFrom) };
+      const result = await io.execFile(cmd, args, { cwd, env: scrubbedEnv(io.env), input, timeoutMs }).catch((error: Error) => {
+        throw new SpawnError(error.message);
+      });
+      if (result.timedOut) throw new TimeoutError(`${cmd} did not finish in ${timeoutMinutes} minutes`);
+      if (result.code !== 0) throw new SessionFailed(`${cmd} failed: exit ${result.code}: ${result.stderr.slice(-500)}`);
+      // The kit turns an empty message, or a missing file, into a failed session.
+      if (readResultFrom === 'stdout') return { text: result.stdout };
+      return { text: io.exists(readResultFrom) ? io.readFile(readResultFrom) : '' };
     },
 
     async finish() {},

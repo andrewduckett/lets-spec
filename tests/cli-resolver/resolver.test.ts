@@ -57,6 +57,44 @@ test('a reviewer whose CLI is not on PATH is skipped, and says so', async () => 
   assert.deepEqual(io.calls, []);
 });
 
+// A claude review, from a codex author, whose CLI answers with result.
+const claudeRun = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'gpt', effort: 'high', timeoutMinutes: 3 }));
+const reviewWith = (result: NonNullable<Parameters<typeof fakeIo>[0]>['results']) => handle('run', claudeRun, createAdapter(fakeIo({ commands: ['claude'], results: result })));
+
+test('a CLI that exits non-zero is exit 5, with its exit and stderr', async () => {
+  const answer = await reviewWith([{ stdout: '', stderr: 'rate limited', code: 2 }]);
+  assert.equal(answer.code, 5);
+  assert.equal(answer.stdout, '');
+  assert.match(answer.stderr, /claude failed: exit 2: rate limited/);
+});
+
+test('a CLI that ends with an empty message is exit 5', async () => {
+  const answer = await reviewWith([{ stdout: '\n', stderr: '', code: 0 }]);
+  assert.equal(answer.code, 5);
+  assert.match(answer.stderr, /empty final message/);
+});
+
+test('a codex run that writes no last message is exit 5', async () => {
+  const answer = await handle('run', runRequest, createAdapter(fakeIo({ commands: ['codex'] })));
+  assert.equal(answer.code, 5);
+  assert.match(answer.stderr, /empty final message/);
+});
+
+test('a CLI that cannot start is exit 4, naming the CLI', async () => {
+  const io = fakeIo({ commands: ['claude'], execFile: async (cmd) => {
+    throw new Error(`cannot run ${cmd}: spawn ${cmd} EACCES`);
+  } });
+  const answer = await handle('run', claudeRun, createAdapter(io));
+  assert.equal(answer.code, 4);
+  assert.match(answer.stderr, /^lets-delegate-cli: cannot run claude: /);
+});
+
+test('a CLI that runs past the timeout is stopped, and is exit 6', async () => {
+  const answer = await reviewWith([{ stdout: '', stderr: '', code: 1, timedOut: true }]);
+  assert.equal(answer.code, 6);
+  assert.match(answer.stderr, /claude did not finish in 3 minutes/);
+});
+
 test('finish refuses a thread handle with exit 4', async () => {
   const request = JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'thread', id: 'T' }, ok: true }));
   const answer = await handle('finish', request, createAdapter(fakeIo({ commands: ['claude'] })));
