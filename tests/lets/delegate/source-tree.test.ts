@@ -3,13 +3,15 @@
 // missing or dangling link.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const LETS = fileURLToPath(new URL('../../../lets/bin/lets', import.meta.url));
+// The git on this PATH. The Nix sandbox has no sh to ask.
+const GIT = (process.env.PATH ?? '').split(delimiter).map((dir) => join(dir, 'git')).find((path) => existsSync(path))!;
 
 // A git repository, and a PATH that holds git alone, so no other resolver is
 // installed. HOME and XDG_CONFIG_HOME are empty, so no delegate config exists.
@@ -19,7 +21,7 @@ function bareRepo() {
   const bin = join(root, 'bin');
   mkdirSync(repo);
   mkdirSync(bin);
-  symlinkSync(execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim(), join(bin, 'git'));
+  symlinkSync(GIT, join(bin, 'git'));
   const env = { PATH: bin, HOME: root, XDG_CONFIG_HOME: join(root, 'config') };
   execFileSync('git', ['init', '--quiet'], { cwd: repo, env });
   return { repo, env };

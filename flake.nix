@@ -338,11 +338,11 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/headless-resolver
+            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/subagent-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts"
+            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts" "tests/subagent-resolver/*.test.ts"
             pnpm check
-            # The built-in default, the contrib resolvers and the shell example
+            # The default, lets-delegate-subagent, the contrib resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
             pnpm conformance
             touch "$out"
