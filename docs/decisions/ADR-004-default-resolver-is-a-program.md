@@ -18,7 +18,7 @@ The default is a resolver program, `lets-delegate-subagent`, built on the same k
 
 ## Consequences
 
-- Easier: the lookup has one kind of resolver. The order, the config and setup can treat the default as one more entry, which the user can see, move or drop.
+- Easier: the lookup has one kind of resolver. Because the default has a path like any other resolver, the config and setup can later list it as one more entry. This decision alone does not let the user see, move or drop it.
 - Easier: the default is checked by the same conformance check as every other resolver, so it cannot drift from the protocol.
 - Easier: a reader learns how the default behaves the way they learn any other resolver: from one small program.
 - Harder: every way `lets` is shipped must also ship the program, at the same place beside `lets`. A packaging mistake shows up as exit 4 at run time.

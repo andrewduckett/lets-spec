@@ -19,8 +19,9 @@
 
 ## Test Seams
 
-- **Primary test seam:** `resolve()` in `lets/src/delegate/lookup.ts`, driven with `fakeIo` and a `packageRoot`. It shows that `lets` finds its own `contrib/lets-delegate-subagent`, runs it with its own Node, and exits 4 when the file is missing.
+- **Primary test seam:** `resolve()` in `lets/src/delegate/lookup.ts`, driven with `fakeIo` and a `packageRoot`. It shows that `lets` finds its own `contrib/lets-delegate-subagent`, runs it with its own Node, and exits 4 with the install message when the file is missing or broken.
 - **Second seam:** the kit's verb layer, driven with a fake `Io`, for the subagent's own answers. This is where the tests in `tests/lets/delegate/default-resolver.test.ts` move to.
+- **Source-tree check:** one test runs the real `lets/bin/lets delegate handoff` as a process, in a temporary git repository, with no other resolver. It proves that the committed `lets/contrib/` symlink leads to a program that answers `subagent`. The fakes at the other seams cannot catch a missing or dangling symlink.
 - **Existing seams reused:** `tests/lets/delegate/lookup.test.ts`, `handoff.test.ts` and `review.test.ts` with `commandDeps()`; `tests/resolver-kit/`; the `pnpm conformance` script; the bundle test in `tests/release-build.bats`; and the flake's `dist` and `commands` checks, which run a packaged `lets` end to end.
 
 ## Scrutiny Tier & Blast Radius
@@ -52,9 +53,11 @@ The default candidate runs as `io.execFile(nodePath, [subagentPath, verb])`. `no
 
 Alternative: run the file directly, through its shebang. That needs `/usr/bin/env` and a `node` on `PATH`. The Nix sandbox has neither, and the Nix `lets-cli` wrapper does not add `node` to `PATH`.
 
-### D3. A missing default is a `SpawnError`, thrown before the call
+### D3. A missing or broken default fails with one install message
 
-When `resolve()` reaches the default candidate, it checks `io.exists(subagentPath)` first. If the file is missing, it throws `SpawnError`: "lets cannot find its default resolver at <path>, so this lets install is incomplete. Reinstall lets." `exitCodeOf` maps that to exit 4. This follows the configured-resolver check, which throws a `UsageError` at the same point. A file that exists but crashes takes the normal path: `exitFor` turns any other exit into 4, with the program's stderr.
+When `resolve()` reaches the default candidate, it checks `io.exists(subagentPath)` first. If the file is missing, it throws `SpawnError`: "lets cannot find its default resolver at <path>, so this lets install is incomplete. Reinstall lets." `exitCodeOf` maps that to exit 4. This follows the configured-resolver check, which throws a `UsageError` at the same point.
+
+When the file exists but the call comes back as exit 4, `resolve()` puts the same install message, with "cannot run" in place of "cannot find", before the program's own stderr. `callResolver` already gives exit 4 for every failure that is not 0, 3, 5 or 6: Node cannot start the file, the program crashes, or it breaks the contract. The subagent never exits 5 or 6, because it starts no session. So for the default, exit 4 always means a broken install.
 
 ### D4. The kit gets a verb layer under the adapter layer
 

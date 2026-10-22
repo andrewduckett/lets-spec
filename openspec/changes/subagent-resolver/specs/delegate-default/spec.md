@@ -57,8 +57,8 @@ The release tarball, the Nix `lets` package and the repository's source tree SHA
 - **WHEN** `lets-delegate-subagent finish` gets a handle of kind `thread`
 - **THEN** it exits 0 and stdout is empty
 
-### Requirement: A missing default fails the request
-When the lookup reaches the default and `lets` cannot run its own `lets-delegate-subagent`, `lets delegate` SHALL exit 4 and print nothing on stdout. Stderr SHALL name the file `lets` tried to run and say that the `lets` install is incomplete.
+### Requirement: A missing or broken default fails the request
+When the lookup reaches the default, and its own `lets-delegate-subagent` is missing or fails with any exit other than 0 or 3, `lets delegate` SHALL exit 4 and print nothing on stdout. Stderr SHALL name the file `lets` tried to run and say that the `lets` install is incomplete.
 
 #### Scenario: The file is gone
 - **WHEN** the release folder's `contrib/lets-delegate-subagent` is deleted, nothing else is installed or configured, and the user runs `lets delegate review`
@@ -67,3 +67,7 @@ When the lookup reaches the default and `lets` cannot run its own `lets-delegate
 #### Scenario: A handoff with the file gone
 - **WHEN** the release folder's `contrib/lets-delegate-subagent` is deleted, nothing else is installed or configured, and the user runs `lets delegate handoff`
 - **THEN** the command exits 4, stdout is empty, and no file is written under `.workspace/lets-delegate/`
+
+#### Scenario: The file is broken
+- **WHEN** the release folder's `contrib/lets-delegate-subagent` holds text that Node cannot run, nothing else is installed or configured, and the user runs `lets delegate review`
+- **THEN** the command exits 4, stdout is empty, and stderr contains the path of `contrib/lets-delegate-subagent` and the word `incomplete`
