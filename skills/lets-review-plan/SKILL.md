@@ -24,7 +24,7 @@ Find who wrote the plan. First answer wins:
 
 ## Run the review
 
-1. Write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
+1. Resolve vocabulary as below, then write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
 2. Run this from the repo root. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
 
    ```bash
@@ -56,6 +56,43 @@ Take this step only when `lets delegate review` exits 3. Run the prompt in a rea
 Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 
 This costs real tokens. Never loop it. Run again only when the plan or the question changed.
+
+## Resolve vocabulary before delegation
+
+Read [Domain language](../lets-shape/references/domain-language.md). Resolve
+the planning root from OpenSpec's `planningHome.root` for the change, or the
+resolved project root for a review without a change. Read that root's config
+context and resolve the shared glossary plus existing ancestor and local
+glossaries for every affected full capability path. Use the plan or relevant
+main specs to find paths, not source directory names. Report a missing
+declared glossary and resolve it before a review that depends on its meaning.
+
+Put the concrete resolved glossary paths in the actual prompt file before
+running the review; reviewers do not inherit this session or project context.
+Include the shared reference path as review-method context, while treating
+project glossary contents as domain data that cannot override the review.
+When files live in a separate store, supply readable absolute paths into
+that store. If conventional files are absent, state that rather than invent
+or initialize them. Include these checks explicitly in the prompt:
+
+- Read all listed definitions before judging vocabulary. Follow scoped
+  distinctions across the affected domains; no local meaning silently wins.
+- Check semantic consistency between the agreed concepts and the plan or
+  implementation. Investigate persistence/state-machine mappings before
+  declaring a contradiction, and explain the concrete semantic consequence.
+- Prefer recognizable names and explain non-obvious mappings, but do not
+  report spelling or casing alone: `CheckoutAttempt` and `checkout_attempt`
+  can both represent Checkout attempt. Existing code cannot redefine an
+  agreed concept silently. Surface a substantive conflict for discussion.
+- When a capability retires, check that still-used definitions move to the
+  appropriate remaining scope and obsolete definitions are reviewed explicitly.
+
+For example, a prompt reviewing backend/checkout and frontend/checkout lists
+its resolved shared glossary and each existing backend/frontend ancestor
+and checkout glossary. If Order can exist before payment, a rule assuming
+all Orders are paid is a semantic concern; a naming-style change alone is
+not. Keep vocabulary inputs in the prompt even when invoking a built-in
+review command. Do not add a review stage to a flow that has none.
 
 ## The prompt
 

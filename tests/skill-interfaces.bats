@@ -186,3 +186,11 @@ load support/release
     done
   done
 }
+
+@test "review vocabulary inputs resolve in the published standard flow" {
+  local out="$BATS_TEST_TMPDIR/standard" skill
+  build "$out" lets-standard,lets-minimal $(flow_skills standard)
+  for skill in lets-review-plan lets-review-code; do
+    assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
+  done
+}
