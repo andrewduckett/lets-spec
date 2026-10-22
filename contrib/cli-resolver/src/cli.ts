@@ -24,6 +24,7 @@ import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-k
 import type { ExecResult, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Family } from 'resolver-kit/protocol.ts';
+import { Declined } from 'resolver-kit/verbs.ts';
 
 const READ_LINES = '2000';
 
@@ -80,6 +81,9 @@ export function createAdapter(io: Io): Adapter {
 
     async spawn(request): Promise<HerdrSession> {
       const { kind, name, cwd, family, prompt } = request;
+      // A handoff needs a session a person can work in. The next resolver
+      // in the chain answers it.
+      if (kind === 'start') throw new Declined('this resolver only runs headless');
       const workspace = io.env.HERDR_WORKSPACE_ID;
       if (!workspace) throw new SpawnError('HERDR_WORKSPACE_ID is not set; run from a herdr pane');
       const created = await herdr(['tab', 'create', '--workspace', workspace, '--cwd', cwd, '--label', name, '--no-focus']);

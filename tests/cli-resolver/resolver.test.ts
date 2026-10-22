@@ -30,6 +30,14 @@ test('run declines with no family CLI on PATH, starting nothing', async () => {
   assert.deepEqual(io.calls, []);
 });
 
+test('start declines with every family CLI on PATH, starting nothing', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
+  const request = JSON.stringify(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P' }));
+  assert.deepEqual(await handle('start', request, createAdapter(io)),
+    { code: 75, stdout: '', stderr: 'lets-delegate-cli: this resolver only runs headless\n' });
+  assert.deepEqual(io.calls, []);
+});
+
 test('finish refuses a thread handle with exit 4', async () => {
   const request = JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'thread', id: 'T' }, ok: true }));
   const answer = await handle('finish', request, createAdapter(fakeIo({ commands: ['claude'] })));
