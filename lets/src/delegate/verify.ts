@@ -85,10 +85,15 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
       }
     }
 
+    // A resolver that only runs headless declines start, and the next
+    // resolver in the chain answers the handoff.
     const started = await call('start', JSON.stringify(buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.' })));
-    const answer = parsed('start', started);
-    report('start answers with a handle or instructions', typeof answer === 'string' ? answer : null);
-    if (typeof answer !== 'string') {
+    const declined = started.code === DECLINE;
+    const answer = declined ? silent(started) : parsed('start', started);
+    report('start answers with a handle or instructions, or declines', typeof answer === 'string' ? answer : null);
+    if (declined && answer === null) {
+      deps.stdout('      it declined start; the next resolver in the chain answers handoffs\n');
+    } else if (answer !== null && typeof answer !== 'string') {
       deps.stdout(answer.handle
         ? `      it started ${answer.handle.kind} ${answer.handle.id}; close it when you are done\n`
         : `      it answered: ${answer.instructions}\n`);

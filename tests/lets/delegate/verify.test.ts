@@ -50,7 +50,7 @@ test('the live part runs, checks the tree, finishes, and starts', async () => {
   assert.match(t.output(), /fake answered as gpt: "FINDINGS"/);
   assert.match(t.output(), /^ok {4}run leaves the tree unchanged$/m);
   assert.match(t.output(), /^ok {4}finish with the run's handle exits 0$/m);
-  assert.match(t.output(), /^ok {4}start answers with a handle or instructions$/m);
+  assert.match(t.output(), /^ok {4}start answers with a handle or instructions, or declines$/m);
   assert.match(t.output(), /it started fake f-1; close it when you are done/);
 });
 
@@ -73,6 +73,19 @@ test('a resolver that declines the live run says where to run the check', async 
   const t = setup({ FAKE_RESOLVER_EXIT_RUN: '75', FAKE_RESOLVER_STDOUT_RUN: '' });
   await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
   assert.match(t.output(), /^FAIL {2}run answers.*: it declined; run the check where this resolver applies$/m);
+});
+
+test('a live start that declines with nothing on stdout passes, and says the next resolver answers handoffs', async () => {
+  const t = setup({ FAKE_RESOLVER_EXIT_START: '75', FAKE_RESOLVER_STDOUT_START: '' });
+  await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
+  assert.match(t.output(), /^ok {4}start answers with a handle or instructions, or declines$/m);
+  assert.match(t.output(), /it declined start; the next resolver in the chain answers handoffs/);
+});
+
+test('a live start that declines and prints on stdout fails', async () => {
+  const t = setup({ FAKE_RESOLVER_EXIT_START: '75', FAKE_RESOLVER_STDOUT_START: '{"resolver":"fake"}' });
+  assert.equal(await run({ command: [fixture('fake-resolver')], live: true }, t.deps), 1);
+  assert.match(t.output(), /^FAIL {2}start answers with a handle or instructions, or declines: it printed /m);
 });
 
 test('arguments after the command go before the verb', async () => {
