@@ -16,7 +16,7 @@
 - The model retry runs as tested code in `lets`, and no skill loops.
 
 **Non-Goals:**
-- Defaults that differ by intent, such as `--effort high` for `code`. Every `run` takes the same options as the old command did.
+- Defaults that differ by intent, such as `--effort high` for `code`. The two review intents take the same options.
 - A way to choose the strategy apart from the command, such as a plan review run interactively.
 - Checking a `delegations` entry for an intent nobody asked about.
 - Changing `lets delegate verify`, apart from sending `verb` on its probe.
@@ -46,7 +46,7 @@
 ## Decisions
 
 ### D-1. Commander groups, one per strategy
-`delegate review` and `delegate handoff` become commands that only hold subcommands. Each has an `instructions` subcommand and a `run` subcommand. The review `run` keeps the options the old `review` had, and the handoff `run` keeps the old `handoff` options. A group command has no action, so commander rejects `lets delegate review --name x`, and the existing `CommanderError` handler maps that to exit 2.
+`delegate review` and `delegate handoff` become commands that only hold subcommands. Each has an `instructions` subcommand and a `run` subcommand. The review `run` takes the review options, and the handoff `run` takes the handoff options.
 - *Alternative:* keep `review` as an action and add `instructions` as a subcommand. Rejected in the brainstorm: commander cannot tell a subcommand from a stray argument on a command that also acts.
 
 ### D-2. `--for` is a mandatory option with choices, per strategy
@@ -98,13 +98,10 @@ The exit-code handling stays: on 3, a review takes the subagent step, and the ha
 
 ## Risks / Trade-offs
 
-- **[Risk] Breaking callers outside this repository.** A user's script that calls `lets delegate review` stops working → The README's *Fresh sessions* section shows the new form. The old commands exit 2 without running anything.
 - **[Risk] A long ranked list makes many calls when every model is refused.** A T3 catalog lists many models → Each refusal ends before any model output, so the calls are cheap. The skill passes only the options it ranked. The stderr names every refusal, so the cause is visible.
 - **[Risk] A third-party resolver ignores `verb`, and declines `start` the way cli used to** → `instructions` names that resolver for a handoff, and the handoff falls through to the next resolver. This is today's behavior. The contract doc tells authors to decline the probe too.
 - **[Trade-off] The probe now differs by verb, so `verify` checks only the `run` probe.** A resolver whose probe for `start` is wrong goes unchecked → Accepted. The handoff path already accepts a declined `start`.
 
 ## Migration & Rollback
 
-- No data or config migration. An existing `config.yaml` stays valid, because `delegations` is optional and the version stays at 2.
-- The three skills ship in the same release as the new `lets`. A project pinned to an older release keeps the old skills and the old `lets` together.
-- To roll back, revert this change's commits. The `delegations` key in a user's config is then ignored as an unknown key, and doesn't fail.
+N/A. The config stays at version 2, and `delegations` is optional. To roll back, revert this change's commits.

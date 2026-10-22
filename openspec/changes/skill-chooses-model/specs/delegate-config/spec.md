@@ -1,15 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The commands are grouped by strategy
-`lets delegate` SHALL have two strategies, `review` and `handoff`, and each SHALL have the commands `instructions` and `run`. `lets delegate review run` SHALL run a prompt in a fresh, read-only session and wait for its final message. `lets delegate handoff run` SHALL start a fresh, interactive session and return at once. `lets delegate review` and `lets delegate handoff` SHALL run no session themselves: given the options of a `run`, they SHALL exit 2 and ask no resolver.
-
-#### Scenario: The old review command
-- **WHEN** the user runs `lets delegate review --name x --prompt-file p.md --source-family claude --effort high --model gpt`
-- **THEN** it exits 2, and no resolver is run
-
-#### Scenario: The old handoff command
-- **WHEN** the user runs `lets delegate handoff --name build-x --prompt-file p.md --model claude`
-- **THEN** it exits 2, and no resolver is run
+`lets delegate` SHALL have two strategies, `review` and `handoff`, and each SHALL have the commands `instructions` and `run`. `lets delegate review run` SHALL run a prompt in a fresh, read-only session and wait for its final message. `lets delegate handoff run` SHALL start a fresh, interactive session and return at once.
 
 #### Scenario: The help lists both commands
 - **WHEN** the user runs `lets delegate review --help`

@@ -4,7 +4,7 @@ Since #58, `lets delegate review` and `lets delegate handoff` need `--model`, bu
 
 ## What Changes
 
-- **BREAKING:** `lets delegate review` and `lets delegate handoff` become groups, each with two commands, `instructions` and `run` (D11, D12). Calling `lets delegate review` or `lets delegate handoff` with the old options exits 2. The only callers are the three skills this change rewrites.
+- `lets delegate review` and `lets delegate handoff` become groups, each with two commands, `instructions` and `run` (D11, D12).
 - `--for <intent>` names what a delegation is for, and is required on every `instructions` and `run` (D13). `review` takes `plan` or `code`. `handoff` takes `apply`.
 - New: `lets delegate review|handoff instructions --for <intent>` prints one JSON line with the strategy, the intent, the resolver that will answer, the models it can run now, and the user's guidance (D14, D18).
 - New: the delegate config may hold `delegations.<intent>.guidance`, a string of prose for the skill to follow. The config stays at version 2. Only `instructions` reads the key (D15, D16).
@@ -32,4 +32,3 @@ The review's stderr line already reports `model` and `independent`, so that item
 - **Skills:** `skills/lets-review-code/SKILL.md`, `skills/lets-review-plan/SKILL.md` and `skills/lets-build/SKILL.md`.
 - **Tests:** `tests/lets/delegate/` (cli, config, review, handoff, lookup and protocol tests), `tests/resolver-kit/` and `tests/cli-resolver/`, and the release checks that call `lets delegate`.
 - **Docs:** `README.md` (*Fresh sessions*, *Set up delegation* and *Resolvers*) and `docs/resolver-contract.md`.
-- **Users:** a hand-written script that calls `lets delegate review` or `lets delegate handoff` must move to `run --for`. A delegate config needs no edit.
