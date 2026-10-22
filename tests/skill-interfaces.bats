@@ -155,6 +155,7 @@ flow_texts() {
 # Include source copies in an isolated fixture so a bad relative path fails.
 assert_reference_links() {
   local text="$1" root="$2" base="${3:-$(dirname "$1")}" link found=0
+  root="$(realpath "$root")"
   while IFS= read -r link; do
     found=1
     [ -f "$base/$link" ] || { echo "unresolved: $text -> $link"; return 1; }
@@ -205,4 +206,13 @@ load support/release
   for skill in lets-review-plan lets-review-code; do
     assert_reference_links "$out/overlay/.agents/skills/$skill/SKILL.md" "$out/overlay"
   done
+}
+
+@test "installed reference containment accepts a symlinked root" {
+  local real="$BATS_TEST_TMPDIR/real" alias="$BATS_TEST_TMPDIR/alias"
+  mkdir -p "$real/skill/references"
+  printf '# Method\n' >"$real/skill/references/method.md"
+  printf '[Method](references/method.md)\n' >"$real/skill/SKILL.md"
+  ln -s "$real" "$alias"
+  assert_reference_links "$alias/skill/SKILL.md" "$alias"
 }
