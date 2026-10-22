@@ -33,7 +33,7 @@ Checkout attempt is only local, keep it local. Different meanings of Account
 in billing and identity need explicit distinctions where they interact.
 Do not promote or duplicate a definition solely because names match.
 
-# Recovering a shaping handoff
+## Recovering a shaping handoff
 
 Agreed definitions are written immediately. Shaping records its baseline
 and owned paths, makes glossary-only commits at confirmed phase boundaries,
