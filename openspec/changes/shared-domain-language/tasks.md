@@ -107,6 +107,24 @@ No live issues, dependency links or Project claims were changed by rehearsals.
 Scratch scripts and prompt fixtures are under .workspace/ and are not
 release artifacts. Durable results are recorded here.
 
+### Post-review validation
+
+Claude Opus 5.5 reviewed 92905a3..10f5015 independently in fresh context.
+All ten findings have separate targeted fixes listed in code-review.md.
+The emitted-instruction regression now resolves references from actual CLI
+JSON rather than an unavailable schema location, and a symlinked-root
+regression fails before root canonicalization and passes after it.
+
+After those fixes, `deli -- nix develop --command pnpm test` passed: 287
+Node tests, type checking, four resolver conformance checks and 112 Bats
+tests. `deli -- nix flake check` passed the x86_64-linux node-tests,
+commands, flows, flake-module and dist checks. Other platforms were not
+built locally; the symlink fixture reproduces the portability boundary on
+Linux. Instruction walkthroughs cover the clarified no-ready stop, existing
+branch route, one preflight per selected owner, optional recovery template,
+docs-Chore claim exception and explicit retirement setting. Verification
+in verification.md found all 15 requirements and 30 scenarios accounted for.
+
 ## Deviations Ledger
 
 No design departures. Acceptance inspection found that replacing an issue
