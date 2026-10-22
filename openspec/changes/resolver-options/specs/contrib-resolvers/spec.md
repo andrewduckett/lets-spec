@@ -91,12 +91,12 @@ Inside T3 Code, `lets-delegate-t3` SHALL answer `run` and `start` with a session
 - **WHEN** `codex debug models` reports `gpt-reserve` with `visibility` `hide` and `gpt-6-luna` with `visibility` `list`, and `agy models` reports `gemini-3.8-flash-high`, `gemini-3.8-flash-low` and `claude-sonnet-4-6`
 - **THEN** `lets-delegate-cli probe` prints `{"resolver":"cli","options":["gpt/gpt-6-luna","claude","gemini/gemini-3.8-flash"]}`
 
-### Requirement: The cli resolver leaves out a family it cannot list
-When a family's CLI is on `PATH` but its model listing exits non-zero or prints what the resolver cannot read, `lets-delegate-cli probe` SHALL leave that family out of `options`, still exit 0, and name the CLI and the failure on stderr.
+### Requirement: The cli resolver lists the bare family when a listing fails
+When a family's CLI is on `PATH` but its model listing exits non-zero, runs past its time limit, or prints what the resolver cannot read, `lets-delegate-cli probe` SHALL list the bare family in that family's place in `options`, still exit 0, and name the CLI and the failure on stderr.
 
 #### Scenario: codex is signed out
 - **WHEN** `codex` and `claude` are on `PATH`, and `codex debug models` exits 1
-- **THEN** `lets-delegate-cli probe` exits 0, prints `{"resolver":"cli","options":["claude"]}`, and stderr names `codex`
+- **THEN** `lets-delegate-cli probe` exits 0, prints `{"resolver":"cli","options":["gpt","claude"]}`, and stderr names `codex`
 
 ### Requirement: The T3 resolver lists the models in its manifest
 Inside T3 Code, `lets-delegate-t3` SHALL list its `options` from T3's model manifest: for each provider in the manifest's order, `<family>/<model>` for each model T3 lists, with the provider's default chat model first. It SHALL list each `gemini` model once, with its effort suffix removed.
@@ -129,6 +129,10 @@ Inside T3 Code, `lets-delegate-t3` SHALL list its `options` from T3's model mani
 #### Scenario: The CLI refuses the model
 - **WHEN** `lets-delegate-cli run` gets `model` `gpt/gpt-6-astra`, and codex exits 1 with nothing on stdout
 - **THEN** it exits 3, and stderr holds the end of codex's stderr
+
+#### Scenario: A refusal after an earlier run with the same name
+- **WHEN** an earlier `gpt` run named `x` left `.workspace/lets-delegate/x.last-message.md`, and a new `lets-delegate-cli run` named `x` gets a codex that exits 1 without writing that file
+- **THEN** it exits 3, not 5
 
 #### Scenario: T3 has no project for the repository
 - **WHEN** `lets-delegate-t3 run` runs inside T3 Code in a repository that T3 has no project for

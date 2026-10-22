@@ -6,14 +6,14 @@ A stored model name is what fails today. The config pinned `gpt-6-astra`, T3 lis
 
 - `probe` answers `{ resolver, options }`. `options` is a list of `family[/model]` strings, in the harness's order:
   - The T3 resolver reads `model-manifest.json` and puts each provider's default first (D11).
-  - The cli resolver runs `codex debug models`, keeping only listed models (D7), and `agy models`, keeping only `gemini-*` ids (D4). It lists claude as the bare family `claude` (D13). It leaves out a family whose listing fails (D12).
+  - The cli resolver runs `codex debug models`, keeping only listed models (D7), and `agy models`, keeping only `gemini-*` ids (D4). It lists claude as the bare family `claude` (D13). It lists the bare family when a listing fails (D12).
   - Each Gemini model appears once, without its effort suffix (D6).
   - The subagent resolver answers an empty list.
 - **BREAKING** `run` and `start` take a required `model` string, `family[/model]`, and run exactly that model. A request without it exits 2 (D1). `run` adds the effort to a Gemini model. A model the resolver never listed is still tried (D8). The T3 `start` uses the model instead of the project default (D14).
 - **BREAKING** The `reviewers` request field goes, and the kit's `pickFamily` and `pickReviewer` go with it. No resolver chooses a model any more.
 - **BREAKING** A refusal is exit 3, with the reason on stderr. A refusal is any no from the harness or the account before the model gives output: the harness is not running or not set up, there are no tokens, or there is no such model. Exit 4 is left for resolver bugs, contract errors and unknown outcomes (D9). The T3 resolver archives a refused thread (D10).
 - `lets delegate verify` checks the new `probe` answer, and its live run sends a `model`.
-- `docs/resolver-contract.md` and the `headless-resolver` sh example follow the new contract. The protocol number stays 1 (D3).
+- `docs/resolver-contract.md` and the `headless-resolver` sh example follow the new contract. The protocol number moves to 2 (D3).
 - A new decision record supersedes ADR-002's second decision.
 - **BREAKING** `lets delegate review` and `lets delegate handoff` take a required `--model <family[/model]>` and pass it to the resolver unchanged (D15). The review skills do not pass it until #59, so a skill's review on `main` fails until then. No release is cut in between (D2).
 

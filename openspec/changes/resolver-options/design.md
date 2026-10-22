@@ -40,7 +40,7 @@
 
 ### D-1: One model string type and parser in the protocol
 
-`protocol.ts` gains `parseModel(text) → { family, model: string | null }`, plus a checker, `check.model`, used by `parseRequest` for `run` and `start` and by `parseResponse` for each entry of `probe`'s `options`. A model string is `<family>` or `<family>/<id>`, where the family is one of `FAMILIES` and the id is non-empty with no whitespace. The id is everything after the first `/`. `buildRequest` takes `model` for `run` and `start`, and `reviewers` goes from the types, the builder and the checker. `PROTOCOL` stays `1` (D3).
+`protocol.ts` gains `parseModel(text) → { family, model: string | null }`, plus a checker, `check.model`, used by `parseRequest` for `run` and `start` and by `parseResponse` for each entry of `probe`'s `options`. A model string is `<family>` or `<family>/<id>`, where the family is one of `FAMILIES` and the id is non-empty with no whitespace. The id is everything after the first `/`. `buildRequest` takes `model` for `run` and `start`, and `reviewers` goes from the types, the builder and the checker. `PROTOCOL` moves to `2` (D3), so a resolver built for protocol 1 rejects a request with exit 2 instead of quietly ignoring `model`.
 
 - *Instead:* split the string into `family` and `model` fields in the request. *Why not:* #59 hands the user's string through `--model` unchanged, and one string is what `probe` lists. One parser at the edge is enough.
 
@@ -59,7 +59,7 @@ In `errors.ts`, and its copy, `NoFamilyError` becomes `Refused`, still exit 3. E
 | No reply to `launchThread` in time | `SpawnError` |
 | `finish` with a handle of another kind | `SpawnError` |
 
-In the cli adapter, a CLI that cannot start is `Refused`. So is a CLI that exits non-zero having printed nothing. For codex, nothing printed means stdout is empty and its last-message file is missing or empty.
+In the cli adapter, a CLI that cannot start is `Refused`. So is a CLI that exits non-zero having printed nothing. For codex, nothing printed means stdout is empty and its last-message file is missing or empty. So that a file from an earlier run with the same name cannot hide a refusal, the adapter removes that file before it starts codex.
 
 - *Instead:* keep `SpawnError` for setup problems, as exit 4. *Why not:* the user chose one signal, exit 3, for "try the next option" (D9).
 
@@ -76,7 +76,7 @@ The T3 adapter's `waitForResult` throws `Refused` when a run is `failed` and the
   - `codex debug models`: parse JSON, keep `visibility === 'list'`, and take `slug` in the order given.
   - `agy models`: take the first tab-separated field of each line that starts with `gemini-`. This skips the `Fetching…` banner. Then strip the effort and drop duplicates (D4, D6).
   - `claude` is `claude` (D13).
-  - A listing that fails, times out, or cannot be parsed leaves its family out, with one warning line on stderr (D12). The order is `gpt`, `claude`, `gemini`.
+  - A listing that fails, times out, or cannot be parsed lists the bare family instead, such as `gpt`, with one warning line on stderr (D12). The caller can still try the CLI's default model. The order is `gpt`, `claude`, `gemini`.
 - **subagent.** It answers `[]`.
 
 Each listing gets 20 seconds, so `probe` fits inside verify's 60 seconds even when it waits for both.
@@ -91,11 +91,11 @@ Each listing gets 20 seconds, so `probe` fits inside verify's 60 seconds even wh
 
 ### D-8: verify checks options and runs the first
 
-`parseResponse('probe')` requires `options`, through D-1's checker. So the shape check fails when `options` is missing or holds a bad entry. The live part takes `options[0]` from the `probe` it already sent. When `options` is empty, the live `run` is skipped, counts as passed, and prints one line saying the resolver lists no model to run. `LIVE_REVIEWERS` goes.
+`parseResponse('probe')` requires `options`, through D-1's checker. So the shape check fails when `options` is missing or holds a bad entry. The live part takes the options from the `probe` it already sent, and runs them in order until one does not exit 3. All refused fails the check, with each refusal's reason. This keeps the check independent of option order (D11). When `options` is empty, the live `run` is skipped, counts as passed, and prints one line saying the resolver lists no model to run. `LIVE_REVIEWERS` goes.
 
 ### D-9: The sh example speaks the new contract
 
-`contrib/headless-resolver` answers `probe` with `{"resolver":"headless-sh","options":["claude"]}`. In `run`, it exits 3 when the family is not `claude`, and passes `--model <id>` when there is one. It exits 2 when `model` is missing.
+`contrib/headless-resolver` checks for protocol 2, and answers `probe` with `{"resolver":"headless-sh","options":["claude"]}`. In `run`, it exits 3 when the family is not `claude`, and passes `--model <id>` when there is one. It exits 2 when `model` is missing.
 
 ### D-10: Docs and records
 

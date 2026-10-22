@@ -10,7 +10,13 @@ description: Architecture decision record (ADR) for resolvers listing the models
 
 ## Context
 
-`lets delegate` hands a session to a resolver, a program that knows one harness, such as T3 Code or the family CLIs on `PATH`. Until now, the resolver also chose the model: from a list of reviewers the caller sent, or by its own rule when there was none. Neither knew enough. A stored model name went stale: T3 listed a model the account could not run, and the review failed while other models were free. The resolver's own rule knew nothing of the work's purpose or the user's wishes. Only the resolver can see what its harness lists now. Only the caller, the skill that wrote the prompt, knows the purpose, the author's family and what the user asked for. This decision replaces the second decision of ADR-002, under which `lets` sent a list of reviewers and the resolver chose from it.
+`lets delegate` hands a session to a resolver, a program that knows one harness, such as T3 Code or the family CLIs on `PATH`. Until now, the resolver also chose the model. It took the first fit from a list of reviewers the caller sent, or used its own rule when there was none.
+
+Neither way knew enough. A stored model name went stale. T3 listed a model the account could not run, and the review failed while other models were free. The resolver's own rule knew nothing of the work's purpose or the user's wishes.
+
+Each side knows half. Only the resolver can see what its harness lists now. Only the caller, the skill that wrote the prompt, knows the purpose, the author's family and what the user asked for.
+
+This decision replaces the second decision of ADR-002, under which `lets` sent a list of reviewers and the resolver chose from it.
 
 ## Decision
 
