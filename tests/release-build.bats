@@ -161,3 +161,10 @@ bundle_alone() {
   [ "$status" -eq 75 ]
   [ "$output" = 'lets-delegate-herdr: not inside herdr' ]
 }
+
+@test "the subagent resolver bundle answers subagent with no node_modules beside it" {
+  bundle_alone subagent-resolver lets-delegate-subagent
+  run node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  [ "$status" -eq 0 ]
+  [ "$output" = '{"resolver":"subagent"}' ]
+}

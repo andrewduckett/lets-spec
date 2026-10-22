@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/review.ts';
 import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
-import { commandDeps, PROMPT_FILE } from './fixtures/command-deps.ts';
+import { commandDeps, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
   ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', ...over });
@@ -153,11 +153,19 @@ test('LETS_SPEC_RESOLVER naming a missing file is exit 2, naming it', async () =
   assert.match(t.stderr(), /\/no\/such\/resolver/);
 });
 
-test('with no resolver, the review is exit 3, prints nothing, and starts no process', async () => {
+test('with no resolver, the review is exit 3, prints nothing, and runs only the default', async () => {
   const t = commandDeps({ resolver: false, commands: ['codex', 'claude', 'agy'] });
   assert.equal(await run(options(), t.deps), 3);
   assert.equal(t.stdout(), '');
-  assert.deepEqual(t.io.calls.filter(([cmd]) => cmd !== 'git'), []);
+  assert.deepEqual(t.io.calls.filter(([cmd]) => cmd !== 'git').map(([cmd, args]) => [cmd, args]), [[NODE, [SUBAGENT, 'run']]]);
+});
+
+test('with lets\'s own default missing, a review is exit 4, naming it and an incomplete install', async () => {
+  const t = commandDeps({ resolver: false, subagent: false });
+  assert.equal(await run(options(), t.deps), 4);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /\/pkg\/contrib\/lets-delegate-subagent/);
+  assert.match(t.stderr(), /incomplete/);
 });
 
 test('with no resolver, stderr says no resolver started a session, and to use a subagent', async () => {

@@ -20,7 +20,7 @@ function setup({ env = { WORKFLOW_RELEASE: RELEASE }, files = releaseFiles, topl
   const out: string[] = [];
   const err: string[] = [];
   const deps = {
-    env, cwd: '/project', packageRoot: '/pkg', io,
+    env, cwd: '/project', packageRoot: '/pkg', nodePath: process.execPath, io,
     stdout: (text: string) => out.push(text),
     stderr: (text: string) => err.push(text),
   };

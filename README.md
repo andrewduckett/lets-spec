@@ -498,7 +498,8 @@ lets delegate setup
 If you use `lets-delegate-t3` or `lets-delegate-herdr`, pass
 `--resolver <path>` each time you run it with `--write`. Setup does not
 find either program by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the built-in default.
+with no resolver, and reviews fall to the default resolver,
+`lets-delegate-subagent`.
 
 It shows what your machine offers: the harness it runs in (T3 Code,
 herdr or none), the family CLIs on your `PATH` (`codex`, `claude`, `agy`),
@@ -517,7 +518,7 @@ with these flags:
 |---|---|
 | `--order gemini,gpt` | The reviewers' order. A family you leave out is dropped. |
 | `--model gpt=gpt-5.6-terra` | One family's model. Give it once per family. |
-| `--resolver <path>` or `--resolver none` | The resolver to ask, or none for the built-in default |
+| `--resolver <path>` or `--resolver none` | The resolver to ask, or none for the default, `lets-delegate-subagent` |
 
 The config is `~/.config/lets-delegate/config.json`, or
 `$XDG_CONFIG_HOME/lets-delegate/config.json` when that is set. To limit a
@@ -549,13 +550,24 @@ A resolver is the program that turns a request into a real session.
    missing, `lets` exits 2 and says to run `lets delegate setup` again.
 3. `lets-delegate-resolver` on your `PATH`. No program by that name
    ships any more, so name your resolver in the config instead.
-4. The built-in default, which never declines.
+4. The default, `lets-delegate-subagent`, which never declines.
 
-The built-in default starts no session, and picks no model family. For a
-review, it runs nothing: `lets delegate review` exits 3, and the review
-skill runs a subagent. For a handoff, it writes the prompt to
+The default is a program that ships with `lets`, in the release tarball,
+the Nix package and this repository's source tree alike. `lets` runs it
+from `contrib/lets-delegate-subagent` beside itself, with its own Node,
+so you never install or link it. It answers as `subagent`.
+
+The default starts no session, and picks no model family. For a review,
+it runs nothing: `lets delegate review` exits 3, and the review skill
+runs a subagent. For a handoff, it writes the prompt to
 `.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
-and that path for you to start any agent in the repository with.
+and that path for you to start any agent in the repository with. The
+JSON line that `lets delegate handoff` prints has `"resolver":"subagent"`.
+Before this release it said `"default"`, so update any script that
+matches on it.
+
+If that file is missing or Node cannot run it, `lets delegate` exits 4
+and says the `lets` install is incomplete. Reinstall `lets`.
 
 When a session fails, `lets` stops and says why. It never retries, and it
 never falls back to another resolver or family. It leaves the failed
@@ -581,15 +593,15 @@ lets delegate setup --resolver "$(command -v lets-delegate-t3)" --write
 ```
 
 The config names one resolver. If you work in both harnesses, name the one
-you review from most. Reviews in the other harness fall to the built-in
-default.
+you review from most. Reviews in the other harness fall to the default,
+`lets-delegate-subagent`.
 
 #### Switching from lets-delegate-resolver
 
 `lets-delegate-resolver`, which served both harnesses, is gone. Install
 the resolver for your harness in its place, then name it with
 `lets delegate setup --resolver <path> --write`. Until you do, reviews fall
-to the built-in default.
+to the default, `lets-delegate-subagent`.
 
 | You installed it with | Do this |
 |---|---|
@@ -857,6 +869,7 @@ OpenSpec CLI. Then run `pnpm install` once.
 | `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `build.mjs` bundles it into one file with esbuild. |
 | `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
 | `contrib/t3-resolver/`, `contrib/herdr-resolver/` | `lets-delegate-t3` and `lets-delegate-herdr`: each is its harness's adapter on the kit, bundled with no runtime dependencies |
+| `contrib/subagent-resolver/` | `lets-delegate-subagent`, the default resolver that ships with `lets`. `lets/contrib/lets-delegate-subagent` links to it, so the source tree's `lets` finds it as an install would |
 | `docs/resolver-contract.md` | The resolver contract, which every resolver keeps |
 | `contrib/headless-resolver` | A complete resolver in `sh`: the worked example for writing your own |
 | `package.json`, `pnpm-workspace.yaml`, `tsconfig.json` | The pnpm workspace, its scripts, and the type check's settings |
@@ -864,7 +877,7 @@ OpenSpec CLI. Then run `pnpm install` once.
 | `schemas/` | The OpenSpec schemas, each with its templates |
 | `overlays/` | The rules fragment and the files `lets sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
 | `tests/*.bats` | End-to-end tests: `lets sync` in real git repos, the release build, the pinned OpenSpec CLI reading each schema, and every command, file and skill the prose names |
-| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/herdr-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
+| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/herdr-resolver/`, `tests/subagent-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
 | `mise.toml` | This repo's own development tools, for working without Nix |
 | `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
 | `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
@@ -886,13 +899,15 @@ version in its `release.json`.
 ### Releases
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
-a release for every flow, and the three resolvers in `contrib/`:
-`headless-resolver`, `lets-delegate-herdr` and `lets-delegate-t3`. Its version is
+a release for every flow, and the four resolvers in `contrib/`:
+`headless-resolver`, `lets-delegate-herdr`, `lets-delegate-subagent` and
+`lets-delegate-t3`. Its version is
 `0.0.0-dev`. Each Node bundle is one file that any Node 26 runs, with no
 `node_modules` beside it. Only `bin/` goes on a mise project's `PATH`.
 
 `nix build .#lets-delegate-t3` and `nix build .#lets-delegate-herdr` build
-the contrib resolvers as packages for a user's profile.
+the contrib resolvers as packages for a user's profile. The `lets`
+package carries `lets-delegate-subagent` in its own `contrib/`.
 
 Release tags are `v<major>.<minor>.<patch>`. When you push one, the
 release workflow builds the folder, sets its version from the tag, and
@@ -913,8 +928,8 @@ nix flake check
 This:
 
 - runs the bats tests, the Node tests and the type check
-- runs the conformance check against the built-in default, each contrib
-  resolver and the shell example
+- runs the conformance check against the default,
+  `lets-delegate-subagent`, each contrib resolver and the shell example
 - builds every flow
 - builds the `dist` folder, the release tarball's contents, and runs its
   `lets sync` in a sample project
@@ -927,8 +942,8 @@ In the dev shell:
 |---|---|
 | `pnpm test` | The Node tests, the type check, the conformance check and the bats tests |
 | `pnpm check` | The type check alone: `tsc --noEmit` |
-| `pnpm conformance` | The conformance check alone, against the built-in default, each contrib resolver and the shell example |
-| `pnpm build` | The bundles, into `lets/dist/lets`, `contrib/t3-resolver/dist/lets-delegate-t3` and `contrib/herdr-resolver/dist/lets-delegate-herdr` |
+| `pnpm conformance` | The conformance check alone, against `lets-delegate-subagent`, each contrib resolver and the shell example |
+| `pnpm build` | The bundles, into `lets/dist/lets`, `contrib/t3-resolver/dist/lets-delegate-t3`, `contrib/herdr-resolver/dist/lets-delegate-herdr` and `contrib/subagent-resolver/dist/lets-delegate-subagent` |
 | `bats tests` | The bats tests alone |
 
 Node runs the TypeScript source directly, so you do not need to build

@@ -42,7 +42,7 @@ async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }
     deps.stderr(`lets delegate: no reviewer in ${configPath(deps)} serves effort ${effort}\n`);
   }
   const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, reviewers });
-  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd, config });
+  const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd, config, packageRoot: deps.packageRoot, nodePath: deps.nodePath });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
     return outcome.code;

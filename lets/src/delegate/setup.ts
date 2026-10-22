@@ -111,7 +111,7 @@ function report({ harness, families }: Findings, current: Config | null, propose
 function describe({ resolver, reviewers }: Config): string[] {
   const efforts = (list?: string[]) => (list === undefined ? '' : ` (efforts: ${list.join(', ')})`);
   return [
-    `  resolver: ${resolver ?? 'none, so the built-in default answers'}`,
+    `  resolver: ${resolver ?? 'none, so the default, lets-delegate-subagent, answers'}`,
     '  reviewers, in order:',
     ...(reviewers.length === 0 ? ['    none'] : reviewers.map(({ family, model, efforts: e }) => `    ${family} ${model ?? '(CLI default)'}${efforts(e)}`)),
   ];

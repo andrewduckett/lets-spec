@@ -29,11 +29,15 @@
 
       # Only the pnpm workspace, so a skill edit does not rebuild the CLI.
       # Every workspace package must be here, or the lockfile does not match.
+      # lets/contrib/ holds only the source tree's link to the default
+      # resolver, which points outside lets/. The build never reads it.
       workspaceSource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.unions ([
-          ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
-        ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib);
+        fileset = lib.fileset.difference
+          (lib.fileset.unions ([
+            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
+          ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib))
+          (lib.fileset.maybeMissing ./lets/contrib);
       };
 
       # The workspace's dependencies from pnpm-lock.yaml. When the lockfile
@@ -89,7 +93,8 @@
 
         # The lets command: the bundle esbuild makes, in libexec, and a
         # bin/lets that runs it with Node 26. The bundle keeps its
-        # #!/usr/bin/env node, because the tarball ships it as it is.
+        # #!/usr/bin/env node, because the tarball ships it as it is. lets
+        # runs its default resolver from contrib/ beside libexec/.
         lets-cli = pkgs.stdenv.mkDerivation {
           pname = "lets";
           version = "0.0.0";
@@ -105,6 +110,7 @@
           installPhase = ''
             runHook preInstall
             install -Dm755 lets/dist/lets $out/libexec/lets
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
             makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets --add-flags $out/libexec/lets
             runHook postInstall
           '';
@@ -138,6 +144,9 @@
         };
         lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
         lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
+        # The default resolver, for lets-cli and dist only. lets runs it from
+        # beside itself, so it is not exported, and no one puts it on PATH.
+        lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
 
         # lets, bound to one release.
         lets = flow:
@@ -157,6 +166,7 @@
           cp ${lets-cli}/libexec/lets $out/bin/lets
           cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
           cp ${lets-delegate-herdr}/libexec/lets-delegate-herdr $out/contrib/lets-delegate-herdr
+          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
@@ -232,6 +242,10 @@
             # small stories, and the skill that sets up its backlog.
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
             [ -f .agents/skills/lets-setup-backlog/SKILL.md ]
+            # With no other resolver on PATH and no delegate config, the
+            # packaged lets runs the default it carries.
+            echo 'Run lets-build on branch build-x' > p.md
+            [ "$(lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -270,10 +284,10 @@
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
             # The resolvers are per user, so they are never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-t3 " ]
+            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-subagent lets-delegate-t3 " ]
             [ -x ${dist}/contrib/headless-resolver ]
             [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
-            for program in lets-delegate-herdr lets-delegate-t3; do
+            for program in lets-delegate-herdr lets-delegate-subagent lets-delegate-t3; do
               [ -x ${dist}/contrib/$program ]
               [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
             done
@@ -300,6 +314,14 @@
             }
             declines lets-delegate-t3 'lets-delegate-t3: not inside T3 Code'
             declines lets-delegate-herdr 'lets-delegate-herdr: not inside herdr'
+            # The default never declines. A copy alone answers for itself.
+            mkdir ../alone
+            cp ${dist}/contrib/lets-delegate-subagent ../alone/
+            [ "$(echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent"}' ]
+            # With nothing else installed or configured, the tarball's lets
+            # finds the default beside it.
+            echo 'Run lets-build on branch build-x' > p.md
+            [ "$(node ${dist}/bin/lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
             touch "$out"
           '';
 
@@ -320,11 +342,11 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/headless-resolver
+            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/subagent-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts"
+            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts" "tests/subagent-resolver/*.test.ts"
             pnpm check
-            # The built-in default, the contrib resolvers and the shell example
+            # The default, lets-delegate-subagent, the contrib resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
             pnpm conformance
             touch "$out"

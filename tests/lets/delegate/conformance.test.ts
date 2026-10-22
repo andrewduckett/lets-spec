@@ -10,6 +10,7 @@ import { realIo } from '../../../lets/src/io.ts';
 import type { Deps } from '../../../lets/src/io.ts';
 
 const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
+const SUBAGENT = fileURLToPath(new URL('../../../contrib/subagent-resolver/bin/lets-delegate-subagent', import.meta.url));
 
 // Real deps in a fresh git repo. settings go into the env of each command
 // the check runs, for the fake resolver.
@@ -19,7 +20,7 @@ function setup(settings: Record<string, string> = {}) {
   const io = realIo();
   const out: string[] = [];
   const deps: Deps = {
-    env: {}, cwd, packageRoot: '/pkg',
+    env: {}, cwd, packageRoot: '/pkg', nodePath: process.execPath,
     io: { ...io, execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, env: { ...process.env, ...settings } }) },
     stdout: (text) => out.push(text),
     stderr: (text) => out.push(text),
@@ -27,9 +28,9 @@ function setup(settings: Record<string, string> = {}) {
   return { deps, output: () => out.join('') };
 }
 
-test('the built-in default keeps the shape of the contract', async () => {
+test('the default, lets-delegate-subagent, keeps the shape of the contract', async () => {
   const t = setup();
-  assert.equal(await run({ command: [fixture('default-resolver')], live: false }, t.deps), 0, t.output());
+  assert.equal(await run({ command: [SUBAGENT], live: false }, t.deps), 0, t.output());
   assert.match(t.output(), /The resolver keeps the contract\.\n$/);
 });
 
@@ -76,5 +77,5 @@ test('a resolver that declines the live run says where to run the check', async 
 
 test('arguments after the command go before the verb', async () => {
   const t = setup();
-  assert.equal(await run({ command: [process.execPath, fixture('default-resolver')], live: false }, t.deps), 0, t.output());
+  assert.equal(await run({ command: [process.execPath, SUBAGENT], live: false }, t.deps), 0, t.output());
 });

@@ -18,7 +18,7 @@ export async function run({ name, promptFile }: HandoffOptions, deps: Deps): Pro
     const prompt = readPromptFile(promptFile, deps);
     const cwd = await repoRoot(deps.cwd, deps.io);
     const request = buildRequest('start', { cwd, name: normalizeName(name), prompt });
-    const { outcome } = await resolve('start', request, { env: deps.env, io: deps.io, cwd, config: readConfig(deps) });
+    const { outcome } = await resolve('start', request, { env: deps.env, io: deps.io, cwd, config: readConfig(deps), packageRoot: deps.packageRoot, nodePath: deps.nodePath });
     if (outcome.code !== EXIT.ok) {
       deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
       return EXIT.spawn;

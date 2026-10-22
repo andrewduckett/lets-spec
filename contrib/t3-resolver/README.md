@@ -7,7 +7,7 @@ work.
 | You work in | A review runs as | A handoff starts |
 |---|---|---|
 | T3 Code | A new thread, archived when the review succeeds | A new thread in the sidebar |
-| Anything else | It declines, and the built-in default answers | It declines, and the built-in default answers |
+| Anything else | It declines, and the default, `lets-delegate-subagent`, answers | It declines, and the default, `lets-delegate-subagent`, answers |
 
 It counts as inside T3 Code only when the running T3 server started it,
 through any number of parent processes. A terminal outside T3 Code
@@ -88,11 +88,11 @@ then runs the first of those models that T3 Code can start.
 
 Pass `--resolver` again each time you run setup with `--write`. Setup does
 not find `lets-delegate-t3` by itself yet, so without the flag it writes a config
-with no resolver, and reviews fall to the built-in default.
+with no resolver, and reviews fall to the default, `lets-delegate-subagent`.
 
 The config names one resolver. If you also work in herdr, name the
 resolver for the harness you review from most. Reviews in the other
-harness fall to the built-in default.
+harness fall to the default, `lets-delegate-subagent`.
 
 ## Before the first review in T3 Code
 
