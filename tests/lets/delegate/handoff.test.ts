@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/handoff.ts';
-import { commandDeps, PROMPT_FILE } from './fixtures/command-deps.ts';
+import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE } from './fixtures/command-deps.ts';
 
 const options = { name: 'Fix Login', promptFile: 'p.md' };
 
@@ -21,10 +21,45 @@ test('the start request has readOnly false and interactive true', async () => {
 });
 
 test('the start request has no reviewers, whatever the config holds', async () => {
-  const config = { version: 1, resolver: null, reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }] };
-  const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': JSON.stringify(config) } });
-  await run(options, t.deps);
+  const config = `version: 2\nresolvers: [${FAKE_RESOLVER}]\nreviewers:\n  - family: gpt\n    model: gpt-6-luna\n`;
+  const t = commandDeps({ resolver: false, config });
+  assert.equal(await run(options, t.deps), 0);
   assert.equal('reviewers' in t.resolverCalls()[0][1], false);
+});
+
+const declining = { FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' };
+
+test('a listed resolver that declines passes the handoff to the subagent entry', async () => {
+  const t = commandDeps({ resolver: false, settings: declining, config: `version: 2\nresolvers: [${FAKE_RESOLVER}, subagent]\n` });
+  assert.equal(await run(options, t.deps), 0);
+  assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
+});
+
+test('a chain that leaves out the default is exit 2 when its resolver declines, and the default is not asked', async () => {
+  const t = commandDeps({ resolver: false, settings: declining, config: `version: 2\nresolvers: [${FAKE_RESOLVER}]\n` });
+  assert.equal(await run(options, t.deps), 2);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), new RegExp(`every resolver declined.*${CONFIG}`));
+  assert.equal(t.io.calls.some(([cmd]) => cmd === NODE), false);
+});
+
+test('an empty chain is exit 2 with nothing on stdout', async () => {
+  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: []\n' });
+  assert.equal(await run(options, t.deps), 2);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /every resolver declined/);
+});
+
+test('a listed path that is missing is exit 2, naming the path and the config file', async () => {
+  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [/opt/r/lets-delegate-subagent]\n' });
+  assert.equal(await run(options, t.deps), 2);
+  assert.match(t.stderr(), new RegExp(`${CONFIG}.*/opt/r/lets-delegate-subagent`));
+});
+
+test('a leftover config.json is exit 2, naming both files', async () => {
+  const t = commandDeps({ resolver: false, files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': '{}' } });
+  assert.equal(await run(options, t.deps), 2);
+  assert.match(t.stderr(), /config\.json.*config\.yaml/);
 });
 
 test('with no resolver, the default hands back the prompt and where it is saved', async () => {
