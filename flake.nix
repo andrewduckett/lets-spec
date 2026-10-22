@@ -138,6 +138,9 @@
         };
         lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
         lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
+        # The default resolver. lets runs it from beside itself, so it is
+        # never on PATH either.
+        lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
 
         # lets, bound to one release.
         lets = flow:
@@ -157,6 +160,7 @@
           cp ${lets-cli}/libexec/lets $out/bin/lets
           cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
           cp ${lets-delegate-herdr}/libexec/lets-delegate-herdr $out/contrib/lets-delegate-herdr
+          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${pkgs.writeText "release.json" (builtins.toJSON {
@@ -173,7 +177,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr lets-delegate-subagent dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
@@ -270,10 +274,10 @@
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
             # The resolvers are per user, so they are never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-t3 " ]
+            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-subagent lets-delegate-t3 " ]
             [ -x ${dist}/contrib/headless-resolver ]
             [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
-            for program in lets-delegate-herdr lets-delegate-t3; do
+            for program in lets-delegate-herdr lets-delegate-subagent lets-delegate-t3; do
               [ -x ${dist}/contrib/$program ]
               [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
             done
@@ -300,6 +304,10 @@
             }
             declines lets-delegate-t3 'lets-delegate-t3: not inside T3 Code'
             declines lets-delegate-herdr 'lets-delegate-herdr: not inside herdr'
+            # The default never declines. A copy alone answers for itself.
+            mkdir ../alone
+            cp ${dist}/contrib/lets-delegate-subagent ../alone/
+            [ "$(echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent"}' ]
             touch "$out"
           '';
 
