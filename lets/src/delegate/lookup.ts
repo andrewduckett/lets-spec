@@ -7,7 +7,7 @@ import { delimiter, join, resolve as resolvePath } from 'node:path';
 import type { Child, Io } from '../io.ts';
 import type { Config } from './config.ts';
 import type { Env } from './env.ts';
-import { ContractError, EXIT, UsageError } from './errors.ts';
+import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
 import { DECLINE, exitFor, parseResponse } from './protocol.ts';
 import type { Requests, Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
@@ -22,8 +22,8 @@ export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
 
 // A resolver to ask: lets runs `<command> [...args] <verb>`. configured: the
 // user's delegate config names it, and it is checked only when the lookup
-// reaches it.
-export type Candidate = { kind: 'external'; name: string; command: string; args?: string[]; configured?: true };
+// reaches it. builtIn: it is the default that ships with lets, at name.
+export type Candidate = { kind: 'external'; name: string; command: string; args?: string[]; configured?: true; builtIn?: true };
 
 // What a verb came to: the exit lets gives, the response, if any, and what
 // the resolver said on stderr.
@@ -50,7 +50,7 @@ export function candidates({ env, io, cwd, config, packageRoot, nodePath }: Look
   if (io.commandExists(RESOLVER_COMMAND) && (configured === null || resolverOnPath(env, io) !== configured)) list.push({ kind: 'external', name: RESOLVER_COMMAND, command: RESOLVER_COMMAND });
   // The default runs with lets's own Node, so it needs no node on PATH.
   const subagent = join(packageRoot, DEFAULT_RESOLVER);
-  list.push({ kind: 'external', name: subagent, command: nodePath, args: [subagent] });
+  list.push({ kind: 'external', name: subagent, command: nodePath, args: [subagent], builtIn: true });
   return list;
 }
 
@@ -100,15 +100,27 @@ export function timeoutFor<V extends Verb>(verb: V, request: Requests[V]): numbe
   return ((request as Requests['run']).timeoutMinutes + BACKSTOP_MINUTES) * 60000;
 }
 
+// Why lets cannot use its own default resolver. lets ships it, so a missing
+// or broken one means the install is broken, not the user's setup.
+const incompleteInstall = (problem: 'find' | 'run', path: string) =>
+  `lets cannot ${problem} its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
+
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
-// it reaches a configured resolver that is missing or cannot be run.
+// it reaches a configured resolver that is missing or cannot be run, and a
+// SpawnError when the default is missing.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
     if (candidate.kind === 'external' && candidate.configured && !deps.io.isExecutable(candidate.command)) {
       throw new UsageError(`your delegate config names the resolver ${candidate.command}, which does not exist or is not executable. Run \`lets delegate setup\` again.`);
     }
+    if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
+    // The default never exits 5 or 6, as it starts no session, so exit 4
+    // from it always means it could not run.
+    if (candidate.builtIn && outcome?.code === EXIT.spawn) {
+      return { candidate, outcome: { ...outcome, stderr: `${incompleteInstall('run', candidate.name)}\n${outcome.stderr}` } };
+    }
     if (outcome !== null) return { candidate, outcome };
   }
   // The default is last, and it never declines.
