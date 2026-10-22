@@ -533,8 +533,8 @@ The skills ask for a session with `lets delegate`:
 
 | Command | What it does |
 |---|---|
-| `lets delegate review` | Runs a prompt read-only in a fresh session, waits, and prints the final message. A JSON line on stderr names the family that answered, and whether the review was independent. |
-| `lets delegate handoff` | Starts an interactive session with a prompt, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
+| `lets delegate review` | Runs a prompt read-only in a fresh session, on the model `--model` names, waits, and prints the final message. A JSON line on stderr names the family that answered, and whether the review was independent. |
+| `lets delegate handoff` | Starts an interactive session with a prompt, on the model `--model` names, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
 
 Run `lets delegate review --help` for the options and the exit codes.
 

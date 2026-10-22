@@ -40,8 +40,10 @@ it, `lets` exits 4 and says its install is incomplete.
 `lets` asks nothing it finds on `PATH`. When every resolver declines,
 `lets` exits 2 and names the config file.
 
-Only `lets` reads the config. `lets` sends no `reviewers` in a `run`
-request, so a resolver picks the family and model itself.
+Only `lets` reads the config. The caller chooses the model: `lets` sends
+the value of `--model` unchanged as the `model` of each `run` and `start`
+request. A resolver runs that model, and never chooses one. It reports
+the models it can run in its `probe` answer, so the caller can choose.
 
 ## How `lets` runs a resolver
 
@@ -52,7 +54,7 @@ it when something fails.
 
 | Verb | `lets` sends it | Answer |
 |---|---|---|
-| `probe` | never; the verify check and people do | `{ resolver }` |
+| `probe` | never; the verify check, the review skills and people do | `{ resolver, options }` |
 | `run` | for `lets delegate review` | `{ resolver, text, family, model?, handle? }`, after the session's turn ends |
 | `start` | for `lets delegate handoff` | `{ resolver, handle }`, or `{ resolver, handle: null, instructions }`. Returns at once. |
 | `finish` | after a `run` that returned a handle | `{}`, or nothing |
@@ -64,7 +66,7 @@ verb.
 
 | Field | Sent with | Value |
 |---|---|---|
-| `protocol` | every verb | `1` |
+| `protocol` | every verb | `2` |
 | `cwd` | every verb | The absolute path of the repository root |
 | `name` | `run`, `start` | A label for the session: lowercase, a letter first, at most 32 characters |
 | `prompt` | `run`, `start` | The text to send |
@@ -73,22 +75,24 @@ verb.
 | `interactive` | `run`, `start` | `false` for `run`, `true` for `start` |
 | `effort` | `run` | `low`, `medium` or `high` |
 | `timeoutMinutes` | `run` | A whole number. By default 15 for `low` and `medium`, and 45 for `high`. |
-| `reviewers` | `run`, optional | A list of `{ family, model }` to try, in order, where `model` is a string or `null` for the tool's default. `lets` never sends it; the verify check does. It may be empty. A resolver may ignore it. |
+| `model` | `run`, `start` | The model to run, as `<family>` or `<family>/<model>`, such as `gpt/gpt-6-luna`. The family is `gpt`, `claude` or `gemini`. The model part is everything after the first `/`, and has no spaces. A bare family, such as `claude`, means the harness's own default model for that family. |
 | `handle` | `finish` | A handle this resolver returned |
 | `ok` | `finish` | `true` when the review succeeded, `false` when the session should stay for a person to read |
 
-The resolvers in `contrib/` walk `reviewers` in order. Each runs the first
-reviewer from a family other than `sourceFamily` that its harness can
-run, else the first it can run at all. When it can run none, it exits 3
-and names each reviewer it skipped and why. For `gemini`, it adds the
-effort to the model, as `gemini-3.8-flash-high`. Without `reviewers`, it
-picks the family itself.
+A request without a valid `model` is malformed: the resolver exits 2.
+
+The resolvers in `contrib/` run exactly the `model` they are given, even
+one they did not list in `options`. When the harness cannot run it, they
+exit 3. For `gemini`, `run` adds the effort to the model, as
+`gemini-3.8-flash-high`. `start` has no effort, so the T3 resolver adds
+`medium`.
 
 ## The response
 
 | Field | Value |
 |---|---|
 | `resolver` | The resolver's own name, such as `t3` or `cli` |
+| `options` | For `probe`: the models this resolver can run now, each as `<family>` or `<family>/<model>`, in its harness's own order. It may be empty, for a resolver that runs no model. A bare family means the harness can run that family's default model, but cannot list its models. |
 | `text` | The session's final message. Empty is a failure. |
 | `family` | The family that answered: `gpt`, `claude` or `gemini`. `lets` reports the review as independent when this differs from `sourceFamily`. |
 | `model` | The model that answered. Optional, for people. |
@@ -101,8 +105,8 @@ picks the family itself.
 |---|---|---|
 | 0 | Success | Reads stdout |
 | 2 | The request is malformed, or its protocol or verb is unknown | Exits 4 and shows the resolver's stderr |
-| 3 | No family is available, not even the source's | Exits 3 |
-| 4 | The harness refused to start the session | Exits 4 |
+| 3 | A refusal: the harness or the account said no before the model gave any output. The harness is not running or not set up, there are no tokens left, or it cannot run the model. stderr says why. | Exits 3, and asks no later resolver. The caller may try another model. |
+| 4 | A bug, a broken contract, or an outcome the resolver cannot know, such as no reply from the harness | Exits 4 |
 | 5 | The session failed: an error, a stop to ask a question, or an empty message | Exits 5 |
 | 6 | The session did not finish within `timeoutMinutes` | Exits 6 |
 | 75 | Decline: this resolver does not handle this request here | Asks the next resolver |
@@ -156,22 +160,35 @@ headless and read-only. It declines `start`, so the default,
 # Check it with: lets delegate verify contrib/headless-resolver
 
 request=$(cat)
-if ! printf '%s' "$request" | jq -e '.protocol == 1' >/dev/null 2>&1; then
-  echo "headless-resolver: not a protocol 1 request" >&2; exit 2
+if ! printf '%s' "$request" | jq -e '.protocol == 2' >/dev/null 2>&1; then
+  echo "headless-resolver: not a protocol 2 request" >&2; exit 2
 fi
 field() { printf '%s' "$request" | jq -r ".$1"; }
 
 case "$1" in
-  probe) echo '{"resolver":"headless-sh"}' ;;
+  probe) echo '{"resolver":"headless-sh","options":["claude"]}' ;;
   run)
+    model=$(field model)
+    case "$model" in
+      claude) id='' ;;
+      claude/?*) id=${model#claude/} ;;
+      gpt | gpt/?* | gemini | gemini/?*) echo "headless-resolver: this resolver runs only claude, not $model" >&2; exit 3 ;;
+      *) echo "headless-resolver: the request's model must be <family> or <family>/<model>, got $model" >&2; exit 2 ;;
+    esac
     command -v claude >/dev/null || { echo "headless-resolver: claude is not on PATH" >&2; exit 3; }
     cd "$(field cwd)" || exit 2
     # The new session must not think it is a child of the one that called lets.
     unset CLAUDECODE CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_SESSION_ID CLAUDE_CODE_BRIDGE_SESSION_ID \
       CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_ENTRYPOINT CLAUDE_PID CLAUDE_EFFORT
-    text=$(field prompt | claude -p --permission-mode plan --effort "$(field effort)") || exit 5
+    # A bare family passes no --model, so claude runs its default.
+    if ! text=$(field prompt | claude -p --permission-mode plan --effort "$(field effort)" ${id:+--model "$id"}); then
+      # Nothing printed: claude said no before the model answered.
+      [ -n "$text" ] || { echo "headless-resolver: claude refused $model" >&2; exit 3; }
+      exit 5
+    fi
     [ -n "$text" ] || { echo "headless-resolver: claude gave an empty answer" >&2; exit 5; }
-    jq -cn --arg text "$text" '{resolver: "headless-sh", family: "claude", text: $text}' ;;
+    jq -cn --arg text "$text" --arg model "$id" \
+      '{resolver: "headless-sh", family: "claude", model: (if $model == "" then null else $model end), text: $text}' ;;
   start) echo "headless-resolver: this resolver only runs headless" >&2; exit 75 ;;
   finish) ;; # It issues no handles, so it has nothing to finish.
   *) echo "headless-resolver: unknown verb $1" >&2; exit 2 ;;

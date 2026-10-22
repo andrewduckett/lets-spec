@@ -32,7 +32,7 @@
 
 ## 6. Contract docs and the whole build [depends-on: 2, 3, 4, 5]
 
-- [ ] 6.1 [easy] The `headless-resolver` example speaks protocol 2, as design D-9 says. `docs/resolver-contract.md` documents `options`, `model`, protocol 2 and the new exit 3 and exit 4, and drops `reviewers`. The `delegate-config` main spec's Purpose no longer mentions `reviewers` (verify: pnpm verify)
+- [x] 6.1 [easy] The `headless-resolver` example speaks protocol 2, as design D-9 says. `docs/resolver-contract.md` documents `options`, `model`, protocol 2 and the new exit 3 and exit 4, and drops `reviewers`. The `delegate-config` main spec's Purpose no longer mentions `reviewers` (verify: pnpm verify) (✓ pnpm verify passed)
 - [ ] 6.2 [easy] Every test, the type check, the verify runs, the bats tests and the flake build pass, and the release copies' `probe` matches the specs (verify: pnpm test && nix flake check)
 
 ## Deviations Ledger
@@ -43,3 +43,5 @@
 - 5.1: its check command includes `cli.test.ts`'s "verify checks a resolver", which runs verify against the `headless-resolver` example. That example moves to protocol 2 in task 6.1, so the test passes from 6.1 on.
 - 5.2: the live `start` needs a `model` now, which design D-8 does not name. It sends the first option `probe` listed, or the bare family `claude` when the list is empty, as for `lets-delegate-subagent`.
 - 5.2: the test fixture `fake-resolver` gained `FAKE_RESOLVER_REFUSE`, a list of models whose `run` exits 3, to test trying the next option.
+- 6.1: also updated the three resolver READMEs and two rows of the main README, which still described the old behavior: a resolver picking the family, `probe` without `options`, and exit 4 for a CLI that cannot start. The T3 README's smoke test now passes `--model gpt`.
+- 6.1: the `headless-resolver` example exits 3, not 5, when `claude` fails having printed nothing, to match the new meaning of exit 3.

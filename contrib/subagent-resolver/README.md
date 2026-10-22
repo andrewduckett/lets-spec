@@ -10,7 +10,7 @@ You do not install it. `lets` ships it and runs it for you.
 |---|---|
 | A review (`run`) | Starts nothing, and exits 3. The review skill then runs the review in a subagent. |
 | A handoff (`start`) | Saves the prompt to `.workspace/lets-delegate/<name>.prompt.md` in the repository, and gives back the prompt and that path, so you can start any agent with it. |
-| `probe` | Answers `{"resolver":"subagent"}`. |
+| `probe` | Answers `{"resolver":"subagent","options":[]}`: it can run no model. |
 | `finish` | Does nothing, and prints nothing. It never issues a handle. |
 
 To get a fresh session in another model family, install a resolver, such

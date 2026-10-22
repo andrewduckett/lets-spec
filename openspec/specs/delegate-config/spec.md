@@ -1,7 +1,7 @@
 # delegate-config Specification
 
 ## Purpose
-Says how `lets delegate` reads the user's delegate config, which decides which resolver answers: the chain of resolvers to ask, in order. It also says how a contrib resolver treats the `reviewers` a request may carry.
+Says how `lets delegate` reads the user's delegate config, which decides which resolver answers: the chain of resolvers to ask, in order. It also says what a request from `lets` carries: the model the user gave with `--model`.
 
 ## Requirements
 
