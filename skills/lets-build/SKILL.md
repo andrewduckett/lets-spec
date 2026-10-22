@@ -102,7 +102,7 @@ Then take the first case that applies:
    none, say the backlog has nothing ready, suggest the `lets-shape`
    skill to shape more, and stop.
 
-Before selecting `next`, apply [Glossary preflight](#glossary-preflight) to each candidate in rank order. Skip unresolved prerequisites; if none remain, say the backlog has nothing ready, suggest `lets-shape`, and stop without selecting or confirming a packet. For a named issue, report the unresolved owner or checkpoint and stop. Then go on to [Confirm the packet](#confirm-the-packet).
+Before selecting `next`, apply only the owner/prerequisite check in the first paragraph of [Glossary preflight](#glossary-preflight) to each candidate in rank order. Defer fetching, commit inspection and transfer rehearsal to Claim for the selected candidate. Skip unresolved prerequisites; if none remain, say the backlog has nothing ready, suggest `lets-shape`, and stop without selecting or confirming a packet. For a named issue, report the unresolved owner or checkpoint and stop. Then go on to [Confirm the packet](#confirm-the-packet).
 
 ## Confirm the packet
 
@@ -165,8 +165,8 @@ unmerged owner, or unavailable definitions remains unresolved: skip that
 candidate for `next`, or report and stop for a named issue. Never recreate
 competing definitions. Stories without a glossary handoff keep normal checks.
 
-When this story is the selected owner, verify its recorded glossary transfer
-before taking the claim:
+Once a candidate is selected and its branch-existence check passes in Claim,
+run the following transfer checks once if this story is the selected owner:
 
 1. Read the starting base, exact owned paths, remote URL/branch, and ordered
    checkpoint commits. Fetch the recorded branch if needed; verify each
