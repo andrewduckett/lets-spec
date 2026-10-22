@@ -1,6 +1,6 @@
 ## 1. Resolver kit
 
-- [ ] 1.1 [easy] An adapter can give its own decline reason, and the kit declines with it; with none, the kit still declines with `not inside <harness>`, so `lets-delegate-t3` keeps `lets-delegate-t3: not inside T3 Code` (verify: node --test tests/resolver-kit/resolver.test.ts)
+- [x] 1.1 [easy] An adapter can give its own decline reason, and the kit declines with it; with none, the kit still declines with `not inside <harness>`, so `lets-delegate-t3` keeps `lets-delegate-t3: not inside T3 Code` (verify: node --test tests/resolver-kit/resolver.test.ts) (✓ node --test tests/resolver-kit/resolver.test.ts passed)
 - [ ] 1.2 [medium] The kit's `execFile` writes a given `input` to the child's stdin, and stops the child when it runs past a given timeout, reporting that it timed out (verify: node --test tests/resolver-kit/*.test.ts)
 
 ## 2. lets-delegate-cli

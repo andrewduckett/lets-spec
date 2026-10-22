@@ -7,7 +7,7 @@ import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
 
-type Options = { detects?: boolean; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
+type Options = { detects?: boolean; whyDeclined?: string; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
@@ -21,6 +21,7 @@ function fakeAdapter(options: Options = {}) {
     handleKind: 'pad',
     calls,
     detect: () => detects,
+    ...(options.whyDeclined === undefined ? {} : { whyDeclined: () => options.whyDeclined! }),
     availableFamilies: (query) => {
       calls.push(['availableFamilies', query]);
       return available;
@@ -55,6 +56,11 @@ test('outside its harness, the resolver declines each session verb with its own 
     assert.deepEqual(answer, { code: 75, stdout: '', stderr: 'lets-delegate-pond: not inside Pond\n' }, verb);
     assert.deepEqual(adapter.calls, [], verb);
   }
+});
+
+test('outside its harness, the resolver declines with the adapter\'s own reason when it gives one', async () => {
+  const answer = await handle('probe', probeRequest, fakeAdapter({ detects: false, whyDeclined: 'no pond on PATH' }));
+  assert.deepEqual(answer, { code: 75, stdout: '', stderr: 'lets-delegate-pond: no pond on PATH\n' });
 });
 
 const finishRequest = (h: Handle, ok = true) => json(buildRequest('finish', { cwd: '/r', handle: h, ok }));

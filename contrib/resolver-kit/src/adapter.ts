@@ -32,6 +32,9 @@ export type Adapter = {
   handleKind: string;
   // True when this process runs inside the adapter's harness.
   detect(): boolean;
+  // Why this process declines, when detect() is false and the adapter can
+  // say more than "not inside <harness>".
+  whyDeclined?(): string;
   availableFamilies(options: { effort: Effort }): Available;
   // Why a family is not available here, when the adapter can say more than
   // that it is not.

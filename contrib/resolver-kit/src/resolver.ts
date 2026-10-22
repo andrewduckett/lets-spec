@@ -1,6 +1,7 @@
 // The adapter layer: the verb layer's answer for a resolver that starts
 // sessions in one harness. probe, run and start go to the adapter when this
-// process is inside its harness, and decline when it is not. finish goes to
+// process is inside its harness, and decline when it is not, with the
+// adapter's own reason when it gives one. finish goes to
 // the adapter when the handle is of the kind it makes. No process access
 // here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
@@ -20,7 +21,7 @@ export async function handle(verb: string, input: string, adapter: Adapter): Pro
 export function adapterAnswer(adapter: Adapter): AnswerFn {
   return async (verb: Verb, request: Request, warn: (message: string) => void): Promise<Response> => {
     if (verb === 'finish') return finish(request as Requests['finish'], adapter, warn);
-    if (!adapter.detect()) throw new Declined(`not inside ${adapter.harness}`);
+    if (!adapter.detect()) throw new Declined(adapter.whyDeclined?.() ?? `not inside ${adapter.harness}`);
     if (verb === 'probe') return { resolver: adapter.name };
     if (verb === 'start') {
       const { cwd, name, prompt } = request as Requests['start'];
