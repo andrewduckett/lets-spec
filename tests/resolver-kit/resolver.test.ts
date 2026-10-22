@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Adapter, SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
-import { SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
-import type { Available } from '../../contrib/resolver-kit/src/families.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
 
-type Options = { detects?: boolean; whyDeclined?: string; available?: Available; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
+type Options = { detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
 function fakeAdapter(options: Options = {}) {
-  const { detects = true, available = { gpt: ['gpt-6.1-sol'], claude: ['claude-fable-5-1'], gemini: [] }, text = 'FINDINGS' } = options;
+  const { detects = true, text = 'FINDINGS' } = options;
   const calls: [string, unknown][] = [];
   const adapter: Adapter & { calls: typeof calls } = {
     name: 'pond',
@@ -22,9 +21,10 @@ function fakeAdapter(options: Options = {}) {
     calls,
     detect: () => detects,
     ...(options.whyDeclined === undefined ? {} : { whyDeclined: () => options.whyDeclined! }),
-    availableFamilies: (query) => {
-      calls.push(['availableFamilies', query]);
-      return available;
+    async options(warn) {
+      calls.push(['options', null]);
+      warn('pond lists slowly');
+      return options.options ?? ['gpt/gpt-6.1-sol', 'claude'];
     },
     async spawn(request: SpawnRequest) {
       calls.push(['spawn', request]);
@@ -45,8 +45,9 @@ function fakeAdapter(options: Options = {}) {
 }
 
 const json = (request: object) => JSON.stringify(request);
-const runRequest = json(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', timeoutMinutes: 3 }));
-const startRequest = json(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P' }));
+const runFields = { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', timeoutMinutes: 3, model: 'gpt/gpt-6.1-sol' } as const;
+const runRequest = json(buildRequest('run', runFields));
+const startRequest = json(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P', model: 'gemini/gemini-3.8-flash' }));
 const probeRequest = json(buildRequest('probe', { cwd: '/r' }));
 
 test('outside its harness, the resolver declines each session verb with its own decline message', async () => {
@@ -84,33 +85,41 @@ test('a finish that fails is reported under the program\'s name, and the exit is
   assert.deepEqual(answer, { code: 0, stdout: '{}\n', stderr: 'lets-delegate-pond: could not finish pad P: pond is not running\n' });
 });
 
-test('probe inside the harness answers the adapter\'s name', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, fakeAdapter()), { code: 0, stdout: '{"resolver":"pond"}\n', stderr: '' });
+test('probe inside the harness answers the adapter\'s name and options', async () => {
+  assert.deepEqual(await handle('probe', probeRequest, fakeAdapter({ options: ['gpt/gpt-6-luna', 'claude'] })), {
+    code: 0, stdout: '{"resolver":"pond","options":["gpt/gpt-6-luna","claude"]}\n', stderr: 'lets-delegate-pond: pond lists slowly\n',
+  });
 });
 
-test('run picks a family other than the source, spawns read-only, and waits the timeout', async () => {
+test('run spawns the request\'s model read-only, and waits the timeout', async () => {
   const adapter = fakeAdapter();
   const answer = await handle('run', runRequest, adapter);
   assert.equal(answer.code, 0);
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', text: 'FINDINGS', family: 'gpt', model: 'gpt-6.1-sol', handle: { kind: 'pad', id: 'pad-1' } });
   assert.deepEqual(adapter.calls, [
-    ['availableFamilies', { effort: 'high' }],
     ['spawn', { kind: 'run', name: 'x', prompt: 'P', cwd: '/r', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high', readOnly: true }],
     ['wait', { timeoutMs: 3 * 60000 }],
   ]);
 });
 
-test('start spawns an interactive claude session and returns its handle', async () => {
+test('run passes a null model for a bare family', async () => {
+  const adapter = fakeAdapter();
+  const answer = await handle('run', json(buildRequest('run', { ...runFields, model: 'claude' })), adapter);
+  assert.deepEqual([JSON.parse(answer.stdout).family, JSON.parse(answer.stdout).model], ['claude', null]);
+  assert.deepEqual(adapter.calls[0], ['spawn', { kind: 'run', name: 'x', prompt: 'P', cwd: '/r', family: 'claude', model: null, effort: 'high', readOnly: true }]);
+});
+
+test('start spawns an interactive session on the request\'s model and returns its handle', async () => {
   const adapter = fakeAdapter();
   const answer = await handle('start', startRequest, adapter);
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', handle: { kind: 'pad', id: 'pad-1' } });
-  assert.deepEqual(adapter.calls, [['spawn', { kind: 'start', name: 'fix-login', prompt: 'P', cwd: '/r', family: 'claude', model: null, effort: null, readOnly: false }]]);
+  assert.deepEqual(adapter.calls, [['spawn', { kind: 'start', name: 'fix-login', prompt: 'P', cwd: '/r', family: 'gemini', model: 'gemini-3.8-flash', effort: null, readOnly: false }]]);
 });
 
 test('each error class is its exit code, with nothing on stdout', async () => {
   const cases: [Options, number, string][] = [
-    [{ available: { gpt: [], claude: [], gemini: [] } }, 3, 'lets-delegate-pond: no family is available for a source of claude\n'],
-    [{ spawnError: new SpawnError('pond has no project') }, 4, 'lets-delegate-pond: pond has no project\n'],
+    [{ spawnError: new Refused('pond has no project') }, 3, 'lets-delegate-pond: pond has no project\n'],
+    [{ spawnError: new SpawnError('pond did not answer') }, 4, 'lets-delegate-pond: pond did not answer\n'],
     [{ waitError: new SessionFailed('the session stopped to ask') }, 5, 'lets-delegate-pond: the session stopped to ask (pad pad-1)\n'],
     [{ waitError: new TimeoutError('no result') }, 6, 'lets-delegate-pond: no result (pad pad-1)\n'],
     [{ text: ' \n' }, 5, 'lets-delegate-pond: empty final message (pad pad-1)\n'],
@@ -120,51 +129,27 @@ test('each error class is its exit code, with nothing on stdout', async () => {
   }
 });
 
-test('a malformed request or an unknown verb is exit 2', async () => {
-  for (const [verb, request] of [['run', 'not json'], ['run', json({ protocol: 99, cwd: '/r' })], ['review', probeRequest]]) {
-    const answer = await handle(verb, request, fakeAdapter());
+test('a session refused while it waits is finished as ok, then exits 3', async () => {
+  const adapter = fakeAdapter({ waitError: new Refused('pond cannot run gpt-6.1-sol') });
+  const answer = await handle('run', runRequest, adapter);
+  assert.deepEqual(answer, { code: 3, stdout: '', stderr: 'lets-delegate-pond: pond cannot run gpt-6.1-sol (pad pad-1)\n' });
+  assert.deepEqual(adapter.calls.at(-1), ['finish', { h: { kind: 'pad', id: 'pad-1' }, ok: true, cwd: '/r' }]);
+});
+
+test('a refused session that cannot be finished is a warning, and the exit stays 3', async () => {
+  const adapter = fakeAdapter({ waitError: new Refused('no such model'), finishError: new SpawnError('pond is gone') });
+  const answer = await handle('run', runRequest, adapter);
+  assert.equal(answer.code, 3);
+  assert.equal(answer.stderr, 'lets-delegate-pond: could not finish pad pad-1: pond is gone\nlets-delegate-pond: no such model (pad pad-1)\n');
+});
+
+test('a malformed request is exit 2', async () => {
+  for (const [verb, request] of [['run', 'not json'], ['run', json({ protocol: 99, cwd: '/r' })], ['review', probeRequest],
+    ['run', json({ ...JSON.parse(runRequest), model: undefined })]]) {
+    const adapter = fakeAdapter();
+    const answer = await handle(verb, request, adapter);
     assert.equal(answer.code, 2, `${verb} ${request}`);
     assert.equal(answer.stdout, '');
+    assert.deepEqual(adapter.calls, []);
   }
-});
-
-// A run request from a claude author, with reviewers.
-const runWith = (reviewers: object[]) => json({ ...JSON.parse(runRequest), reviewers });
-const spawned = (adapter: { calls: [string, unknown][] }) => adapter.calls.filter(([call]) => call === 'spawn').map(([, request]) => request as SpawnRequest);
-
-test('run takes the first reviewer from another family that the harness can run', async () => {
-  const adapter = fakeAdapter();
-  const answer = await handle('run', runWith([{ family: 'claude', model: null }, { family: 'gpt', model: 'gpt-6-luna' }]), adapter);
-  assert.equal(answer.code, 0);
-  assert.equal(spawned(adapter)[0].model, 'gpt-6-luna');
-  assert.equal(JSON.parse(answer.stdout).family, 'gpt');
-});
-
-test('run passes over a reviewer the harness cannot run', async () => {
-  const adapter = fakeAdapter();
-  await handle('run', runWith([{ family: 'gemini', model: 'gemini-3.8-flash' }, { family: 'gpt', model: null }]), adapter);
-  assert.deepEqual([spawned(adapter)[0].family, spawned(adapter)[0].model], ['gpt', null]);
-});
-
-test('run takes the author\'s family when no other reviewer can run', async () => {
-  const answer = await handle('run', runWith([{ family: 'claude', model: null }]), fakeAdapter());
-  assert.equal(answer.code, 0);
-  assert.equal(JSON.parse(answer.stdout).family, 'claude');
-});
-
-test('run exits 3 when the harness can run no reviewer, naming each one and why', async () => {
-  const adapter = fakeAdapter({ available: { gpt: [], claude: [], gemini: [] } });
-  const answer = await handle('run', runWith([{ family: 'gpt', model: 'gpt-6-luna' }, { family: 'gemini', model: null }]), adapter);
-  assert.equal(answer.code, 3);
-  assert.match(answer.stderr, /gpt\/gpt-6-luna: pond cannot run gpt/);
-  assert.match(answer.stderr, /gemini\/default: pond cannot run gemini/);
-  assert.deepEqual(spawned(adapter), []);
-});
-
-test('run exits 3 on an empty reviewers list, starting nothing', async () => {
-  const adapter = fakeAdapter();
-  const answer = await handle('run', runWith([]), adapter);
-  assert.equal(answer.code, 3);
-  assert.match(answer.stderr, /no reviewers/);
-  assert.deepEqual(spawned(adapter), []);
 });

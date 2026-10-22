@@ -7,10 +7,12 @@ export const EXIT = { ok: 0, usage: 2, noSession: 3, spawn: 4, session: 5, timeo
 export class UsageError extends Error {}
 // A resolver broke the contract: a bad response, a bad exit code.
 export class ContractError extends Error {}
-// No fresh session can run here: no resolver started one, or none of its
-// families is available.
-export class NoFamilyError extends Error {}
-// The harness refused to start the session.
+// No fresh session can run here: the harness or the account said no before
+// the model gave any output. The harness is not running or not set up,
+// there are no tokens left, or it cannot run the model.
+export class Refused extends Error {}
+// A resolver bug, a broken contract, or an outcome the resolver cannot know,
+// such as no reply from the harness.
 export class SpawnError extends Error {}
 // The session started and failed: an error, it stopped to ask, an empty
 // final message. The message is the reason.
@@ -21,7 +23,7 @@ export class TimeoutError extends Error {}
 // The exit code for one of the errors above, or null for any other error.
 export function exitCodeOf(error: unknown): number | null {
   if (error instanceof UsageError) return EXIT.usage;
-  if (error instanceof NoFamilyError) return EXIT.noSession;
+  if (error instanceof Refused) return EXIT.noSession;
   if (error instanceof ContractError || error instanceof SpawnError) return EXIT.spawn;
   if (error instanceof SessionFailed) return EXIT.session;
   if (error instanceof TimeoutError) return EXIT.timeout;
