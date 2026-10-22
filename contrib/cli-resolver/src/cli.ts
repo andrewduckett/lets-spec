@@ -13,7 +13,7 @@ import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
 import type { Io } from 'resolver-kit/io.ts';
-import { FAMILIES } from 'resolver-kit/protocol.ts';
+import { FAMILIES, normalizeName } from 'resolver-kit/protocol.ts';
 import type { Effort, Family } from 'resolver-kit/protocol.ts';
 import { Declined } from 'resolver-kit/verbs.ts';
 
@@ -87,6 +87,13 @@ export function createAdapter(io: Io): Adapter {
       return { text: io.exists(readResultFrom) ? io.readFile(readResultFrom) : '' };
     },
 
-    async finish() {},
+    // Removes the session's files on ok. The handle's id is the session's
+    // name, so only a name that is safe in a path removes anything.
+    async finish(handle, ok, { cwd }) {
+      if (normalizeName(handle.id) !== handle.id) throw new SpawnError('the handle\'s id is not a session name');
+      if (!ok) return;
+      const path = lastMessagePath(cwd, handle.id);
+      if (io.exists(path)) io.removeFile(path);
+    },
   };
 }

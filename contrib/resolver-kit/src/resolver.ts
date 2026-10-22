@@ -55,10 +55,10 @@ async function run(adapter: Adapter, { cwd, name, prompt, sourceFamily, effort, 
 // Clean up after a session, from anywhere: finish does not check detect().
 // It never fails because the session is gone: a failure is reported on
 // stderr, and the exit is still 0.
-async function finish({ handle, ok: succeeded }: Requests['finish'], adapter: Adapter, warn: (message: string) => void): Promise<Response> {
+async function finish({ cwd, handle, ok: succeeded }: Requests['finish'], adapter: Adapter, warn: (message: string) => void): Promise<Response> {
   if (handle.kind !== adapter.handleKind) throw new SpawnError(`${adapter.harness} makes no handle of kind ${handle.kind}`);
   try {
-    await adapter.finish(handle, succeeded);
+    await adapter.finish(handle, succeeded, { cwd });
   } catch (error) {
     if (exitCodeOf(error) === null) throw error;
     warn(`could not finish ${handle.kind} ${handle.id}: ${(error as Error).message}`);

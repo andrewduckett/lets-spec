@@ -363,9 +363,9 @@ test('finish archives the thread on ok and leaves it otherwise', async () => {
   const log: Log = [];
   const io = fakeIo({ env: {}, files: RUNNING, fetch: fakeFetch([200], []), WebSocket: fakeWebSocket(SUCCESS, log) });
   const adapter = createAdapter(io);
-  await adapter.finish(HANDLE, false);
+  await adapter.finish(HANDLE, false, { cwd: '/r' });
   assert.deepEqual(log, []);
-  await adapter.finish(HANDLE, true);
+  await adapter.finish(HANDLE, true, { cwd: '/r' });
   const frame = log[1][1] as { payload: { type: string; threadId: string } };
   assert.equal(frame.payload.type, 'thread.archive');
   assert.equal(frame.payload.threadId, 'T');
@@ -374,12 +374,12 @@ test('finish archives the thread on ok and leaves it otherwise', async () => {
 test('finish sends the token to the running server, never to an origin the handle names', async () => {
   const fetches: [string, RequestInit | undefined][] = [];
   const io = fakeIo({ env: {}, files: RUNNING, fetch: fakeFetch([200], fetches), WebSocket: fakeWebSocket(SUCCESS, []) });
-  await createAdapter(io).finish({ ...HANDLE, origin: 'http://evil.example' }, true);
+  await createAdapter(io).finish({ ...HANDLE, origin: 'http://evil.example' }, true, { cwd: '/r' });
   assert.equal(fetches[0][0], `${ORIGIN}/api/auth/websocket-ticket`);
 });
 
 test('finish fails when t3 is not running', async () => {
-  await assert.rejects(createAdapter(fakeIo({ env: {} })).finish(HANDLE, true), (error) => error instanceof SpawnError && /not running/.test(error.message));
+  await assert.rejects(createAdapter(fakeIo({ env: {} })).finish(HANDLE, true, { cwd: '/r' }), (error) => error instanceof SpawnError && /not running/.test(error.message));
 });
 
 const runRequest: SpawnRequest = { kind: 'run', name: 'x-plan-review', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high', readOnly: true };

@@ -95,6 +95,36 @@ test('a CLI that runs past the timeout is stopped, and is exit 6', async () => {
   assert.match(answer.stderr, /claude did not finish in 3 minutes/);
 });
 
+const LAST_MESSAGE = '/r/.workspace/lets-delegate/cli-resolver.last-message.md';
+const finishCodex = (ok: boolean) => JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'process', id: 'cli-resolver' }, ok }));
+
+test('finishing a review that succeeded removes its files', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { [LAST_MESSAGE]: 'FINDINGS\n' } });
+  assert.deepEqual(await handle('finish', finishCodex(true), createAdapter(io)), { code: 0, stdout: '{}\n', stderr: '' });
+  assert.equal(io.exists(LAST_MESSAGE), false);
+});
+
+test('finishing a review that failed keeps its files', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { [LAST_MESSAGE]: 'FINDINGS\n' } });
+  assert.equal((await handle('finish', finishCodex(false), createAdapter(io))).code, 0);
+  assert.equal(io.exists(LAST_MESSAGE), true);
+});
+
+test('finishing a review that wrote no files removes nothing', async () => {
+  const io = fakeIo({ commands: ['claude'] });
+  assert.deepEqual(await handle('finish', finishCodex(true), createAdapter(io)), { code: 0, stdout: '{}\n', stderr: '' });
+  assert.deepEqual(io.removed, []);
+});
+
+test('finish removes nothing for a process handle whose id is not a session name', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { '/r/.workspace/lets-delegate/../x.last-message.md': 'X' } });
+  const request = JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'process', id: '../x' }, ok: true }));
+  const answer = await handle('finish', request, createAdapter(io));
+  assert.equal(answer.code, 0);
+  assert.match(answer.stderr, /could not finish process \.\.\/x/);
+  assert.deepEqual(io.removed, []);
+});
+
 test('finish refuses a thread handle with exit 4', async () => {
   const request = JSON.stringify(buildRequest('finish', { cwd: '/r', handle: { kind: 'thread', id: 'T' }, ok: true }));
   const answer = await handle('finish', request, createAdapter(fakeIo({ commands: ['claude'] })));

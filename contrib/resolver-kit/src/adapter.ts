@@ -41,6 +41,7 @@ export type Adapter = {
   whyNot?(family: Family): string;
   spawn(request: SpawnRequest): Promise<Session>;
   waitForResult(session: Session, options: { timeoutMs: number }): Promise<{ text: string }>;
-  // Cleans up after a session on ok. Throws when it cannot.
-  finish(handle: Handle, ok: boolean): Promise<void>;
+  // Cleans up after a session on ok. cwd is the finish request's folder.
+  // Throws when it cannot.
+  finish(handle: Handle, ok: boolean, options: { cwd: string }): Promise<void>;
 };
