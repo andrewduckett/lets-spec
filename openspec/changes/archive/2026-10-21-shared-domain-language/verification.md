@@ -65,3 +65,11 @@ planned evidence boundary. This report does not claim cross-platform builds
 or a live multi-agent behavioral evaluation.
 
 Final project check results are recorded in tasks.md and the PR description.
+
+## Archive validation
+
+The user selected sync and archive. The new main shared-domain-language
+spec preserves the delta's Purpose, all 15 requirement blocks and all 30
+scenarios, with the delta operation header converted to Requirements.
+A full body comparison confirmed nothing remains to sync.
+`openspec validate --specs --strict` passed all six main specs.
