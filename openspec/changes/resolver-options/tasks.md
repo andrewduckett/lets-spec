@@ -16,7 +16,7 @@
 
 ## 4. The cli resolver [depends-on: 1]
 
-- [ ] 4.1 [parallel] [complex] `lets-delegate-cli probe` lists models as the spec says:
+- [x] 4.1 [parallel] [complex] `lets-delegate-cli probe` lists models as the spec says: (✓ node --test tests/cli-resolver/*.test.ts passed)
   - codex: `visibility: list` slugs;
   - agy: `gemini-*` ids, effort stripped, without duplicates;
   - claude: the bare family `claude`;

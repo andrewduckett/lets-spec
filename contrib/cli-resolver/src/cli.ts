@@ -11,16 +11,38 @@ import { join } from 'node:path';
 import type { Adapter, Session } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
-import { familiesFromExecutors, HEADLESS_EXECUTOR, withEffort } from 'resolver-kit/families.ts';
+import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from 'resolver-kit/families.ts';
 import type { Io } from 'resolver-kit/io.ts';
 import { FAMILIES, normalizeName } from 'resolver-kit/protocol.ts';
-import type { Effort, Family } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, ModelString } from 'resolver-kit/protocol.ts';
 import { Declined } from 'resolver-kit/verbs.ts';
 
 // Relative to the request's folder. codex writes its last message here.
 const SCRATCH = '.workspace/lets-delegate';
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
+
+// How long each CLI may take to list its models. Both listings together
+// stay inside the verify check's 60 seconds for probe.
+const LISTING_TIMEOUT_MS = 20_000;
+
+// The command that lists a family's models, and how to read what it prints.
+// claude cannot list its models, so it has none.
+const LISTINGS: Partial<Record<Family, { args: string[]; read: (stdout: string) => string[] }>> = {
+  // codex debug models prints JSON; a model it shows has visibility "list".
+  gpt: {
+    args: ['debug', 'models'],
+    read: (stdout) => (JSON.parse(stdout) as { models: { slug: string; visibility: string }[] }).models
+      .filter(({ visibility }) => visibility === 'list').map(({ slug }) => slug),
+  },
+  // agy models prints a banner, then one tab-separated line per model, once
+  // per effort. It lists other makers' models too, which it cannot run as
+  // gemini, so only gemini-* ids count.
+  gemini: {
+    args: ['models'],
+    read: (stdout) => stdout.split('\n').filter((line) => line.startsWith('gemini-')).map((line) => withoutEffort(line.split('\t')[0])),
+  },
+};
 
 type RunCommandInput = { family: Family; model: string | null; effort: Effort; prompt: string; lastMessagePath: string; timeoutMinutes: number };
 
@@ -63,8 +85,27 @@ export function createAdapter(io: Io): Adapter {
     // Any terminal or harness will do, as long as one family's CLI is on PATH.
     detect: () => FAMILIES.some((family) => io.commandExists(HEADLESS_EXECUTOR[family])),
     whyDeclined: () => 'none of codex, claude or agy is on PATH',
-    availableFamilies: () => familiesFromExecutors(io.commandExists),
-    whyNot: (family) => `${HEADLESS_EXECUTOR[family]} is not on PATH`,
+    // Each family whose CLI is on PATH, gpt, claude, gemini. A listing that
+    // fails lists the bare family, so the caller can still try the CLI's
+    // default model.
+    async options(warn) {
+      const onPath = FAMILIES.filter((family) => io.commandExists(HEADLESS_EXECUTOR[family]));
+      const lists = await Promise.all(onPath.map(async (family): Promise<ModelString[]> => {
+        const listing = LISTINGS[family];
+        if (listing === undefined) return [family];
+        const cmd = HEADLESS_EXECUTOR[family];
+        try {
+          const { stdout, stderr, code, timedOut } = await io.execFile(cmd, listing.args, { env: scrubbedEnv(io.env), timeoutMs: LISTING_TIMEOUT_MS });
+          if (timedOut) throw new Error(`no answer in ${LISTING_TIMEOUT_MS / 1000} s`);
+          if (code !== 0) throw new Error(`exit ${code}: ${stderr.trim().slice(-200)}`);
+          return [...new Set(listing.read(stdout))].map((model) => `${family}/${model}`);
+        } catch (error) {
+          warn(`${cmd} ${listing.args.join(' ')} failed, so ${family} is listed with its default model only: ${(error as Error).message}`);
+          return [family];
+        }
+      }));
+      return lists.flat();
+    },
 
     // The CLI starts in waitForResult, which knows the timeout.
     async spawn({ kind, name, cwd, prompt, family, model, effort }): Promise<CliSession> {

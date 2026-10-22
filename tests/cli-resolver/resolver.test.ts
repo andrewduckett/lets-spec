@@ -8,16 +8,24 @@ import { createAdapter } from '../../contrib/cli-resolver/src/cli.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
-const runRequest = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high' }));
+const runRequest = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', model: 'gpt' }));
 const NO_CLI = { code: 75, stdout: '', stderr: 'lets-delegate-cli: none of codex, claude or agy is on PATH\n' };
 
 test('probe answers cli with one family CLI on PATH', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['claude'] }))), { code: 0, stdout: '{"resolver":"cli"}\n', stderr: '' });
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['claude'] }))), { code: 0, stdout: '{"resolver":"cli","options":["claude"]}\n', stderr: '' });
 });
 
 test('probe answers cli inside another harness', async () => {
-  const insideT3 = fakeIo({ commands: ['codex'], env: { PATH: '/bin', T3CODE_HOME: '/home/u/.t3' } });
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3)), { code: 0, stdout: '{"resolver":"cli"}\n', stderr: '' });
+  const listing = { stdout: JSON.stringify({ models: [{ slug: 'gpt-6-luna', visibility: 'list' }] }), stderr: '', code: 0 };
+  const insideT3 = fakeIo({ commands: ['codex'], env: { PATH: '/bin', T3CODE_HOME: '/home/u/.t3' }, results: [listing] });
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3)), { code: 0, stdout: '{"resolver":"cli","options":["gpt/gpt-6-luna"]}\n', stderr: '' });
+});
+
+test('probe lists the bare family when codex is signed out, and names codex', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude'], results: [{ stdout: '', stderr: 'not logged in', code: 1 }] });
+  const answer = await handle('probe', probeRequest, createAdapter(io));
+  assert.deepEqual([answer.code, answer.stdout], [0, '{"resolver":"cli","options":["gpt","claude"]}\n']);
+  assert.match(answer.stderr, /^lets-delegate-cli: .*codex/);
 });
 
 test('probe declines with no family CLI on PATH', async () => {
@@ -32,7 +40,7 @@ test('run declines with no family CLI on PATH, starting nothing', async () => {
 
 test('start declines with every family CLI on PATH, starting nothing', async () => {
   const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
-  const request = JSON.stringify(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P' }));
+  const request = JSON.stringify(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P', model: 'claude' }));
   assert.deepEqual(await handle('start', request, createAdapter(io)),
     { code: 75, stdout: '', stderr: 'lets-delegate-cli: this resolver only runs headless\n' });
   assert.deepEqual(io.calls, []);
@@ -48,17 +56,8 @@ test('a review with codex answers codex\'s final message on gpt, with a process 
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'cli', text: 'FINDINGS\n', family: 'gpt', model: null, handle: { kind: 'process', id: 'x' } });
 });
 
-test('a reviewer whose CLI is not on PATH is skipped, and says so', async () => {
-  const request = JSON.stringify({ ...JSON.parse(runRequest), reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }] });
-  const io = fakeIo({ commands: ['claude'] });
-  const answer = await handle('run', request, createAdapter(io));
-  assert.equal(answer.code, 3);
-  assert.match(answer.stderr, /gpt\/gpt-6-luna: codex is not on PATH/);
-  assert.deepEqual(io.calls, []);
-});
-
 // A claude review, from a codex author, whose CLI answers with result.
-const claudeRun = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'gpt', effort: 'high', timeoutMinutes: 3 }));
+const claudeRun = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'gpt', effort: 'high', timeoutMinutes: 3, model: 'claude' }));
 const reviewWith = (result: NonNullable<Parameters<typeof fakeIo>[0]>['results']) => handle('run', claudeRun, createAdapter(fakeIo({ commands: ['claude'], results: result })));
 
 test('a CLI that exits non-zero is exit 5, with its exit and stderr', async () => {
