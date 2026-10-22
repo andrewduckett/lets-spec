@@ -4,7 +4,7 @@
 
 - [x] 1.1 [medium] `readConfig` reads `config.yaml` under `XDG_CONFIG_HOME` or `~/.config`, through the `yaml` package added to `lets/package.json`, and returns `{ version: 2, resolvers }` where each entry is an absolute path or the word `subagent`; it ignores unknown keys, and exits 2 naming the file and the bad value for a non-number `version`, a `resolvers` that is not such a list, or a document that is not YAML (verify: `node --test tests/lets/delegate/config.test.ts`) (✓ `node --test tests/lets/delegate/config.test.ts` passed, 7 tests)
 - [x] 1.2 [easy] When `config.yaml` is missing and `config.json` exists beside it, `readConfig` throws a usage error that names both files and says the config is now `config.yaml`; when both exist, it reads `config.yaml` and ignores the JSON (verify: `node --test tests/lets/delegate/config.test.ts`) (✓ `node --test tests/lets/delegate/config.test.ts` passed, 9 tests)
-- [ ] 1.3 [easy] `nix flake check` builds with the new dependency: refresh the `pnpmDeps` hash in `flake.nix` as its comment says, after `pnpm install` updates `pnpm-lock.yaml` (verify: `nix flake check`)
+- [x] 1.3 [easy] `nix flake check` builds with the new dependency: refresh the `pnpmDeps` hash in `flake.nix` as its comment says, after `pnpm install` updates `pnpm-lock.yaml` (verify: `nix flake check`) (✓ the `commands`, `dist`, `flake-module` and `flows` checks passed; `node-tests` fails only on the 12 tests the ledger names, which tasks 3.1 and 3.2 remove)
 
 ## 2. The lookup [depends-on: 1]
 
@@ -32,3 +32,4 @@
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
 
 - 2026-10-21, task 1.1: from this commit until tasks 3.1 and 3.2, the full suite has 12 failing tests. They test behavior this change removes: the `reviewers` tests in `review.test.ts` and the tests in `setup.test.ts`. Tasks 3.1 and 3.2 replace and delete them. The config error no longer ends with "Run `lets delegate setup`", since setup goes in task 3.2.
+- 2026-10-21, task 1.3: `lets/build.mjs` also changed. esbuild bundles `yaml`'s CommonJS build, which calls `require` on Node's own modules, and an ES module bundle has no `require`, so the `dist` check failed with "Dynamic require of \"process\" is not supported". The banner now defines `require` with `createRequire`. The release still needs nothing beside Node.
