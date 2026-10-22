@@ -8,16 +8,24 @@ import { createAdapter } from '../../contrib/cli-resolver/src/cli.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
-const runRequest = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high' }));
+const runRequest = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', model: 'gpt' }));
 const NO_CLI = { code: 75, stdout: '', stderr: 'lets-delegate-cli: none of codex, claude or agy is on PATH\n' };
 
 test('probe answers cli with one family CLI on PATH', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['claude'] }))), { code: 0, stdout: '{"resolver":"cli"}\n', stderr: '' });
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['claude'] }))), { code: 0, stdout: '{"resolver":"cli","options":["claude"]}\n', stderr: '' });
 });
 
 test('probe answers cli inside another harness', async () => {
-  const insideT3 = fakeIo({ commands: ['codex'], env: { PATH: '/bin', T3CODE_HOME: '/home/u/.t3' } });
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3)), { code: 0, stdout: '{"resolver":"cli"}\n', stderr: '' });
+  const listing = { stdout: JSON.stringify({ models: [{ slug: 'gpt-6-luna', visibility: 'list' }] }), stderr: '', code: 0 };
+  const insideT3 = fakeIo({ commands: ['codex'], env: { PATH: '/bin', T3CODE_HOME: '/home/u/.t3' }, results: [listing] });
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3)), { code: 0, stdout: '{"resolver":"cli","options":["gpt/gpt-6-luna"]}\n', stderr: '' });
+});
+
+test('probe lists the bare family when codex is signed out, and names codex', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude'], results: [{ stdout: '', stderr: 'not logged in', code: 1 }] });
+  const answer = await handle('probe', probeRequest, createAdapter(io));
+  assert.deepEqual([answer.code, answer.stdout], [0, '{"resolver":"cli","options":["gpt","claude"]}\n']);
+  assert.match(answer.stderr, /^lets-delegate-cli: .*codex/);
 });
 
 test('probe declines with no family CLI on PATH', async () => {
@@ -32,7 +40,7 @@ test('run declines with no family CLI on PATH, starting nothing', async () => {
 
 test('start declines with every family CLI on PATH, starting nothing', async () => {
   const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
-  const request = JSON.stringify(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P' }));
+  const request = JSON.stringify(buildRequest('start', { cwd: '/r', name: 'fix-login', prompt: 'P', model: 'claude' }));
   assert.deepEqual(await handle('start', request, createAdapter(io)),
     { code: 75, stdout: '', stderr: 'lets-delegate-cli: this resolver only runs headless\n' });
   assert.deepEqual(io.calls, []);
@@ -48,24 +56,85 @@ test('a review with codex answers codex\'s final message on gpt, with a process 
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'cli', text: 'FINDINGS\n', family: 'gpt', model: null, handle: { kind: 'process', id: 'x' } });
 });
 
-test('a reviewer whose CLI is not on PATH is skipped, and says so', async () => {
-  const request = JSON.stringify({ ...JSON.parse(runRequest), reviewers: [{ family: 'gpt', model: 'gpt-6-luna' }] });
+// A run request for model, at effort, from a claude author.
+const runOn = (model: string, effort: 'low' | 'medium' | 'high' = 'high') =>
+  JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort, model }));
+// An io with every CLI on PATH, whose one run prints FINDINGS.
+const answering = () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'], results: [(cmd, args) => {
+    if (cmd === 'codex') io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS\n');
+    return { stdout: cmd === 'codex' ? '' : 'FINDINGS\n', stderr: '', code: 0 };
+  }] });
+  return io;
+};
+const argsOf = (io: ReturnType<typeof fakeIo>) => io.calls.map(([cmd, args]) => [cmd, args]);
+
+test('a review with codex runs the given model with -m, and answers it', async () => {
+  const io = answering();
+  const answer = await handle('run', runOn('gpt/gpt-6-luna'), createAdapter(io));
+  assert.equal(io.calls.length, 1);
+  assert.deepEqual(io.calls[0][1].slice(io.calls[0][1].indexOf('-m'), io.calls[0][1].indexOf('-m') + 2), ['-m', 'gpt-6-luna']);
+  assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'cli', text: 'FINDINGS\n', family: 'gpt', model: 'gpt-6-luna', handle: { kind: 'process', id: 'x' } });
+});
+
+test('a bare family runs the CLI with no model argument', async () => {
+  const io = answering();
+  const answer = await handle('run', runOn('claude'), createAdapter(io));
+  assert.deepEqual(argsOf(io), [['claude', ['-p', '--permission-mode', 'plan', '--effort', 'high']]]);
+  assert.equal(JSON.parse(answer.stdout).family, 'claude');
+});
+
+test('a gemini model runs with the review\'s effort added', async () => {
+  const io = answering();
+  await handle('run', runOn('gemini/gemini-3.8-flash', 'high'), createAdapter(io));
+  assert.deepEqual(argsOf(io)[0][1].slice(4, 6), ['--model', 'gemini-3.8-flash-high']);
+});
+
+test('a model the CLI never listed is still tried', async () => {
+  const io = answering();
+  await handle('run', runOn('gpt/gpt-6-astra'), createAdapter(io));
+  assert.equal(io.calls.length, 1);
+  assert.ok(io.calls[0][1].includes('gpt-6-astra'));
+});
+
+test('a run with no model is exit 2, naming it, and starts nothing', async () => {
   const io = fakeIo({ commands: ['claude'] });
-  const answer = await handle('run', request, createAdapter(io));
-  assert.equal(answer.code, 3);
-  assert.match(answer.stderr, /gpt\/gpt-6-luna: codex is not on PATH/);
+  const answer = await handle('run', JSON.stringify({ ...JSON.parse(runOn('claude')), model: undefined }), createAdapter(io));
+  assert.deepEqual([answer.code, answer.stdout], [2, '']);
+  assert.match(answer.stderr, /model/);
   assert.deepEqual(io.calls, []);
 });
 
+test('codex refusing the model is exit 3, with the end of its stderr', async () => {
+  const io = fakeIo({ commands: ['codex'], results: [{ stdout: '', stderr: 'error: model gpt-6-astra not available', code: 1 }] });
+  const answer = await handle('run', runOn('gpt/gpt-6-astra'), createAdapter(io));
+  assert.equal(answer.code, 3);
+  assert.match(answer.stderr, /model gpt-6-astra not available/);
+});
+
+test('a codex refusal after an earlier run with the same name is exit 3, not 5', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { '/r/.workspace/lets-delegate/x.last-message.md': 'OLD FINDINGS\n' },
+    results: [{ stdout: '', stderr: 'model not available', code: 1 }] });
+  const answer = await handle('run', runOn('gpt/gpt-6-astra'), createAdapter(io));
+  assert.equal(answer.code, 3);
+});
+
 // A claude review, from a codex author, whose CLI answers with result.
-const claudeRun = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'gpt', effort: 'high', timeoutMinutes: 3 }));
+const claudeRun = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'gpt', effort: 'high', timeoutMinutes: 3, model: 'claude' }));
 const reviewWith = (result: NonNullable<Parameters<typeof fakeIo>[0]>['results']) => handle('run', claudeRun, createAdapter(fakeIo({ commands: ['claude'], results: result })));
 
-test('a CLI that exits non-zero is exit 5, with its exit and stderr', async () => {
-  const answer = await reviewWith([{ stdout: '', stderr: 'rate limited', code: 2 }]);
+test('a CLI that prints and then exits non-zero is exit 5, with its exit and stderr', async () => {
+  const answer = await reviewWith([{ stdout: 'half a review', stderr: 'rate limited', code: 2 }]);
   assert.equal(answer.code, 5);
   assert.equal(answer.stdout, '');
   assert.match(answer.stderr, /claude failed: exit 2: rate limited/);
+});
+
+test('a CLI that exits non-zero having printed nothing is a refusal, exit 3, with the end of its stderr', async () => {
+  const answer = await reviewWith([{ stdout: '', stderr: 'model not found', code: 1 }]);
+  assert.equal(answer.code, 3);
+  assert.equal(answer.stdout, '');
+  assert.match(answer.stderr, /claude refused: exit 1: model not found/);
 });
 
 test('a CLI that ends with an empty message is exit 5', async () => {
@@ -80,12 +149,12 @@ test('a codex run that writes no last message is exit 5', async () => {
   assert.match(answer.stderr, /empty final message/);
 });
 
-test('a CLI that cannot start is exit 4, naming the CLI', async () => {
+test('a CLI that cannot start is a refusal, exit 3, naming the CLI', async () => {
   const io = fakeIo({ commands: ['claude'], execFile: async (cmd) => {
     throw new Error(`cannot run ${cmd}: spawn ${cmd} EACCES`);
   } });
   const answer = await handle('run', claudeRun, createAdapter(io));
-  assert.equal(answer.code, 4);
+  assert.equal(answer.code, 3);
   assert.match(answer.stderr, /^lets-delegate-cli: cannot run claude: /);
 });
 

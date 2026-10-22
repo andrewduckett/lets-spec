@@ -1,11 +1,11 @@
 // What a resolver needs from its harness. Each program has one adapter,
 // which makes sessions in one harness; resolver.ts turns protocol verbs into
 // these calls.
-import type { Available } from './families.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
+import type { Effort, Family, Handle, ModelString } from './protocol.ts';
 
 // run: read-only, and the resolver waits for the final message.
 // start: interactive, and the resolver returns at once.
+// A null model is the harness's default for the family.
 export type SpawnRequest = {
   kind: 'run' | 'start';
   name: string;
@@ -35,11 +35,13 @@ export type Adapter = {
   // Why this process declines, when detect() is false and the adapter can
   // say more than "not inside <harness>".
   whyDeclined?(): string;
-  availableFamilies(options: { effort: Effort }): Available;
-  // Why a family is not available here, when the adapter can say more than
-  // that it is not.
-  whyNot?(family: Family): string;
+  // The models this harness can run now, in its own order. It never
+  // chooses one: the caller does. warn adds a line to stderr.
+  options(warn: (message: string) => void): Promise<ModelString[]>;
+  // Throws Refused when the harness says no before the model gives output.
   spawn(request: SpawnRequest): Promise<Session>;
+  // Throws Refused when the harness says no before the model gives output;
+  // the kit then finishes the session as ok.
   waitForResult(session: Session, options: { timeoutMs: number }): Promise<{ text: string }>;
   // Cleans up after a session on ok. cwd is the finish request's folder.
   // Throws when it cannot.

@@ -54,13 +54,44 @@ test('the live part runs, checks the tree, finishes, and starts', async () => {
   assert.match(t.output(), /it started fake f-1; close it when you are done/);
 });
 
-test('the live run sends reviewers, and a resolver that ignores them still passes', async () => {
+test('a probe answer without options fails the probe check, naming options', async () => {
+  const t = setup({ FAKE_RESOLVER_STDOUT_PROBE: '{"resolver":"x"}' });
+  assert.equal(await run({ command: [fixture('fake-resolver')], live: false }, t.deps), 1);
+  assert.match(t.output(), /^FAIL {2}probe answers.*options/m);
+});
+
+// The models of the live run requests, in order, with the probe answering options.
+async function liveRuns(options: string[], settings: Record<string, string> = {}) {
   const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');
-  const t = setup({ FAKE_RESOLVER_LOG: log });
-  await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
-  assert.match(t.output(), /^ok {4}run answers with text, a known family and resolver$/m);
-  const [, request] = readFileSync(log, 'utf8').split('\n').find((line) => line.startsWith('run\t'))!.split('\t');
-  assert.ok(Array.isArray(JSON.parse(request).reviewers) && JSON.parse(request).reviewers.length > 0);
+  const t = setup({ FAKE_RESOLVER_LOG: log, FAKE_RESOLVER_STDOUT_PROBE: JSON.stringify({ resolver: 'fake', options }), ...settings });
+  const code = await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
+  const runs = readFileSync(log, 'utf8').split('\n').filter((line) => line.startsWith('run\t')).map((line) => JSON.parse(line.split('\t')[1]).model);
+  return { code, runs, output: t.output() };
+}
+
+test('the live run sends the first option as its model', async () => {
+  const { runs, output } = await liveRuns(['gpt/gpt-6-luna', 'claude']);
+  assert.deepEqual(runs, ['gpt/gpt-6-luna']);
+  assert.match(output, /^ok {4}run answers with text, a known family and resolver$/m);
+});
+
+test('the live run tries the next option when one is refused', async () => {
+  const { runs, output } = await liveRuns(['gpt/gpt-6-astra', 'claude'], { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra' });
+  assert.deepEqual(runs, ['gpt/gpt-6-astra', 'claude']);
+  assert.match(output, /^ok {4}run answers with text, a known family and resolver$/m);
+});
+
+test('the live run fails when every option is refused, naming each one', async () => {
+  const { code, output } = await liveRuns(['gpt/gpt-6-astra', 'claude'], { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra,claude' });
+  assert.equal(code, 1);
+  assert.match(output, /^FAIL {2}run answers.*gpt\/gpt-6-astra: refused gpt\/gpt-6-astra.*claude: refused claude/m);
+});
+
+test('a resolver with no options gets no live run, and passes', async () => {
+  const { runs, output } = await liveRuns([]);
+  assert.deepEqual(runs, []);
+  assert.match(output, /^ok {4}run answers.*$/m);
+  assert.match(output, /lists no model to run/);
 });
 
 test('a live run that fails is reported with its reason', async () => {

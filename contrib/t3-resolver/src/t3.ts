@@ -20,13 +20,12 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Available } from 'resolver-kit/families.ts';
 import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
-import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
 import { pollUntil } from 'resolver-kit/wait.ts';
 
 export const TOKEN_FILE_SUFFIX = '.config/lets-delegate/t3-token';
@@ -42,8 +41,8 @@ export const T3_INSTANCE: Record<Family, string> = { gpt: 'codex', claude: 'clau
 // Each t3 provider names its effort option differently. Gemini carries the
 // effort in the model id instead.
 const T3_EFFORT_OPTION: Record<Family, string | null> = { gpt: 'reasoningEffort', claude: 'effort', gemini: null };
-// The model a start uses when the project has no default.
-const START_MODEL = 'claude-opus-5-5';
+// A start has no effort, and a gemini model needs one.
+const START_EFFORT: Effort = 'medium';
 
 export type ModelSelection = { instanceId: string; model: string | null; options: { id: string; value: string }[] };
 type Manifest = {
@@ -52,32 +51,40 @@ type Manifest = {
     providers?: Record<string, { defaults?: { chat?: string } | null } | undefined>;
   };
 };
-type Project = { project_id: string; title: string; workspace_root: string; default_model_selection_json: string | null };
+type Project = { project_id: string; title: string; workspace_root: string };
 
-// t3 lists gemini once per effort, as gemini-<version>-<effort>. Put the one
-// for this effort first and keep the rest in order.
-export function familiesFromT3Manifest(manifest: Manifest, effort: Effort): Available {
-  const current = manifest.manifest.currentModels;
-  const families = {} as Available;
-  for (const family of FAMILIES) families[family] = [...(current[T3_INSTANCE[family]] ?? [])];
-  const match = families.gemini.findIndex((id) => id?.endsWith(`-${effort}`));
-  if (match > 0) families.gemini.unshift(...families.gemini.splice(match, 1));
-  return families;
+// The models t3 can run, as <family>/<model>: each provider in the
+// manifest's order, its default chat model first. t3 lists gemini once per
+// effort, as gemini-<version>-<effort>, so the effort goes and each gemini
+// model appears once. A provider instance lets has no family for is left out.
+export function optionsFromT3Manifest(manifest: Manifest): ModelString[] {
+  const familyOf = (instance: string) => FAMILIES.find((family) => T3_INSTANCE[family] === instance);
+  const options = new Set<ModelString>();
+  for (const [instance, models] of Object.entries(manifest.manifest.currentModels)) {
+    const family = familyOf(instance);
+    if (family === undefined) continue;
+    const chat = manifest.manifest.providers?.[instance]?.defaults?.chat;
+    for (const model of [...(chat ? [chat] : []), ...(models ?? [])]) {
+      options.add(`${family}/${family === 'gemini' ? withoutEffort(model) : model}`);
+    }
+  }
+  return [...options];
 }
 
 // The provider's default chat model in the manifest, or null when it has none.
-// gemini's default names an effort, which is dropped, so the review's own
-// effort is added in its place.
-export function defaultModel(manifest: Manifest, family: Family): string | null {
+// gemini's default names an effort. A run drops it, so the review's own
+// effort is added in its place; a start keeps it.
+export function defaultModel(manifest: Manifest, family: Family, { keepEffort = false } = {}): string | null {
   const model = manifest.manifest.providers?.[T3_INSTANCE[family]]?.defaults?.chat ?? null;
-  return family === 'gemini' && model !== null ? withoutEffort(model) : model;
+  return family === 'gemini' && model !== null && !keepEffort ? withoutEffort(model) : model;
 }
 
 // A gemini model takes the effort as a suffix, unless it already has one.
-export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort }): ModelSelection {
+// A null effort is a start's: no effort option, and medium for gemini.
+export function t3ModelSelection({ family, model, effort }: { family: Family; model: string | null; effort: Effort | null }): ModelSelection {
   const option = T3_EFFORT_OPTION[family];
-  const id = family === 'gemini' && model !== null ? withEffort(model, effort) : model;
-  return { instanceId: T3_INSTANCE[family], model: id, options: option ? [{ id: option, value: effort }] : [] };
+  const id = family === 'gemini' && model !== null ? withEffort(model, effort ?? START_EFFORT) : model;
+  return { instanceId: T3_INSTANCE[family], model: id, options: option && effort !== null ? [{ id: option, value: effort }] : [] };
 }
 
 export function baseDir(env: Io['env'], homedir: string): string {
@@ -111,11 +118,11 @@ export function isAncestor(io: Io, ancestorPid: number): boolean {
 
 export function findProject(db: Db, repoRoot: string): Project {
   const projects = db.prepare(
-    'select project_id, title, workspace_root, default_model_selection_json from projection_projects where deleted_at is null',
+    'select project_id, title, workspace_root from projection_projects where deleted_at is null',
   ).all() as Project[];
   const project = projects.find((p) => p.workspace_root === repoRoot);
   if (!project) {
-    throw new SpawnError(`t3 has no project for ${repoRoot}; run: t3 project add ${repoRoot}; known: ${projects.map((p) => p.title).join(', ')}`);
+    throw new Refused(`t3 has no project for ${repoRoot}; run: t3 project add ${repoRoot}; known: ${projects.map((p) => p.title).join(', ')}`);
   }
   return { ...project };
 }
@@ -196,7 +203,7 @@ async function issueToken(io: Io): Promise<string> {
   const args = ['auth', 'session', 'issue', '--base-dir', baseDir(io.env, io.homedir()), '--ttl', '30d', '--label', 'lets-delegate', '--token-only'];
   const { stdout, stderr, code } = await io.execFile('t3', args, { env: io.env });
   const token = stdout.trim();
-  if (code !== 0 || !/^\S+$/.test(token)) throw new SpawnError(`could not issue a t3 token (exit ${code}): ${stderr.trim()}`);
+  if (code !== 0 || !/^\S+$/.test(token)) throw new Refused(`could not issue a t3 token (exit ${code}): ${stderr.trim()}`);
   const path = tokenPath(io);
   io.mkdirp(dirname(path), { mode: 0o700 });
   io.writeFile(path, token, { mode: 0o600 });
@@ -214,7 +221,7 @@ async function requestTicket(io: Io, origin: string, token: string): Promise<Res
     return await io.fetch(`${origin}/api/auth/websocket-ticket`, { method: 'POST', headers: { authorization: `Bearer ${token}` } });
   } catch (error) {
     const { cause, message } = error as Error & { cause?: { code?: string } };
-    throw new SpawnError(`t3 at ${origin} is unreachable (${cause?.code ?? message})`);
+    throw new Refused(`t3 at ${origin} is unreachable (${cause?.code ?? message})`);
   }
 }
 
@@ -246,9 +253,9 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
   let response = await requestTicket(io, origin, token);
   if (rejected(response)) {
     response = await requestTicket(io, origin, await issueToken(io));
-    if (rejected(response)) throw new SpawnError('t3 rejected the token twice');
+    if (rejected(response)) throw new Refused('t3 rejected the token twice');
   }
-  if (!response.ok) throw new SpawnError(`t3 ticket request failed with HTTP ${response.status}: ${await response.text()}`);
+  if (!response.ok) throw new Refused(`t3 ticket request failed with HTTP ${response.status}: ${await response.text()}`);
   const { ticket } = await response.json() as { ticket: string };
 
   const url = new URL('/ws', origin.replace(/^http/, 'ws'));
@@ -263,12 +270,13 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
       let opened = false;
       let refused = false;
       // Before the socket opens, an error or a close means t3 refused the
-      // upgrade, and the WebSocket API hides why. Ask t3 itself, once.
+      // upgrade, and the WebSocket API hides why. Ask t3 itself, once. After
+      // it opens, t3 may have acted on the request, so the outcome is unknown.
       const fail = (reason: string) => {
         if (opened) return reject(new SpawnError(reason));
         if (refused) return;
         refused = true;
-        refusal(io, origin).then((why) => reject(new SpawnError(why)));
+        refusal(io, origin).then((why) => reject(new Refused(why)));
       };
       ws.addEventListener('open', () => {
         opened = true;
@@ -277,13 +285,13 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
       ws.addEventListener('message', (event) => {
         for (const message of [JSON.parse(event.data as string) as Frame | Frame[]].flat()) {
           if (message._tag === 'Exit' && String(message.requestId) === '1') resolveExit(message.exit!);
-          else if (message._tag === 'Defect' || message._tag === 'ClientProtocolError') reject(new SpawnError(`t3 rejected the request: ${JSON.stringify(message)}`));
+          else if (message._tag === 'Defect' || message._tag === 'ClientProtocolError') reject(new Refused(`t3 rejected the request: ${JSON.stringify(message)}`));
         }
       });
       ws.addEventListener('error', (event) => fail(`t3 websocket error: ${(event as Event & { message?: string }).message || event.type}`));
       ws.addEventListener('close', (event) => fail(`t3 websocket closed: ${event.code} ${event.reason}`));
     });
-    if (exit._tag !== 'Success') throw new SpawnError(`t3 ${tag} failed: ${JSON.stringify(exit)}`);
+    if (exit._tag !== 'Success') throw new Refused(`t3 ${tag} failed: ${JSON.stringify(exit)}`);
     return exit.value;
   } finally {
     clearTimeout(timer);
@@ -319,21 +327,15 @@ export function createAdapter(io: Io): Adapter {
 
   async function git(cwd: string, args: string[]): Promise<string> {
     const { stdout, stderr, code } = await io.execFile('git', ['-C', cwd, ...args], { cwd });
-    if (code !== 0) throw new SpawnError(`git ${args.join(' ')} failed in ${cwd}: ${stderr.trim()}`);
+    if (code !== 0) throw new Refused(`git ${args.join(' ')} failed in ${cwd}: ${stderr.trim()}`);
     return stdout.trim();
-  }
-
-  // A start runs with the project's default model, else START_MODEL.
-  function startSelection(project: Project): ModelSelection {
-    if (project.default_model_selection_json) return JSON.parse(project.default_model_selection_json);
-    return { instanceId: T3_INSTANCE.claude, model: START_MODEL, options: [] };
   }
 
   // The running server. finish sends the token only here, never to an
   // origin a handle names.
   function runningServer() {
     const runtime = readRuntime(io);
-    if (runtime === null) throw new SpawnError(`t3 is not running (no ${userdata(io)}/server-runtime.json)`);
+    if (runtime === null) throw new Refused(`t3 is not running (no ${userdata(io)}/server-runtime.json)`);
     return runtime;
   }
 
@@ -348,10 +350,9 @@ export function createAdapter(io: Io): Adapter {
       return runtime !== null && io.processAlive(runtime.pid) && isAncestor(io, runtime.pid);
     },
 
-    availableFamilies({ effort }) {
+    async options() {
       const manifest = readManifest();
-      if (manifest === null) return { gpt: [], claude: [], gemini: [] };
-      return familiesFromT3Manifest(manifest, effort);
+      return manifest === null ? [] : optionsFromT3Manifest(manifest);
     },
 
     async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
@@ -361,9 +362,9 @@ export function createAdapter(io: Io): Adapter {
       const project = withDb((db) => findProject(db, repoRoot));
       const branch = (await git(cwd, ['branch', '--show-current'])) || null;
       // A null model is the provider's default; with none, t3 picks its own.
-      const manifest = model === null && kind === 'run' ? readManifest() : null;
-      const runModel = model ?? (manifest === null ? null : defaultModel(manifest, family));
-      const modelSelection = kind === 'run' ? t3ModelSelection({ family, model: runModel, effort: effort! }) : startSelection(project);
+      const manifest = model === null ? readManifest() : null;
+      const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: kind === 'start' }));
+      const modelSelection = t3ModelSelection({ family, model: chosen, effort });
       const token = await readToken(io);
       const { threadId } = await launch(io, { origin, token }, buildLaunch({
         threadId: randomUUID(),
@@ -384,7 +385,12 @@ export function createAdapter(io: Io): Adapter {
         const run = readRun(db, handle.id);
         if (run === null) return undefined;
         if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
-        if (run.status === 'failed') throw new SessionFailed(run.failure ?? 'run failed');
+        // A run that failed before any message is a refusal, such as a model
+        // the account cannot run. The kit then archives the thread.
+        if (run.status === 'failed') {
+          const failure = run.failure ?? 'run failed';
+          throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
+        }
         if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
         if (run.status !== 'completed') return undefined;
         // A completed run with no message yet is one with none at all; the

@@ -96,11 +96,21 @@ It declines outside T3 Code. If you also work in other terminals, list
 [`lets-delegate-cli`](../cli-resolver/README.md) after it: outside T3
 Code, that one answers.
 
-Until [#58](https://github.com/andrewduckett/lets-spec/issues/58) lands,
-a review runs the first model in T3 Code's catalog for the family it
-picks. If your account cannot run that model, the review fails, and the
-`subagent` entry after it does not run. List `subagent` alone until #58
-lands if that happens.
+## Which model runs
+
+The caller chooses the model, and the resolver runs exactly that one:
+
+- `probe` lists the models in T3 Code's catalog, as `<family>/<model>`.
+  It takes each provider in the catalog's order, with that provider's
+  default model first. It lists each Gemini model once, without its
+  effort.
+- A review or a handoff runs the model that `--model` names. A bare
+  family, such as `claude`, runs that provider's default model.
+- When T3 Code or your account says no before the model answers, the
+  resolver exits 3, says why on stderr, and archives any thread it
+  started. Examples are a model your account cannot run, T3 Code not
+  running, and a repository with no T3 project. The caller can then try
+  another model.
 
 ## Before the first review in T3 Code
 
@@ -140,7 +150,7 @@ project that T3 knows:
 lets delegate verify --live lets-delegate-t3
 printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
 lets delegate review --name smoke-review --prompt-file .workspace/p.md \
-  --source-family claude --effort low
+  --source-family claude --effort low --model gpt
 ```
 
 Expect:

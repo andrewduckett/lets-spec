@@ -5,7 +5,7 @@
 import { isAbsolute } from 'node:path';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 // The exit code a resolver declines with: it does not handle this request
 // here, and it has started nothing.
 export const DECLINE = 75;
@@ -23,21 +23,40 @@ export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium
 // process. A resolver may add fields; lets passes the handle back whole.
 export type Handle = { kind: string; id: string; [field: string]: unknown };
 
-// A family and model a review may run on. A null model is the tool's own
-// default. lets never sends them; the verify check does.
-export type Reviewer = { family: Family; model: string | null };
+// The model a session runs, as <family> or <family>/<id>. A bare family is
+// the harness's own default model for that family.
+export type ModelString = string;
+
+// A model string split into its family and id. A null model is the
+// harness's default.
+export type Model = { family: Family; model: string | null };
+
+// The family and id of a model string, or null when it is not
+// <family> or <family>/<id>. The id is everything after the first slash,
+// and has no whitespace.
+export function parseModel(text: string): Model | null {
+  const slash = text.indexOf('/');
+  const family = slash === -1 ? text : text.slice(0, slash);
+  if (!(FAMILIES as readonly string[]).includes(family)) return null;
+  if (slash === -1) return { family: family as Family, model: null };
+  const model = text.slice(slash + 1);
+  return model !== '' && !/\s/.test(model) ? { family: family as Family, model } : null;
+}
 
 export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string };
 export type RunRequest = {
   protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; sourceFamily: Family;
-  readOnly: true; interactive: false; effort: Effort; timeoutMinutes: number; reviewers?: Reviewer[];
+  readOnly: true; interactive: false; effort: Effort; timeoutMinutes: number; model: ModelString;
 };
-export type StartRequest = { protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; readOnly: false; interactive: true };
+export type StartRequest = {
+  protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; readOnly: false; interactive: true; model: ModelString;
+};
 export type FinishRequest = { protocol: typeof PROTOCOL; cwd: string; handle: Handle; ok: boolean };
 export type Requests = { probe: ProbeRequest; run: RunRequest; start: StartRequest; finish: FinishRequest };
 export type Request = Requests[Verb];
 
-export type ProbeResponse = { resolver: string };
+// options: the models this resolver can run now, in the harness's order.
+export type ProbeResponse = { resolver: string; options: ModelString[] };
 export type RunResponse = { resolver: string; text: string; family: Family; model?: string | null; handle?: Handle | null };
 export type StartResponse = { resolver: string; handle: Handle } | { resolver: string; handle: null; instructions: string };
 export type FinishResponse = Record<string, unknown>;
@@ -47,24 +66,23 @@ export type Response = Responses[Verb];
 // What a caller gives buildRequest: the request without what the verb sets.
 export type Fields = {
   probe: { cwd: string };
-  run: { cwd: string; name: string; prompt: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number; reviewers?: Reviewer[] };
-  start: { cwd: string; name: string; prompt: string };
+  run: { cwd: string; name: string; prompt: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number; model: ModelString };
+  start: { cwd: string; name: string; prompt: string; model: ModelString };
   finish: { cwd: string; handle: Handle; ok: boolean };
 };
 
 const builders: { [V in Verb]: (fields: Fields[V]) => Requests[V] } = {
   probe: ({ cwd }) => ({ protocol: PROTOCOL, cwd }),
-  run: ({ cwd, name, prompt, sourceFamily, effort, timeoutMinutes, reviewers }) => ({
+  run: ({ cwd, name, prompt, sourceFamily, effort, timeoutMinutes, model }) => ({
     protocol: PROTOCOL, cwd, name, prompt, sourceFamily, readOnly: true, interactive: false, effort,
-    timeoutMinutes: timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES[effort],
-    ...(reviewers === undefined ? {} : { reviewers }),
+    timeoutMinutes: timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES[effort], model,
   }),
-  start: ({ cwd, name, prompt }) => ({ protocol: PROTOCOL, cwd, name, prompt, readOnly: false, interactive: true }),
+  start: ({ cwd, name, prompt, model }) => ({ protocol: PROTOCOL, cwd, name, prompt, readOnly: false, interactive: true, model }),
   finish: ({ cwd, handle, ok }) => ({ protocol: PROTOCOL, cwd, handle, ok }),
 };
 
 // The request for a verb. run takes the default timeout for its effort when
-// none is given, and has reviewers only when they are given.
+// none is given.
 export function buildRequest<V extends Verb>(verb: V, fields: Fields[V]): Requests[V] {
   return (builders[verb] as (fields: Fields[V]) => Requests[V])(fields);
 }
@@ -84,12 +102,12 @@ export function parseRequest(verb: string, text: string): Request {
     check.text('prompt');
     check.exactly('readOnly', verb === 'run');
     check.exactly('interactive', verb === 'start');
+    check.model('model');
   }
   if (verb === 'run') {
     check.oneOf('sourceFamily', FAMILIES);
     check.oneOf('effort', EFFORTS);
     check.wholeNumber('timeoutMinutes');
-    check.reviewers('reviewers');
   }
   if (verb === 'finish') {
     check.handle('handle', false);
@@ -106,6 +124,7 @@ export function parseResponse<V extends Verb>(verb: V, text: string): Responses[
   const check = checker(response, 'the response', (message) => new ContractError(message));
   if (verb === 'finish') return response as Responses[V];
   check.text('resolver');
+  if (verb === 'probe') check.models('options');
   if (verb === 'run') {
     if (typeof response.text !== 'string') throw new ContractError('the response has no text');
     check.oneOf('family', FAMILIES);
@@ -141,6 +160,8 @@ export function normalizeName(raw: string): string {
 }
 
 type Json = Record<string, unknown>;
+
+const MODEL_FORMAT = `<family> or <family>/<id>, for a family of ${FAMILIES.join(', ')}`;
 
 const preview = (text: string) => JSON.stringify(text.length > 200 ? `${text.slice(0, 200)}...` : text);
 
@@ -191,15 +212,14 @@ function checker(object: Json, what: string, fail: (message: string) => Error) {
     wholeNumber(field: string) {
       if (!Number.isInteger(object[field]) || (object[field] as number) < 1) throw bad(field, 'a whole number of minutes');
     },
-    // An optional list of reviewers, each a known family and a string or null model.
-    reviewers(field: string) {
-      if (missing(field)) return;
-      const isReviewer = (value: unknown) => typeof value === 'object' && value !== null && !Array.isArray(value)
-        && (FAMILIES as readonly unknown[]).includes((value as Json).family)
-        && (typeof (value as Json).model === 'string' || (value as Json).model === null);
+    model(field: string) {
+      if (typeof object[field] !== 'string' || parseModel(object[field]) === null) throw bad(field, MODEL_FORMAT);
+    },
+    // A list of model strings, which may be empty.
+    models(field: string) {
       const value = object[field];
-      if (!Array.isArray(value) || !value.every(isReviewer)) {
-        throw bad(field, `a list of objects with a family (${FAMILIES.join(', ')}) and a string or null model`);
+      if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string' && parseModel(entry) !== null)) {
+        throw bad(field, `a list of ${MODEL_FORMAT}`);
       }
     },
     // nullable: the field may be null or absent.

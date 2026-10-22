@@ -32,7 +32,7 @@ When no config file exists, `lets delegate` SHALL ask the default, its own `cont
 When the default answers a review, `lets delegate review` SHALL exit 3, print nothing on stdout, and start no process.
 
 #### Scenario: A review with no resolver installed
-- **WHEN** the default answers `lets delegate review --name x --prompt-file p.md --source-family claude --effort high`
+- **WHEN** the default answers `lets delegate review --name x --prompt-file p.md --source-family claude --effort high --model gpt`
 - **THEN** the command exits 3, stdout is empty, and no process is started
 
 #### Scenario: A family CLI is on PATH
@@ -50,7 +50,7 @@ When the default answers a review, `lets delegate review` SHALL say on stderr th
 When the default answers a handoff, `lets delegate handoff` SHALL exit 0 and print one JSON line with `resolver` `subagent`, `handle` `null`, and `instructions` that contain the prompt text and the path of the file the prompt is saved in.
 
 #### Scenario: A handoff with no resolver installed
-- **WHEN** the default answers `lets delegate handoff --name build-x --prompt-file p.md`, and `p.md` holds `Run lets-build on branch build-x`
+- **WHEN** the default answers `lets delegate handoff --name build-x --prompt-file p.md --model claude`, and `p.md` holds `Run lets-build on branch build-x`
 - **THEN** the command exits 0, and its JSON line has `"resolver":"subagent"`, `"handle":null`, and `instructions` that contain `Run lets-build on branch build-x` and `.workspace/lets-delegate/build-x.prompt.md`
 
 #### Scenario: The saved prompt
@@ -80,11 +80,11 @@ The release tarball, the Nix `lets` package and the repository's source tree SHA
 - **THEN** the JSON line has `"resolver":"subagent"`
 
 ### Requirement: The default never declines
-`lets-delegate-subagent` SHALL answer `probe`, `run` and `start` wherever it runs, and SHALL never exit 75. It SHALL answer `probe` with `{"resolver":"subagent"}`.
+`lets-delegate-subagent` SHALL answer `probe`, `run` and `start` wherever it runs, and SHALL never exit 75. It SHALL answer `probe` with `{"resolver":"subagent","options":[]}`, because it can run no model.
 
 #### Scenario: probe in a plain terminal
 - **WHEN** `lets-delegate-subagent probe` runs outside any harness
-- **THEN** it exits 0 and prints `{"resolver":"subagent"}`
+- **THEN** it exits 0 and prints `{"resolver":"subagent","options":[]}`
 
 ### Requirement: The default finishes nothing
 `lets-delegate-subagent` SHALL answer `finish` with exit 0 and nothing on stdout, whatever the handle.

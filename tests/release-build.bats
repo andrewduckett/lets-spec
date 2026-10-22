@@ -150,7 +150,7 @@ bundle_alone() {
 @test "the T3 resolver bundle declines outside T3 Code with no node_modules beside it" {
   bundle_alone t3-resolver lets-delegate-t3
   # No T3 server runtime file.
-  run env T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  run env T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe <<<"{\"protocol\":2,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
   [ "$output" = 'lets-delegate-t3: not inside T3 Code' ]
 }
@@ -160,16 +160,16 @@ bundle_alone() {
   # A PATH with node on it, and none of codex, claude or agy.
   mkdir "$BATS_TEST_TMPDIR/node-only"
   ln -s "$(command -v node)" "$BATS_TEST_TMPDIR/node-only/node"
-  run env PATH="$BATS_TEST_TMPDIR/node-only" node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  run env PATH="$BATS_TEST_TMPDIR/node-only" node "$bin" probe <<<"{\"protocol\":2,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
   [ "$output" = 'lets-delegate-cli: none of codex, claude or agy is on PATH' ]
 }
 
 @test "the subagent resolver bundle answers subagent with no node_modules beside it" {
   bundle_alone subagent-resolver lets-delegate-subagent
-  run node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
+  run node "$bin" probe <<<"{\"protocol\":2,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 0 ]
-  [ "$output" = '{"resolver":"subagent"}' ]
+  [ "$output" = '{"resolver":"subagent","options":[]}' ]
 }
 
 @test "each flow ships the authored domain-language reference" {

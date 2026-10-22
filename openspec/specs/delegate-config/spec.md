@@ -1,7 +1,7 @@
 # delegate-config Specification
 
 ## Purpose
-Says how `lets delegate` reads the user's delegate config, which decides which resolver answers: the chain of resolvers to ask, in order. It also says how a contrib resolver treats the `reviewers` a request may carry.
+Says how `lets delegate` reads the user's delegate config, which decides which resolver answers: the chain of resolvers to ask, in order. It also says what a request from `lets` carries: the model the user gave with `--model`.
 
 ## Requirements
 
@@ -69,13 +69,6 @@ When `config.yaml` does not exist and `config.json` exists in the same folder, `
 - **WHEN** both `config.json` and `config.yaml` exist
 - **THEN** `lets delegate review` reads `config.yaml` and ignores `config.json`
 
-### Requirement: A request from lets carries no reviewers
-A `run` request that `lets delegate review` sends SHALL have no `reviewers` field, whatever the config holds, so the resolver chooses as "No list keeps the resolver's own choice" says.
-
-#### Scenario: A review with a config
-- **WHEN** a config file exists and the user runs `lets delegate review`
-- **THEN** the `run` request the resolver receives has no `reviewers` field
-
 ### Requirement: A missing configured resolver stops the command
 When the lookup reaches an absolute path the config lists, and that path does not exist or is not an executable file, `lets delegate` SHALL exit 2 and name the path and the config file. It SHALL ask no later resolver. A resolver earlier in the order that answers is not affected.
 
@@ -91,38 +84,24 @@ When the lookup reaches an absolute path the config lists, and that path does no
 - **WHEN** the config lists a resolver that answers the review, then a path that does not exist
 - **THEN** `lets delegate review` exits 0 with the first resolver's answer, and stderr does not name the missing path
 
-### Requirement: The resolver takes the first reviewer from another family
-When a `run` request has `reviewers`, the contrib resolver SHALL use the first reviewer whose family is not `sourceFamily` and that its harness can run. When there is none, it SHALL use the first reviewer it can run. It SHALL answer with that reviewer's family and model.
+### Requirement: A request from lets carries the model the user gave
+`lets delegate review` and `lets delegate handoff` SHALL require `--model <family[/model]>`, and SHALL send its value unchanged as the `model` of the `run` or `start` request. Without `--model`, they SHALL exit 2 and ask no resolver. The `run` request SHALL have no `reviewers` field, whatever the config holds.
 
-#### Scenario: The author's family is first
-- **WHEN** `sourceFamily` is `claude`, `reviewers` is `claude`/`null` then `gpt`/`gpt-6-luna`, and the harness can run both
-- **THEN** the session runs `gpt-6-luna`, and the response has `"family":"gpt"`
+#### Scenario: A review with a model
+- **WHEN** the user runs `lets delegate review --model gpt/gpt-6-luna` with the other required options
+- **THEN** the `run` request the resolver receives has `"model":"gpt/gpt-6-luna"` and no `reviewers` field
 
-#### Scenario: Only the author's family
-- **WHEN** `sourceFamily` is `claude` and `reviewers` holds only `claude`/`null`
-- **THEN** the session runs on `claude`, and `lets delegate review` reports `"independent":false`
+#### Scenario: A handoff with a bare family
+- **WHEN** the user runs `lets delegate handoff --name build-x --prompt-file p.md --model claude`
+- **THEN** the `start` request the resolver receives has `"model":"claude"`
 
-### Requirement: The resolver runs the reviewer's model
-The contrib resolver SHALL start the session with the reviewer's model, or with the harness's default for the family when the model is `null`. For `gemini`, it SHALL add the review's effort to the model, as `<model>-<effort>`.
+#### Scenario: No model
+- **WHEN** the user runs `lets delegate review` without `--model`
+- **THEN** it exits 2, stderr names `--model`, and no resolver is run
 
-#### Scenario: A gemini reviewer at high effort
-- **WHEN** the chosen reviewer is `gemini`/`gemini-3.8-flash` and the effort is `high`
-- **THEN** the session runs `gemini-3.8-flash-high`
+### Requirement: A refusal stops the review with exit 3
+When the resolver that answers a review or a handoff exits 3, `lets delegate review` and `lets delegate handoff` SHALL exit 3 and show the resolver's stderr. They SHALL NOT ask a later resolver in the chain.
 
-### Requirement: No usable reviewer exits 3
-When a `run` request has `reviewers` and the harness can run none of them, the contrib resolver SHALL exit 3, start no session, and name on stderr each reviewer it skipped and why.
-
-#### Scenario: The harness lacks the family
-- **WHEN** `lets-delegate-cli run` runs with `claude` on `PATH`, `reviewers` holds only `gpt`/`gpt-6-luna`, and `codex` is not on `PATH`
-- **THEN** it exits 3, and stderr names `gpt` and says `codex` is not on `PATH`
-
-#### Scenario: An empty list
-- **WHEN** a `run` request reaches the resolver with `reviewers` `[]`
-- **THEN** it exits 3, starts no session, and stderr says the request has no reviewers
-
-### Requirement: No list keeps the resolver's own choice
-When a `run` request has no `reviewers` field, the contrib resolver SHALL choose the family and model as it did before this field existed.
-
-#### Scenario: An older lets
-- **WHEN** a `run` request without `reviewers` reaches `lets-delegate-cli`, with `codex` on `PATH` and `sourceFamily` `claude`
-- **THEN** the session runs on `gpt` with codex's default model
+#### Scenario: The model is refused
+- **WHEN** the resolver that answers `lets delegate review --model gpt/gpt-6-astra` exits 3 with `codex refused gpt-6-astra` on stderr
+- **THEN** `lets delegate review` exits 3, and its stderr contains `codex refused gpt-6-astra`

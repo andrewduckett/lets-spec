@@ -30,7 +30,7 @@ function bareRepo() {
 test('the source tree\'s lets delegate handoff answers with subagent', () => {
   const { repo, env } = bareRepo();
   writeFileSync(join(repo, 'p.md'), 'Run lets-build on branch build-x');
-  const result = spawnSync(process.execPath, [LETS, 'delegate', 'handoff', '--name', 'build-x', '--prompt-file', 'p.md'], { cwd: repo, env, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [LETS, 'delegate', 'handoff', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude'], { cwd: repo, env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).resolver, 'subagent');
   assert.equal(readFileSync(join(repo, '.workspace/lets-delegate/build-x.prompt.md'), 'utf8'), 'Run lets-build on branch build-x');

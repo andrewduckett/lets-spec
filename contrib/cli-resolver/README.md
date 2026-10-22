@@ -20,16 +20,31 @@ contract](../../docs/resolver-contract.md).
 
 This page covers:
 
+- [Which models it lists](#which-models-it-lists)
 - [How a review runs](#how-a-review-runs)
 - [Install it](#install-it)
 - [List it in your delegate config](#list-it-in-your-delegate-config)
 - [Check that it works](#check-that-it-works)
 
+## Which models it lists
+
+`probe` lists the models each CLI on your `PATH` reports, in the order
+`gpt`, `claude`, `gemini`:
+
+| Family | Listed from | What it lists |
+|---|---|---|
+| `gpt` | `codex debug models` | `gpt/<model>` for each model codex shows, not the hidden ones |
+| `claude` | nothing: `claude` cannot list its models | the bare family `claude`, which runs claude's default model |
+| `gemini` | `agy models` | `gemini/<model>` for each Gemini model, once, without its effort |
+
+Each listing gets 20 seconds. When one fails, for example because codex
+is signed out, `probe` lists the bare family instead, such as `gpt`, and
+says why on stderr.
+
 ## How a review runs
 
-It picks a family whose CLI is on your `PATH`, from another family than
-the author's when it can. It runs that CLI in the repository, and waits
-for its final message:
+It runs the CLI of the family that `--model` names, in the repository,
+and waits for its final message:
 
 | Family | Command | The prompt goes | The answer comes from |
 |---|---|---|---|
@@ -37,8 +52,11 @@ for its final message:
 | `claude` | `claude -p --permission-mode plan` | on stdin | stdout |
 | `gemini` | `agy --mode plan … -p <prompt>` | in the arguments | stdout |
 
-Each command gets the review's effort, and the reviewer's model when
-`lets` names one. When the review succeeds, `finish` removes the
+Each command gets the review's effort, and the model that `--model` names,
+with `-m` for codex and `--model` for the others. A Gemini model also
+gets the effort, as `gemini-3.8-flash-high`. A bare family passes no
+model, so the CLI runs its default. It tries a model it did not list, too.
+When the review succeeds, `finish` removes the
 session's files in `.workspace/lets-delegate/`. When it fails, they stay,
 so you can read them.
 
@@ -47,9 +65,12 @@ own exit code:
 
 | What happened | Exit |
 |---|---|
-| The CLI cannot start | 4 |
-| The CLI exits non-zero, or ends with an empty message | 5 |
+| The CLI cannot start | 3 |
+| The CLI exits non-zero having printed nothing, such as for a model it cannot run | 3 |
+| The CLI prints and then exits non-zero, or ends with an empty message | 5 |
 | The CLI runs past the time limit | 6 |
+
+Exit 3 is a refusal: the caller can try another model.
 
 ## Install it
 

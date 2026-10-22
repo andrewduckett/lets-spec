@@ -245,7 +245,7 @@
             # With no other resolver on PATH and no delegate config, the
             # packaged lets runs the default it carries.
             echo 'Run lets-build on branch build-x' > p.md
-            [ "$(lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
+            [ "$(lets delegate handoff --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -308,7 +308,7 @@
             # the sandbox is not T3 Code, and has none of codex, claude or agy.
             declines() {
               status=0
-              echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
+              echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
               [ "$status" -eq 75 ]
               [ "$(cat stderr)" = "$2" ]
             }
@@ -317,11 +317,11 @@
             # The default never declines. A copy alone answers for itself.
             mkdir ../alone
             cp ${dist}/contrib/lets-delegate-subagent ../alone/
-            [ "$(echo "{\"protocol\":1,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent"}' ]
+            [ "$(echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent","options":[]}' ]
             # With nothing else installed or configured, the tarball's lets
             # finds the default beside it.
             echo 'Run lets-build on branch build-x' > p.md
-            [ "$(node ${dist}/bin/lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
+            [ "$(node ${dist}/bin/lets delegate handoff --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
             touch "$out"
           '';
 

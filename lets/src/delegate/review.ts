@@ -12,10 +12,11 @@ import { readPromptFile } from './prompt-file.ts';
 import { buildRequest, normalizeName } from './protocol.ts';
 import type { Effort, Family, Handle } from './protocol.ts';
 
-export type ReviewOptions = { name: string; promptFile: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number };
+// model: <family> or <family>/<model>, sent to the resolver unchanged.
+export type ReviewOptions = { name: string; promptFile: string; sourceFamily: Family; effort: Effort; model: string; timeoutMinutes?: number };
 
-// The exit code: 0 ok, 2 usage, 3 no family, 4 refused, 5 session failed,
-// 6 timeout, 7 tree changed.
+// The exit code: 0 ok, 2 usage, 3 refused, 4 contract or unknown outcome,
+// 5 session failed, 6 timeout, 7 tree changed.
 export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
   try {
     return await review(options, deps);
@@ -27,7 +28,7 @@ export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
   }
 }
 
-async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }: ReviewOptions, deps: Deps) {
+async function review({ name, promptFile, sourceFamily, effort, model: modelString, timeoutMinutes }: ReviewOptions, deps: Deps) {
   const { io } = deps;
   const started = io.now();
   const config = readConfig(deps);
@@ -36,8 +37,7 @@ async function review({ name, promptFile, sourceFamily, effort, timeoutMinutes }
   // What is already uncommitted is the user's, not the session's.
   const before = await treeStatus(cwd, io);
 
-  // No reviewers: the resolver chooses the family and model itself.
-  const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes });
+  const request = buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, model: modelString });
   const { candidate, outcome } = await resolve('run', request, { env: deps.env, io, cwd, config, packageRoot: deps.packageRoot, nodePath: deps.nodePath });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);

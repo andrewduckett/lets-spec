@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
-import { EFFORTS, FAMILIES } from './delegate/protocol.ts';
+import { EFFORTS, FAMILIES, parseModel } from './delegate/protocol.ts';
 import { run as review } from './delegate/review.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { run as verify } from './delegate/verify.ts';
@@ -86,9 +86,12 @@ answered is not the source family.
 Exit codes:
   0  the final message is on stdout
   2  usage error, or every resolver in the config declined
-  3  no fresh session can run here: no resolver started one, or none of
-     its families is available
-  4  the harness refused the session, or the resolver broke the contract
+  3  no fresh session can run here: the harness or the account said no
+     before the model gave any output. The harness is not running or not
+     set up, there are no tokens left, it cannot run the model, or no
+     resolver started a session. stderr says why. Another model may run.
+  4  the resolver broke the contract, or the outcome is unknown, such as
+     no reply from the harness
   5  the session failed: an error, it stopped to ask, or an empty message
   6  the session did not finish in time
   7  the session changed files outside .workspace/`;
@@ -100,20 +103,33 @@ started, handle is null and instructions holds the text to show the user.
 Exit codes:
   0  ok
   2  usage error, or every resolver in the config declined
-  4  the session could not start`;
+  3  no fresh session can run here: the harness or the account said no.
+     stderr says why. Another model may run.
+  4  the resolver broke the contract, or the outcome is unknown, such as
+     no reply from the harness`;
 
 const VERIFY_HELP = `
 It prints one line per check, and exits 1 if any fails.
 
-The live part runs "Reply with the single word ready and stop" read-only,
-checks the answer and the tree, and sends finish. Then it starts a session
-with "Say hello and stop", and leaves it for you to close.`;
+The live part runs "Reply with the single word ready and stop" read-only
+on each model probe lists, in order, until one is not refused (exit 3).
+It checks the answer and the tree, and sends finish. A resolver that lists
+no model gets no run. Then it starts a session with "Say hello and stop"
+on the first model listed, and leaves it for you to close.`;
 
 // --timeout-minutes: a whole number of minutes.
 function wholeMinutes(value: string): number {
   if (!/^[1-9][0-9]*$/.test(value)) throw new InvalidArgumentError('Give a whole number of minutes.');
   return Number(value);
 }
+
+// --model: <family> or <family>/<model>, passed to the resolver unchanged.
+function modelString(value: string): string {
+  if (parseModel(value) === null) throw new InvalidArgumentError(`Give <family> or <family>/<model>, for a family of ${FAMILIES.join(', ')}.`);
+  return value;
+}
+const modelOption = () => new Option('--model <family[/model]>', 'the model to run, such as gpt/gpt-6-luna, or a bare family for the harness\'s default')
+  .argParser(modelString).makeOptionMandatory();
 
 // The release's version from its release.json, else 0.0.0-dev.
 function version(): string {
@@ -163,11 +179,12 @@ const delegate = program
 delegate
   .command('review')
   .summary('run a prompt in a fresh, read-only session and wait for its answer')
-  .description('Run a prompt in a fresh, read-only session, and wait for its final message. The resolver picks the model family.')
+  .description('Run a prompt in a fresh, read-only session on the model --model names, and wait for its final message.')
   .requiredOption('--name <name>', 'a label for the session, normalized to lowercase kebab-case')
   .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
   .addOption(new Option('--source-family <family>', 'the model family that wrote the work').choices(FAMILIES).makeOptionMandatory())
   .addOption(new Option('--effort <effort>', 'how hard the session thinks').choices(EFFORTS).makeOptionMandatory())
+  .addOption(modelOption())
   .option('--timeout-minutes <minutes>', 'how long to wait (default: 15, or 45 with --effort high)', wholeMinutes)
   .addHelpText('after', REVIEW_HELP)
   .action(async (options: ReviewOptions) => {
@@ -177,9 +194,10 @@ delegate
 delegate
   .command('handoff')
   .summary('start a fresh, interactive session and return at once')
-  .description('Start a fresh, interactive session with a prompt, and return at once.')
+  .description('Start a fresh, interactive session with a prompt, on the model --model names, and return at once.')
   .requiredOption('--name <name>', 'a label for the session, normalized to lowercase kebab-case')
   .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
+  .addOption(modelOption())
   .addHelpText('after', HANDOFF_HELP)
   .action(async (options: HandoffOptions) => {
     process.exitCode = await handoff(options, realDeps());

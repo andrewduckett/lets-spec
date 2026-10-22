@@ -18,7 +18,7 @@ const SELF = { packageRoot: '/pkg', nodePath: '/bin/node' };
 const SUBAGENT = '/pkg/contrib/lets-delegate-subagent';
 // The source tree's lets, whose contrib/ links to the real subagent.
 const SOURCE = { packageRoot: fileURLToPath(new URL('../../../lets', import.meta.url)), nodePath: process.execPath };
-const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'low' });
+const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'low', model: 'gpt' });
 const probeRequest = buildRequest('probe', { cwd: '/r' });
 
 // The real io, with the fake resolver's settings added to the env of each
@@ -73,13 +73,13 @@ test('a resolver on PATH is never a candidate', () => {
 
 const CONFIG_FILE = '/home/u/.config/lets-delegate/config.yaml';
 const decline = { stdout: '', stderr: '', code: 75 };
-const answer = (resolver: string) => ({ stdout: JSON.stringify({ resolver }), stderr: '', code: 0 });
+const answer = (resolver: string) => ({ stdout: JSON.stringify({ resolver, options: [] }), stderr: '', code: 0 });
 
 test('when the first listed resolver declines, the next one answers', async () => {
   const io = fakeIo({ executables: ['/a', '/b'], results: [decline, answer('b')] });
   const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/a', '/b') });
   assert.equal(candidate.name, '/b');
-  assert.deepEqual(outcome.response, { resolver: 'b' });
+  assert.deepEqual(outcome.response, { resolver: 'b', options: [] });
 });
 
 test('when the first listed resolver answers, the next one is never run', async () => {
@@ -169,14 +169,14 @@ test('a decline passes the request to the next candidate', async () => {
   const io = ioWith({ FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' });
   const { candidate, outcome } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SOURCE, config: null });
   assert.equal(candidate.name, join(SOURCE.packageRoot, 'contrib/lets-delegate-subagent'));
-  assert.deepEqual(outcome.response, { resolver: 'subagent' });
+  assert.deepEqual(outcome.response, { resolver: 'subagent', options: [] });
 });
 
 test('a listed resolver is run by its path', async () => {
-  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '{"resolver":"t3"}', stderr: '', code: 0 }] });
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '{"resolver":"t3","options":["claude"]}', stderr: '', code: 0 }] });
   const { candidate, outcome } = await resolve('probe', probeRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
   assert.equal(candidate.name, '/opt/r/lets-delegate-t3');
-  assert.deepEqual(outcome.response, { resolver: 't3' });
+  assert.deepEqual(outcome.response, { resolver: 't3', options: ['claude'] });
   const [[cmd, args, opts]] = io.calls;
   assert.equal(cmd, '/opt/r/lets-delegate-t3');
   assert.deepEqual(args, ['probe']);
@@ -285,7 +285,7 @@ test('a default that exits other than 0, 3 or 4 is exit 4 with the install messa
 
 test('a failing default is named by its path, not by the Node that runs it', async () => {
   const io = fakeIo({ files: { [SUBAGENT]: '' }, results: [{ stdout: 'not json', stderr: '', code: 0 }] });
-  const { outcome } = await resolve('start', buildRequest('start', { cwd: '/r', name: 'x', prompt: 'P' }), { env: {}, io, cwd: '/r', ...SELF, config: null });
+  const { outcome } = await resolve('start', buildRequest('start', { cwd: '/r', name: 'x', prompt: 'P', model: 'claude' }), { env: {}, io, cwd: '/r', ...SELF, config: null });
   assert.match(outcome.stderr, new RegExp(`\n${SUBAGENT} broke the contract`));
   assert.doesNotMatch(outcome.stderr, /\/bin\/node/);
 });
