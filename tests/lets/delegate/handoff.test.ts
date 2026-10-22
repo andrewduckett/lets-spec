@@ -31,11 +31,19 @@ test('with no resolver, the default hands back the prompt and where it is saved'
   const t = commandDeps({ resolver: false, files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
   assert.equal(await run({ name: 'build-x', promptFile: 'p.md' }, t.deps), 0);
   const { resolver, handle, instructions } = JSON.parse(t.stdout());
-  assert.equal(resolver, 'default');
+  assert.equal(resolver, 'subagent');
   assert.equal(handle, null);
   assert.match(instructions, /Run lets-build on branch build-x/);
   assert.match(instructions, /\.workspace\/lets-delegate\/build-x\.prompt\.md/);
-  assert.equal(t.io.files.get('/repo/.workspace/lets-delegate/build-x.prompt.md'), 'Run lets-build on branch build-x');
+  assert.equal(t.repoFile('.workspace/lets-delegate/build-x.prompt.md'), 'Run lets-build on branch build-x');
+});
+
+test('with lets\'s own default missing, a handoff is exit 4 and writes no prompt file', async () => {
+  const t = commandDeps({ resolver: false, subagent: false });
+  assert.equal(await run(options, t.deps), 4);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /contrib\/lets-delegate-subagent.*incomplete/);
+  assert.equal(t.repoFile('.workspace/lets-delegate/fix-login.prompt.md'), null);
 });
 
 test('the default\'s handoff instructions are the same whichever CLIs are on PATH, and name none', async () => {
