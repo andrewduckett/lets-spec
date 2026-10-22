@@ -18,7 +18,7 @@
 ## 4. Every lets carries the program [depends-on: 2]
 
 - [x] 4.1 [parallel] [medium] The flake builds `lets-delegate-subagent`, and the release folder's `contrib/` holds exactly `headless-resolver`, `lets-delegate-herdr`, `lets-delegate-subagent` and `lets-delegate-t3`. The `dist` check lists all four, and a copy of the subagent alone answers `probe` with `{"resolver":"subagent"}`. `tests/release-build.bats` bundles it alone the same way (verify: bats tests/release-build.bats && nix build .#checks.x86_64-linux.dist --no-link) (✓ bats tests/release-build.bats and nix build .#checks.x86_64-linux.dist --no-link passed)
-- [ ] 4.2 [parallel] [medium] The Nix `lets-cli` package installs the bundle at `$out/contrib/lets-delegate-subagent`, and `workspaceSource` leaves out the `lets/contrib/` symlink. The `commands` check runs the packaged `lets delegate handoff` in its test project and gets `"resolver":"subagent"` (verify: nix build .#checks.x86_64-linux.commands --no-link)
+- [x] 4.2 [parallel] [medium] The Nix `lets-cli` package installs the bundle at `$out/contrib/lets-delegate-subagent`, and `workspaceSource` leaves out the `lets/contrib/` symlink. The `commands` check runs the packaged `lets delegate handoff` in its test project and gets `"resolver":"subagent"` (verify: nix build .#checks.x86_64-linux.commands --no-link) (✓ nix build .#checks.x86_64-linux.commands --no-link passed)
 
 ## 5. Docs and the whole check [depends-on: 3, 4]
 

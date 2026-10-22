@@ -29,11 +29,15 @@
 
       # Only the pnpm workspace, so a skill edit does not rebuild the CLI.
       # Every workspace package must be here, or the lockfile does not match.
+      # lets/contrib/ holds only the source tree's link to the default
+      # resolver, which points outside lets/. The build never reads it.
       workspaceSource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.unions ([
-          ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
-        ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib);
+        fileset = lib.fileset.difference
+          (lib.fileset.unions ([
+            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
+          ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib))
+          (lib.fileset.maybeMissing ./lets/contrib);
       };
 
       # The workspace's dependencies from pnpm-lock.yaml. When the lockfile
@@ -89,7 +93,8 @@
 
         # The lets command: the bundle esbuild makes, in libexec, and a
         # bin/lets that runs it with Node 26. The bundle keeps its
-        # #!/usr/bin/env node, because the tarball ships it as it is.
+        # #!/usr/bin/env node, because the tarball ships it as it is. lets
+        # runs its default resolver from contrib/ beside libexec/.
         lets-cli = pkgs.stdenv.mkDerivation {
           pname = "lets";
           version = "0.0.0";
@@ -105,6 +110,7 @@
           installPhase = ''
             runHook preInstall
             install -Dm755 lets/dist/lets $out/libexec/lets
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
             makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets --add-flags $out/libexec/lets
             runHook postInstall
           '';
@@ -236,6 +242,10 @@
             # small stories, and the skill that sets up its backlog.
             [ -f openspec/schemas/lets-minimal/schema.yaml ]
             [ -f .agents/skills/lets-setup-backlog/SKILL.md ]
+            # With no other resolver on PATH and no delegate config, the
+            # packaged lets runs the default it carries.
+            echo 'Run lets-build on branch build-x' > p.md
+            [ "$(lets delegate handoff --name build-x --prompt-file p.md | jq -r .resolver)" = subagent ]
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
