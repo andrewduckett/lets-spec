@@ -8,6 +8,8 @@ description: Architecture decision record (ADR) for lets owning the delegate con
 
 # ADR-002: lets owns the delegate config, and resolvers get reviewers through the request
 
+> Amended by ADR-005: the config names a list of resolvers, not one, and holds no reviewers. `lets` is still its only reader. A resolver still honours a `reviewers` field when a caller sends one, but `lets` no longer does.
+
 ## Context
 
 `lets delegate` hands a review to a resolver, a program the user installs for their harness, such as T3 Code or herdr. Anyone can write a resolver, and `lets` talks to it through a small JSON protocol. Under ADR-001, choosing a family and a model belongs to the resolver and the setup that installs it. But a resolver alone can't know which models the user's account can run, and the user had nowhere to say which family and model they prefer. A user-level config now records that, as an ordered list of reviewers. Something has to read that file, and every resolver has to act on it.
