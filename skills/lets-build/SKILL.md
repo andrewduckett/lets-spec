@@ -200,8 +200,10 @@ is the only additional implementation step this skill owns.
 1. Name the change after the issue title. Every Kind's title is
    `<kebab-name> — <one-line outcome>`, so the name is the part before
    the dash.
-2. Complete [Glossary preflight](#glossary-preflight) against the proposed base. If a branch with the change's name already exists, say so, suggest
-   switching to it and running `lets-build` there, and stop.
+2. If a branch with the change's name already exists, say so, suggest
+   switching to it and running `lets-build` there, and stop before fetching
+   or rehearsing a transfer. Otherwise complete
+   [Glossary preflight](#glossary-preflight) against the proposed base.
 3. Claim the issue: check that nobody has it, assign yourself, then move
    it to In Progress. `<url>` is the issue's URL.
 
@@ -231,8 +233,9 @@ story branch. Skip equivalent patches already present as verified during
 preflight. Preserve their separate `docs:` units. Record destination branch,
 resulting commits and PR when available in the issue's **Glossary handoff**;
 retain the holding branch until that destination safely contains the edits.
-If this is an existing change branch with its recorded edits already
-present, no transfer or new claim is needed.
+This import section applies only to the newly created branch. Resuming an
+existing change follows Find where you are directly into OpenSpec; its
+already committed glossary edits need neither a transfer nor a new claim.
 
 If transfer fails, abort the cherry-pick sequence. Return to the recorded
 starting branch without discarding user changes. Delete only the branch
