@@ -22,11 +22,10 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Available } from 'resolver-kit/families.ts';
 import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
-import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
 import { pollUntil } from 'resolver-kit/wait.ts';
 
 export const TOKEN_FILE_SUFFIX = '.config/lets-delegate/t3-token';
@@ -54,15 +53,22 @@ type Manifest = {
 };
 type Project = { project_id: string; title: string; workspace_root: string; default_model_selection_json: string | null };
 
-// t3 lists gemini once per effort, as gemini-<version>-<effort>. Put the one
-// for this effort first and keep the rest in order.
-export function familiesFromT3Manifest(manifest: Manifest, effort: Effort): Available {
-  const current = manifest.manifest.currentModels;
-  const families = {} as Available;
-  for (const family of FAMILIES) families[family] = [...(current[T3_INSTANCE[family]] ?? [])];
-  const match = families.gemini.findIndex((id) => id?.endsWith(`-${effort}`));
-  if (match > 0) families.gemini.unshift(...families.gemini.splice(match, 1));
-  return families;
+// The models t3 can run, as <family>/<model>: each provider in the
+// manifest's order, its default chat model first. t3 lists gemini once per
+// effort, as gemini-<version>-<effort>, so the effort goes and each gemini
+// model appears once. A provider instance lets has no family for is left out.
+export function optionsFromT3Manifest(manifest: Manifest): ModelString[] {
+  const familyOf = (instance: string) => FAMILIES.find((family) => T3_INSTANCE[family] === instance);
+  const options = new Set<ModelString>();
+  for (const [instance, models] of Object.entries(manifest.manifest.currentModels)) {
+    const family = familyOf(instance);
+    if (family === undefined) continue;
+    const chat = manifest.manifest.providers?.[instance]?.defaults?.chat;
+    for (const model of [...(chat ? [chat] : []), ...(models ?? [])]) {
+      options.add(`${family}/${family === 'gemini' ? withoutEffort(model) : model}`);
+    }
+  }
+  return [...options];
 }
 
 // The provider's default chat model in the manifest, or null when it has none.
@@ -348,10 +354,9 @@ export function createAdapter(io: Io): Adapter {
       return runtime !== null && io.processAlive(runtime.pid) && isAncestor(io, runtime.pid);
     },
 
-    availableFamilies({ effort }) {
+    async options() {
       const manifest = readManifest();
-      if (manifest === null) return { gpt: [], claude: [], gemini: [] };
-      return familiesFromT3Manifest(manifest, effort);
+      return manifest === null ? [] : optionsFromT3Manifest(manifest);
     },
 
     async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {

@@ -5,8 +5,8 @@ import { test } from 'node:test';
 import { SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
 import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
-  baseDir, buildLaunch, createAdapter, dispatch, familiesFromT3Manifest, findProject, isAncestor, launch, readFinalMessage,
-  readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
+  baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
+  optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
 } from '../../contrib/t3-resolver/src/t3.ts';
 import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
@@ -112,20 +112,37 @@ test('detect needs a runtime file, a live server, and the server among this proc
   assert.equal(createAdapter(io({ parentPid: (pid: number) => stale[pid] ?? null })).detect(), false);
 });
 
-test('reads current models from the t3 manifest, gemini by effort suffix', () => {
-  const manifest = { manifest: { currentModels: {
-    codex: ['gpt-6-astra', 'gpt-6.1-sol'], claudeAgent: ['claude-fable-5-1'],
-    antigravity: ['gemini-3.8-flash-high', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-low'] } } };
-  assert.deepEqual(familiesFromT3Manifest(manifest, 'medium'),
-    { gpt: ['gpt-6-astra', 'gpt-6.1-sol'], claude: ['claude-fable-5-1'], gemini: ['gemini-3.8-flash-medium', 'gemini-3.8-flash-high', 'gemini-3.8-flash-low'] });
-  assert.deepEqual(familiesFromT3Manifest({ manifest: { currentModels: {} } }, 'high'), { gpt: [], claude: [], gemini: [] });
+test('options list each provider in the manifest\'s order, its default first', () => {
+  const manifest = { manifest: {
+    currentModels: { codex: ['gpt-6-luna'], claudeAgent: ['claude-opus-5-5', 'claude-fable-5-1'], antigravity: ['gemini-3.8-flash-high', 'gemini-3.8-flash-low'] },
+    providers: { claudeAgent: { defaults: { chat: 'claude-fable-5-1' } } },
+  } };
+  assert.deepEqual(optionsFromT3Manifest(manifest), ['gpt/gpt-6-luna', 'claude/claude-fable-5-1', 'claude/claude-opus-5-5', 'gemini/gemini-3.8-flash']);
 });
 
-test('availableFamilies reads the model manifest, and a missing one means none', () => {
-  const manifest = { manifest: { currentModels: { codex: ['gpt-6.1-sol'], claudeAgent: ['claude-fable-5-1'] } } };
+test('options follow the manifest\'s key order, not the family order', () => {
+  const manifest = { manifest: { currentModels: { antigravity: ['gemini-3.8-flash-high'], codex: ['gpt-6-luna'] } } };
+  assert.deepEqual(optionsFromT3Manifest(manifest), ['gemini/gemini-3.8-flash', 'gpt/gpt-6-luna']);
+});
+
+test('options list a gemini default once, without its effort', () => {
+  const manifest = { manifest: {
+    currentModels: { antigravity: ['gemini-3.8-pro-low', 'gemini-3.8-flash-high', 'gemini-3.8-flash-medium'] },
+    providers: { antigravity: { defaults: { chat: 'gemini-3.8-flash-medium' } } },
+  } };
+  assert.deepEqual(optionsFromT3Manifest(manifest), ['gemini/gemini-3.8-flash', 'gemini/gemini-3.8-pro']);
+});
+
+test('options leave out a provider instance lets does not know', () => {
+  const manifest = { manifest: { currentModels: { opencode: ['llama-4'], codex: ['gpt-6-luna'] }, providers: { opencode: { defaults: { chat: 'llama-4' } } } } };
+  assert.deepEqual(optionsFromT3Manifest(manifest), ['gpt/gpt-6-luna']);
+});
+
+test('the adapter\'s options read the model manifest, and a missing one lists none', async () => {
+  const manifest = { manifest: { currentModels: { codex: ['gpt-6.1-sol'] } } };
   const io = fakeIo({ files: { '/home/u/.t3/userdata/model-manifest.json': JSON.stringify(manifest) }, env: {} });
-  assert.deepEqual(createAdapter(io).availableFamilies({ effort: 'high' }), { gpt: ['gpt-6.1-sol'], claude: ['claude-fable-5-1'], gemini: [] });
-  assert.deepEqual(createAdapter(fakeIo({ env: {} })).availableFamilies({ effort: 'high' }), { gpt: [], claude: [], gemini: [] });
+  assert.deepEqual(await createAdapter(io).options(() => {}), ['gpt/gpt-6.1-sol']);
+  assert.deepEqual(await createAdapter(fakeIo({ env: {} })).options(() => {}), []);
 });
 
 test('t3 model selection carries the effort in each provider\'s own option', () => {

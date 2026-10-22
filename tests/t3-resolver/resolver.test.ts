@@ -19,8 +19,8 @@ const io = (parents: Record<number, number>) => fakeIo({
 const insideT3 = () => io({ 100: 50, 50: 7, 7: 1 });
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
 
-test('probe inside T3 Code answers t3', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3())), { code: 0, stdout: '{"resolver":"t3"}\n', stderr: '' });
+test('probe inside T3 Code with no model manifest answers t3 with no options', async () => {
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3())), { code: 0, stdout: '{"resolver":"t3","options":[]}\n', stderr: '' });
 });
 
 test('probe declines when the running T3 server is not an ancestor', async () => {
