@@ -102,7 +102,7 @@ Then take the first case that applies:
    none, say the backlog has nothing ready, suggest the `lets-shape`
    skill to shape more, and stop.
 
-Before selecting `next`, apply [Glossary preflight](#glossary-preflight) to each candidate in rank order. Skip unresolved prerequisites; for a named issue, report the unresolved owner or checkpoint and stop. Then go on to [Confirm the packet](#confirm-the-packet).
+Before selecting `next`, apply [Glossary preflight](#glossary-preflight) to each candidate in rank order. Skip unresolved prerequisites; if none remain, say the backlog has nothing ready, suggest `lets-shape`, and stop without selecting or confirming a packet. For a named issue, report the unresolved owner or checkpoint and stop. Then go on to [Confirm the packet](#confirm-the-packet).
 
 ## Confirm the packet
 
