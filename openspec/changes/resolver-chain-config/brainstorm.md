@@ -6,7 +6,7 @@
 
 | # | Question | Answer | Source |
 |---|---|---|---|
-| D1 | What went wrong on the user's machine? | The config pinned `gpt-6-astra`, T3's catalog lists it but the account cannot run it, and the review exited 4 while other models were there. Two faults: stored knowledge that ages, and a first refusal ending the call. | User |
+| D1 | What went wrong on the user's machine? | The resolver picked `gpt-6-astra`, the first gpt entry in T3's catalog, because nothing told it otherwise; the account cannot run it, and the review failed while other models were there. Two faults: a model chosen from stored or guessed knowledge, and a first refusal ending the call. | User |
 | D2 | Does the config keep a stored list of reviewers and models? | No. Nothing about models is stored. A resolver reports what its harness can run at the moment of the call. | User |
 | D3 | Is anything kept compatible with the version 1 config? | No. There are no users yet, so the old file is refused and nothing migrates. | User |
 | D4 | How is a family and model written? | One string, `family[/model]`, at every boundary: config, flags, requests, answers, log lines. Each program splits it in one place. `sourceFamily` stays a bare family. | User |
@@ -23,6 +23,7 @@
 | D15 | What happens to a T3 thread that was refused? | The resolver archives it at once and puts the reason on stderr. | User |
 | D16 | What about herdr? | It goes, as a harness. Its resolver becomes `lets-delegate-cli`: one resolver for every family CLI on PATH, answering in any terminal, declining `start`. One resolver per harness, as ADR-003 says; a terminal is one harness with three CLIs in it. | User |
 | D17 | What does `lets` do in `lets/src/delegate/lookup.ts`? | Asks `LETS_SPEC_RESOLVER` when set, then the config's `resolvers` in order, and stops at the first that does not decline. The `lets-delegate-resolver` PATH lookup and the built-in special case for the default go. A listed resolver that is missing or not executable is a usage error that names it. | Evidence: issue #49 scope |
+| D18 | How does the chain name the default? | With the word `subagent` in `resolvers`, which means the running `lets`'s own copy, run with its own Node. By path would not work: the copy sits at a Nix store path that moves with every update, and keeps a `#!/usr/bin/env node` line that needs a Node on `PATH`. Added after review round 1. | Assumption |
 
 ## Changes from the story
 

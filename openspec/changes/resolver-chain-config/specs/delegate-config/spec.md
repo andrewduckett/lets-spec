@@ -1,10 +1,10 @@
 ## MODIFIED Requirements
 
 ### Requirement: The config file
-The config SHALL be one YAML document in `$XDG_CONFIG_HOME/lets-delegate/config.yaml`, or in `~/.config/lets-delegate/config.yaml` when `XDG_CONFIG_HOME` is unset. It SHALL hold `version` `2` and `resolvers`, the chain: a list of the resolvers to ask, in order. Each entry SHALL be an absolute path, or the word `subagent`, which names the default that ships beside the running `lets`. The list MAY be empty. `lets delegate` SHALL ignore any other key. When `version` is not `2`, when `resolvers` is not such a list, or when the document is not YAML, `lets delegate` SHALL exit 2 with a message that names the file and the bad value.
+The config SHALL be one YAML document in `$XDG_CONFIG_HOME/lets-delegate/config.yaml`, or in `~/.config/lets-delegate/config.yaml` when `XDG_CONFIG_HOME` is unset. It SHALL hold `version` `2` and `resolvers`, the chain: a list of the resolvers to ask, in order. Each entry SHALL be an absolute path, or the word `subagent`, which names the default that ships beside the running `lets`. The list MAY be empty. `lets delegate review` and `lets delegate handoff` SHALL ignore any other key. When `version` is not the number `2`, when `resolvers` is not such a list, or when the document is not YAML, they SHALL exit 2 with a message that names the file and the bad value.
 
 #### Scenario: A valid config
-- **WHEN** the file holds `version: 2` and `resolvers:` listing `/opt/r/lets-delegate-t3` and `subagent`
+- **WHEN** the file holds `version: 2` and `resolvers:` listing `/opt/r/lets-delegate-t3` and `subagent`, and `/opt/r/lets-delegate-t3` declines
 - **THEN** `lets delegate review` reads it without error, and asks that path, then the default, in that order
 
 #### Scenario: An invalid config
@@ -20,7 +20,7 @@ The config SHALL be one YAML document in `$XDG_CONFIG_HOME/lets-delegate/config.
 - **THEN** `lets delegate review` reads it without error and asks the listed resolvers
 
 ### Requirement: A missing configured resolver stops the command
-When the lookup reaches an absolute path the config lists, and that path does not exist or cannot be run, `lets delegate` SHALL exit 2 and name the path and the config file. It SHALL ask no later resolver. A resolver earlier in the order that answers is not affected.
+When the lookup reaches an absolute path the config lists, and that path does not exist or is not an executable file, `lets delegate` SHALL exit 2 and name the path and the config file. It SHALL ask no later resolver. A resolver earlier in the order that answers is not affected.
 
 #### Scenario: The resolver was removed
 - **WHEN** `LETS_SPEC_RESOLVER` is unset, and the config lists `/nix/store/gone/bin/lets-delegate-t3`, which does not exist
@@ -82,7 +82,7 @@ When `LETS_SPEC_RESOLVER` is unset or declines, and every resolver the config li
 - **THEN** the line for exit 2 says that every resolver in the config declined
 
 ### Requirement: A leftover JSON config is refused
-When `config.yaml` does not exist and `config.json` exists in the same folder, `lets delegate` SHALL exit 2 and say on stderr that the config is now `config.yaml`, naming both files.
+When `config.yaml` does not exist and `config.json` exists in the same folder, `lets delegate review` and `lets delegate handoff` SHALL exit 2 and say on stderr that the config is now `config.yaml`, naming both files.
 
 #### Scenario: Yesterday's file
 - **WHEN** `~/.config/lets-delegate/config.json` exists, `config.yaml` does not, and the user runs `lets delegate review`
