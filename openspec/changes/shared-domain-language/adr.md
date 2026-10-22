@@ -7,7 +7,7 @@
 
 Reviewed each decision in design.md against the ADR test. The glossary behavior belongs in the spec. The shared reference, conventional paths, and handoff instructions use existing file, release, and Git mechanisms. They introduce no new runtime boundary, data format parser, or external dependency whose reversal would require an architectural migration.
 
-These choices remain documented in design.md. No new durable ADR is needed.
+These choices remain documented in design.md. The default path is overridable through project context, so changing that default need not migrate a consumer glossary. No new durable ADR is needed.
 
 ## In-Force ADRs Reviewed
 

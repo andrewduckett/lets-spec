@@ -6,7 +6,7 @@ Keep agreed domain meanings consistent from shaping through implementation and r
 
 ### Requirement: Read the relevant vocabulary throughout the workflow
 
-Agents SHALL read the shared glossary and applicable ancestor and affected-scope glossaries during shaping, brainstorming, spec writing, implementation, and reviews in both supported flows. Missing optional scoped glossaries SHALL NOT require creating files or changing a flat capability layout.
+Agents SHALL read the shared glossary and applicable ancestor and affected-scope glossaries during shaping, brainstorming, spec writing, and implementation in both supported flows, and during reviews where the flow includes them. Missing optional scoped glossaries SHALL NOT require creating files or changing a flat capability layout.
 
 #### Scenario: Work spans domains
 - **WHEN** a story affects backend checkout and frontend checkout
@@ -134,7 +134,7 @@ When a later workflow step discovers an apparent semantic conflict, agents SHALL
 
 ### Requirement: Ask about glossary ownership only when shaping made glossary edits
 
-At shaping's handoff, the agent SHALL ask how to carry forward glossary edits made during that run. When the run made no glossary edits, the agent SHALL retain the existing handoff without a glossary-specific PR question. Unrelated working-tree changes SHALL NOT trigger that question.
+At shaping's glossary handoff, the agent SHALL ask how to carry forward glossary edits made during that run. When the run made no glossary edits, the agent SHALL retain the existing handoff without a glossary-specific PR question. Unrelated working-tree changes SHALL NOT trigger that question.
 
 #### Scenario: Shaping changed vocabulary
 - **WHEN** shaping ends with glossary edits made during the run
@@ -146,7 +146,7 @@ At shaping's handoff, the agent SHALL ask how to carry forward glossary edits ma
 
 ### Requirement: Carry glossary edits forward through the selected PR
 
-For a single story, the handoff SHALL offer to carry glossary edits into that story's build branch and PR, or open a documentation PR if the user stops after shaping. The handoff SHALL record where the edits live for a later build session. It SHALL NOT publish them directly to the default branch or merge a PR without the user's instruction.
+For a single story, the glossary handoff SHALL offer to carry glossary edits into that story's build branch and PR, or open a documentation PR if the user stops after shaping. The glossary handoff SHALL record where the edits live for a later build session. It SHALL NOT publish them directly to the default branch or merge a PR without the user's instruction.
 
 #### Scenario: The user continues into build
 - **WHEN** the user chooses to build the single shaped story
@@ -158,15 +158,19 @@ For a single story, the handoff SHALL offer to carry glossary edits into that st
 
 ### Requirement: Choose one owner for vocabulary shared by several stories
 
-When several shaped stories share new definitions, the handoff SHALL ask whether a selected story's PR carries the glossary edits or a separate documentation PR lands first. It SHALL record the selected owner so other stories can reference the definitions without copying them into competing PRs or automatically stacking independent stories.
+When several shaped stories share new definitions, the glossary handoff SHALL ask whether a selected story's PR carries the glossary edits or a separate documentation PR lands first. It SHALL record the selected owner so other stories can reference the definitions without copying them into competing PRs or automatically stacking independent stories. Agents SHALL seek user confirmation for blocker links to the owner and keep dependent stories unready until that prerequisite is resolved.
 
 #### Scenario: A story PR owns the shared definitions
-- **WHEN** the user selects checkout's PR to carry definitions also needed by fulfillment
-- **THEN** the handoff records that ownership and fulfillment can consume the shared definitions after that PR merges
+- **WHEN** the user selects checkout's PR to carry definitions also needed by fulfillment and confirms the blocker link
+- **THEN** the glossary handoff records that ownership and fulfillment's issue records checkout's issue as its blocker
 
 #### Scenario: Shared documentation precedes independent implementations
-- **WHEN** the user selects a documentation PR for the shared definitions
-- **THEN** the handoff records that PR as their owner so both stories can use the definitions after it merges
+- **WHEN** the user selects a documentation PR for the shared definitions and confirms blocker links for both stories
+- **THEN** the glossary handoff records that PR as their owner and both stories record the documentation issue as their blocker
+
+#### Scenario: The user declines blocker links
+- **WHEN** the user declines blocker links while a story still needs definitions from an unmerged owner PR
+- **THEN** the issue packet retains that unresolved prerequisite and build selection does not claim the story until it is resolved
 
 ### Requirement: Review glossary definitions when retiring a capability
 

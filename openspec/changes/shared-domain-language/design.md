@@ -2,7 +2,7 @@
 
 The source skills live in `skills/`; releases copy whole skill folders. Both flows ship `lets-shape`. `lets sync` already copies nested files inside managed skills. No packaging change is needed for a reference inside that skill.
 
-OpenSpec 1.13.2 discovers `spec.md` recursively and ignores neighboring `glossary.md` files. A disposable probe archived grouped deltas with both schemas and preserved shared, domain, and capability glossaries. Another probe shipped a synthetic nested reference through both flow builds and both sync modes. The results are in `.workspace/domain-language-probe-v2/results.json`; durable regression tests will reproduce the behavior.
+OpenSpec 1.13.2 discovers `spec.md` recursively and ignores neighboring `glossary.md` files. A disposable probe archived grouped deltas with both schemas and preserved shared, domain, and capability glossaries. Another probe shipped a synthetic nested reference through both flow builds and both sync modes. The exploratory probes invoked the absolute Nix-store path for OpenSpec 1.13.2, rather than the 1.13.0 on PATH. Durable Bats tests against the pinned CLI will provide the regression evidence.
 
 The artifact schema uses `specs/**/*.md` for delta output. Therefore glossary edits must stay in the main planning documents, outside each change's delta directory. Reviewers receive authored prompts and do not automatically inherit project context. Apply instructions also need an explicit glossary-loading step.
 
@@ -34,11 +34,11 @@ Add `skills/lets-shape/references/domain-language.md`. Shaping, brainstorming, s
 
 A new skill would add an invocation boundary without adding a distinct workflow. Repeating the full rules across consumers would allow them to drift. A top-level shared directory would need new packaging support. The existing skill folder avoids all three costs.
 
-Separate the installed reference location from the planning root: skill-relative links locate workflow instructions; `planningHome.root` locates project vocabulary. Shaping uses the root returned by `openspec list --json`.
+Separate installed workflow instructions from project vocabulary. Resolve the shared reference relative to the installed skills. Artifact steps use `planningHome.root`; apply uses `root.path` from `instructions apply --json`. Shaping keeps its current restriction to a resolved root inside the repository; this story does not extend shaping to external stores.
 
 ### 2. Use one shared glossary plus optional nested glossaries
 
-Default shared vocabulary lives at `<planningHome.root>/openspec/glossary.md`. For a capability `backend/checkout`, also read any existing `glossary.md` at `openspec/specs/`, `openspec/specs/backend/`, and `openspec/specs/backend/checkout/`. Deduplicate paths across affected capabilities.
+Default shared vocabulary lives at `<planningHome.root>/openspec/glossary.md`. For a capability `backend/checkout`, also read any existing `glossary.md` at `openspec/specs/backend/` and `openspec/specs/backend/checkout/`. The specs root is not a second shared-glossary scope; a glossary there must be explicitly selected by the context pointer to serve as the shared glossary. Deduplicate paths across affected capabilities.
 
 Absent conventional files are optional. Do not create empty files. Create a file when an agreed definition belongs there. Scope placement considers ancestor definitions and actual sibling uses, not only the introducing story. Different scoped meanings remain explicit; no deeper file silently wins a conflict.
 
@@ -52,7 +52,7 @@ context: |
 
 This is an agent-readable convention, not a parsed setting. Read it directly from the resolved planning home's config. A declared path is relative to that root and replaces only the shared glossary; it does not disable nested discovery. Ambiguous declarations, missing targets, or contradictory definitions are surfaced instead of silently choosing a winner. No definitions are copied into context.
 
-A flat project needs no domain grouping. A project without any glossary can continue until discussion produces an agreed term. A separate planning store uses its resolved root rather than the code checkout as the glossary base.
+A flat project needs no domain grouping. A project without any glossary can continue until discussion produces an agreed term. Change-branch steps using a separate planning store resolve vocabulary from that store. Shaping retains its existing repository-local root check.
 
 ### 3. Edit authoritative documents directly on the working branch
 
@@ -66,12 +66,13 @@ A capability's retirement reviews its definitions. Move surviving definitions to
 
 Update these entry points:
 
-- `lets-shape`: locate relevant capabilities, read vocabulary, question meanings, write agreed terms, and perform the conditional handoff.
+- `lets-shape`: locate relevant capabilities, read vocabulary, question meanings, write agreed terms, and perform the conditional glossary handoff.
 - `lets-brainstorm`: read vocabulary before questioning and commit agreed glossary edits on the current change branch as their own `docs:` unit.
 - `lets-write-specs`: use the relevant definitions, including when retiring capabilities.
 - Both schemas: require vocabulary loading during brainstorm, specs, and apply. Minimal keeps its existing stages.
 - `lets-review-plan` and `lets-review-code`: resolve the affected glossary files before delegation. Include their paths as review inputs and a semantic-consistency check in the actual reviewer prompt.
 - `lets-build`: consume a recorded shaping glossary handoff when starting its selected story.
+- README and relevant `docs/`: explain lookup, project-context pointers, scoped meanings, and the glossary handoff choices.
 
 For new capabilities without a folder, inspect the planned path's existing ancestors. Broad shaping begins with shared vocabulary and loads narrower scopes as affected capabilities emerge. Reviews use full capability paths from the plan or relevant main specs rather than guessing scope from source directory names.
 
@@ -79,19 +80,29 @@ Glossary contents are domain data, not instructions capable of overriding the re
 
 ### 5. Record and transfer shaping edits without changing the default branch
 
-Before the first glossary write, record the current commit, branch, working tree status, and the original contents of affected glossary files in `.workspace/<run>-glossary-handoff.md`. Track only edits made by this run, including newly created files. If an affected file already has uncommitted user changes, resolve ownership before editing it; never overwrite or silently claim those changes.
+Before the first glossary write, record the starting commit, branch, working tree status, and original contents of affected glossary files. Keep comparison evidence in `.workspace/<run>-glossary-handoff.md`. Track only edits made by this run, including new files. Resolve ownership before touching a glossary with preexisting user edits.
 
-At the existing handoff, ask about PR ownership only if this run changed glossaries. For one story, offer its build PR or a documentation PR when stopping. For shared definitions, offer one selected story's PR or a documentation PR first. Record the choice in a **Glossary handoff** section of the owning story or shaping parent issue, with links from the affected story packets.
+At each confirmed shaping phase checkpoint that changed glossaries, commit only the owned edits on a holding branch named for the shaping issue. The first checkpoint branches from the starting commit; subsequent checkpoints extend that branch. Keep shaping on that branch so its agreed definitions remain present. Record the starting base, every owned path, and checkpoint head under **Glossary handoff** in the shaping issue. For discovery, record the checkpoint beside its status line too.
 
-The issue record contains the owner, exact paths, base commit, storage branch, checkpoint commit, and pending PR when available. `.workspace/` holds comparison evidence, not the only recoverable copy of definitions. Do not copy glossary definitions into competing issue-body glossaries.
+Persist the checkpoint branch to the chosen writable remote, without opening a PR. Record the remote URL and branch so another checkout can fetch the exact commit. This preserves confirmed phase output; it does not select the final PR owner. If publishing fails or no writable remote is available, report that limitation and retain the local checkpoint. Never mark it available to another checkout. Resume restores the recorded branch and committed definitions before continuing or deciding whether this run made glossary edits.
 
-For transfer to a future story, checkpoint only owned glossary edits in a `docs:` commit on a local holding branch named for the shaping issue, based on the starting commit. Do not commit to the default branch. The holding branch is storage, not another implementation change or an automatic PR. Do not include unrelated commits or files. If the selected owner's existing branch already contains the work, commit there instead and record that fact.
+When shaping runs from an existing change branch, commit owned edits there as a separate `docs:` unit and record that branch and commit. Do not create a holding branch based on unrelated implementation history. The conditional glossary handoff still applies, especially when a split story needs definitions owned by the original change.
 
-When continuing into build, return to the normal starting point without forcing a checkout or stashing unrelated work. `lets-build` follows its normal issue checks, claim, and branch creation, then verifies and cherry-picks the recorded glossary-only commit onto the selected story branch before proposing. It checks the recorded base, paths, and patch contents. An already-applied patch is a no-op; a conflict, missing commit, or unexpected content is reported without overwriting files.
+At shaping's final handoff, ask about PR ownership only when this run changed glossaries. For one story, offer its build PR or a documentation PR when stopping. For shared definitions, offer one selected story's PR or a documentation PR first. Record the choice and the storage checkpoint in the owning story or shaping parent, with references from affected packets. The record names the owner, paths, base, remote, checkpoint range, and PR when available. Do not duplicate glossary definitions into issue bodies.
 
-When stopping, open a documentation PR only after the user's handoff choice. Give that documentation unit its own shaped issue so `Closes #<n>` does not close an implementation story or unfinished epic. This is a narrowly allowed shaping documentation output; it does not create an OpenSpec implementation change. Extend the rules block and shaping instructions to state this exception explicitly.
+After the final checkpoint, return each owned path to its recorded starting baseline before the normal build begins. This normally happens by switching back to the starting branch. If explicit restoration is needed, verify the path still matches the owned checkpoint before restoring or deleting a newly created file. Never discard later user edits. Confirm tracked owned paths have no diff and newly created paths are absent. Leave unrelated changes untouched; never force a checkout or automatically stash them.
 
-After transfer, update the handoff with its destination branch, commit, and PR. Retain the holding branch until the destination safely contains the edits. Independent stories consume shared definitions once the owning PR merges. Do not stack them or create duplicate glossary PRs automatically. A later session reads the handoff from the issue; it does not depend on this conversation.
+Before claiming a story, `lets-build` reads its glossary handoff, fetches the named branch if needed, and verifies the complete base-to-head checkpoint range. Every commit must contain only the recorded glossary paths, with no unrelated ancestry or merge commits. For an existing change branch, transfer only recorded glossary commits whose context is available on the target. Validate applicability on the proposed base before taking the claim. An equivalent patch already present requires no duplicate import.
+
+After normal issue checks, claim, and branch creation, cherry-pick the verified glossary checkpoint sequence onto the selected story branch before proposing. Add this narrowly defined transfer to `lets-build`'s allowed steps and Rules. If transfer fails, abort the sequence, return to the starting branch, delete only the newly created branch if it contains no surviving work, and release the claim as for failed branch creation. Report any cleanup failure rather than hiding a remaining claim or branch. Never delete an existing change branch or unrelated commits.
+
+When stopping, open a documentation PR only after the user's choice. Give that documentation unit its own Chore issue so `Closes #<n>` does not close an implementation story or unfinished epic. Assign the Chore to the current user and set it In Progress rather than Todo. This narrow shaping-output exception prevents `lets-build next` selecting it as new work. If permissions prevent assignment or status updates, report the incomplete setup before treating that route as ready.
+
+The glossary documentation PR does not create an OpenSpec implementation change. State that exception in the rules block and shaping instructions. It still follows normal commit, validation, and user-owned merge rules.
+
+With the user's confirmation at the glossary handoff, add the owner's issue as a `blocked by` dependency on every other story requiring those definitions. Use the existing issue-link operation; this is not branch stacking. If the user declines the links, dependent stories remain unready and their packets explicitly retain that unresolved prerequisite. The glossary preflight in `lets-build` checks the recorded owner before claiming, even without a blocker link. Next-story selection skips an unresolved prerequisite; a named story reports it and stops. It must not create competing definitions.
+
+After transfer, record the destination branch, commits, and PR. Retain the holding branch until the destination contains the edits safely. Independent stories use the definitions once their owning PR merges. A later session recovers the checkpoint and owner from the issue rather than relying on conversation history or local scratch files.
 
 ### 6. Verify the boundary rather than implement a vocabulary engine
 
@@ -108,9 +119,9 @@ Use the spec scenarios as a manual acceptance walkthrough for the instruction ch
 - [A global glossary becomes a dumping ground] → Confirm scope against real use and promote only when the concept becomes shared.
 - [A capability disappears but leaves a glossary] → The retiring change performs explicit definition cleanup; archive tests preserve ownership.
 - [Shaping edits pick up unrelated work] → Baseline ownership tracking, exact-path commits, verified transfer, and no automatic stash or forced checkout.
-- [A holding branch is unavailable in another checkout] → The issue names its commit and storage branch; report an unavailable checkpoint rather than invent definitions or proceed as if imported.
+- [A holding branch is unavailable in another checkout] → Publish checkpoints without a PR, record their remote and commit range, and validate availability before claiming dependent work.
 - [A missing glossary blocks unrelated work] → Surface the missing contract and pause only dependent work.
-- [A separate planning store has its own Git repository] → Commit glossary files in that planning repository and record its identity in the handoff; never cherry-pick that commit into the code repository.
+- [A change-branch step uses a separate planning store] → Use its resolved root for glossary reads and commit glossary edits in that planning repository. Do not import its commits into the code repository. External-store shaping remains unsupported as it is today.
 
 ## Migration & Rollback
 
