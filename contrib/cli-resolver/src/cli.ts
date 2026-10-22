@@ -68,7 +68,7 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 'herdr',
-    program: 'lets-delegate-herdr',
+    program: 'lets-delegate-cli',
     harness: 'herdr',
     handleKind: 'tab',
     detect: () => io.env.HERDR_ENV === '1' && io.commandExists('herdr'),

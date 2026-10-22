@@ -1,10 +1,10 @@
 {
-  "name": "lets-delegate-herdr",
+  "name": "lets-delegate-cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "bin": {
-    "lets-delegate-herdr": "bin/lets-delegate-herdr"
+    "lets-delegate-cli": "bin/lets-delegate-cli"
   },
   "engines": {
     "node": ">=26"

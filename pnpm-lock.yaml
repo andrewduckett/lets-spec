@@ -173,7 +173,7 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  contrib/herdr-resolver:
+  contrib/cli-resolver:
     dependencies:
       resolver-kit:
         specifier: workspace:*

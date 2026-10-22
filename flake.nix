@@ -143,7 +143,7 @@
           meta.mainProgram = program;
         };
         lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
-        lets-delegate-herdr = resolver "lets-delegate-herdr" "herdr-resolver";
+        lets-delegate-cli = resolver "lets-delegate-cli" "cli-resolver";
         # The default resolver, for lets-cli and dist only. lets runs it from
         # beside itself, so it is not exported, and no one puts it on PATH.
         lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
@@ -165,7 +165,7 @@
           mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
           cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
-          cp ${lets-delegate-herdr}/libexec/lets-delegate-herdr $out/contrib/lets-delegate-herdr
+          cp ${lets-delegate-cli}/libexec/lets-delegate-cli $out/contrib/lets-delegate-cli
           cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
@@ -183,7 +183,7 @@
           paths = [ openspec (lets flow) pkgs.gh pkgs.nodejs_26 ];
         };
       in
-        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-herdr dist; default = bundle "standard"; }
+        { inherit openspec openspec-skills lets-cli lets-delegate-t3 lets-delegate-cli dist; default = bundle "standard"; }
         // lib.genAttrs (lib.attrNames flows) bundle);
 
       apps = forAllSystems (pkgs: {
@@ -284,10 +284,10 @@
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
             # The resolvers are per user, so they are never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-herdr lets-delegate-subagent lets-delegate-t3 " ]
+            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-cli lets-delegate-subagent lets-delegate-t3 " ]
             [ -x ${dist}/contrib/headless-resolver ]
             [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
-            for program in lets-delegate-herdr lets-delegate-subagent lets-delegate-t3; do
+            for program in lets-delegate-cli lets-delegate-subagent lets-delegate-t3; do
               [ -x ${dist}/contrib/$program ]
               [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
             done
@@ -313,7 +313,7 @@
               [ "$(cat stderr)" = "$2" ]
             }
             declines lets-delegate-t3 'lets-delegate-t3: not inside T3 Code'
-            declines lets-delegate-herdr 'lets-delegate-herdr: not inside herdr'
+            declines lets-delegate-cli 'lets-delegate-cli: not inside herdr'
             # The default never declines. A copy alone answers for itself.
             mkdir ../alone
             cp ${dist}/contrib/lets-delegate-subagent ../alone/
@@ -342,9 +342,9 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/t3-resolver/bin contrib/herdr-resolver/bin contrib/subagent-resolver/bin contrib/headless-resolver
+            patchShebangs tests contrib/t3-resolver/bin contrib/cli-resolver/bin contrib/subagent-resolver/bin contrib/headless-resolver
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/herdr-resolver/*.test.ts" "tests/subagent-resolver/*.test.ts"
+            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/cli-resolver/*.test.ts" "tests/subagent-resolver/*.test.ts"
             pnpm check
             # The default, lets-delegate-subagent, the contrib resolvers and the shell example
             # keep the shape of the contract. None starts a session here.

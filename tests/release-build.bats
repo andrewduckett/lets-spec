@@ -156,10 +156,10 @@ bundle_alone() {
 }
 
 @test "the herdr resolver bundle declines outside herdr with no node_modules beside it" {
-  bundle_alone herdr-resolver lets-delegate-herdr
+  bundle_alone cli-resolver lets-delegate-cli
   run env -u HERDR_ENV node "$bin" probe <<<"{\"protocol\":1,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
-  [ "$output" = 'lets-delegate-herdr: not inside herdr' ]
+  [ "$output" = 'lets-delegate-cli: not inside herdr' ]
 }
 
 @test "the subagent resolver bundle answers subagent with no node_modules beside it" {
