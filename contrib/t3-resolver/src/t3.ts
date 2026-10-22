@@ -20,7 +20,7 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
 import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
@@ -122,7 +122,7 @@ export function findProject(db: Db, repoRoot: string): Project {
   ).all() as Project[];
   const project = projects.find((p) => p.workspace_root === repoRoot);
   if (!project) {
-    throw new SpawnError(`t3 has no project for ${repoRoot}; run: t3 project add ${repoRoot}; known: ${projects.map((p) => p.title).join(', ')}`);
+    throw new Refused(`t3 has no project for ${repoRoot}; run: t3 project add ${repoRoot}; known: ${projects.map((p) => p.title).join(', ')}`);
   }
   return { ...project };
 }
@@ -203,7 +203,7 @@ async function issueToken(io: Io): Promise<string> {
   const args = ['auth', 'session', 'issue', '--base-dir', baseDir(io.env, io.homedir()), '--ttl', '30d', '--label', 'lets-delegate', '--token-only'];
   const { stdout, stderr, code } = await io.execFile('t3', args, { env: io.env });
   const token = stdout.trim();
-  if (code !== 0 || !/^\S+$/.test(token)) throw new SpawnError(`could not issue a t3 token (exit ${code}): ${stderr.trim()}`);
+  if (code !== 0 || !/^\S+$/.test(token)) throw new Refused(`could not issue a t3 token (exit ${code}): ${stderr.trim()}`);
   const path = tokenPath(io);
   io.mkdirp(dirname(path), { mode: 0o700 });
   io.writeFile(path, token, { mode: 0o600 });
@@ -221,7 +221,7 @@ async function requestTicket(io: Io, origin: string, token: string): Promise<Res
     return await io.fetch(`${origin}/api/auth/websocket-ticket`, { method: 'POST', headers: { authorization: `Bearer ${token}` } });
   } catch (error) {
     const { cause, message } = error as Error & { cause?: { code?: string } };
-    throw new SpawnError(`t3 at ${origin} is unreachable (${cause?.code ?? message})`);
+    throw new Refused(`t3 at ${origin} is unreachable (${cause?.code ?? message})`);
   }
 }
 
@@ -253,9 +253,9 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
   let response = await requestTicket(io, origin, token);
   if (rejected(response)) {
     response = await requestTicket(io, origin, await issueToken(io));
-    if (rejected(response)) throw new SpawnError('t3 rejected the token twice');
+    if (rejected(response)) throw new Refused('t3 rejected the token twice');
   }
-  if (!response.ok) throw new SpawnError(`t3 ticket request failed with HTTP ${response.status}: ${await response.text()}`);
+  if (!response.ok) throw new Refused(`t3 ticket request failed with HTTP ${response.status}: ${await response.text()}`);
   const { ticket } = await response.json() as { ticket: string };
 
   const url = new URL('/ws', origin.replace(/^http/, 'ws'));
@@ -270,12 +270,13 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
       let opened = false;
       let refused = false;
       // Before the socket opens, an error or a close means t3 refused the
-      // upgrade, and the WebSocket API hides why. Ask t3 itself, once.
+      // upgrade, and the WebSocket API hides why. Ask t3 itself, once. After
+      // it opens, t3 may have acted on the request, so the outcome is unknown.
       const fail = (reason: string) => {
         if (opened) return reject(new SpawnError(reason));
         if (refused) return;
         refused = true;
-        refusal(io, origin).then((why) => reject(new SpawnError(why)));
+        refusal(io, origin).then((why) => reject(new Refused(why)));
       };
       ws.addEventListener('open', () => {
         opened = true;
@@ -284,13 +285,13 @@ async function request(io: Io, { origin, token }: Server, { tag, payload, thread
       ws.addEventListener('message', (event) => {
         for (const message of [JSON.parse(event.data as string) as Frame | Frame[]].flat()) {
           if (message._tag === 'Exit' && String(message.requestId) === '1') resolveExit(message.exit!);
-          else if (message._tag === 'Defect' || message._tag === 'ClientProtocolError') reject(new SpawnError(`t3 rejected the request: ${JSON.stringify(message)}`));
+          else if (message._tag === 'Defect' || message._tag === 'ClientProtocolError') reject(new Refused(`t3 rejected the request: ${JSON.stringify(message)}`));
         }
       });
       ws.addEventListener('error', (event) => fail(`t3 websocket error: ${(event as Event & { message?: string }).message || event.type}`));
       ws.addEventListener('close', (event) => fail(`t3 websocket closed: ${event.code} ${event.reason}`));
     });
-    if (exit._tag !== 'Success') throw new SpawnError(`t3 ${tag} failed: ${JSON.stringify(exit)}`);
+    if (exit._tag !== 'Success') throw new Refused(`t3 ${tag} failed: ${JSON.stringify(exit)}`);
     return exit.value;
   } finally {
     clearTimeout(timer);
@@ -326,7 +327,7 @@ export function createAdapter(io: Io): Adapter {
 
   async function git(cwd: string, args: string[]): Promise<string> {
     const { stdout, stderr, code } = await io.execFile('git', ['-C', cwd, ...args], { cwd });
-    if (code !== 0) throw new SpawnError(`git ${args.join(' ')} failed in ${cwd}: ${stderr.trim()}`);
+    if (code !== 0) throw new Refused(`git ${args.join(' ')} failed in ${cwd}: ${stderr.trim()}`);
     return stdout.trim();
   }
 
@@ -334,7 +335,7 @@ export function createAdapter(io: Io): Adapter {
   // origin a handle names.
   function runningServer() {
     const runtime = readRuntime(io);
-    if (runtime === null) throw new SpawnError(`t3 is not running (no ${userdata(io)}/server-runtime.json)`);
+    if (runtime === null) throw new Refused(`t3 is not running (no ${userdata(io)}/server-runtime.json)`);
     return runtime;
   }
 
@@ -384,7 +385,12 @@ export function createAdapter(io: Io): Adapter {
         const run = readRun(db, handle.id);
         if (run === null) return undefined;
         if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
-        if (run.status === 'failed') throw new SessionFailed(run.failure ?? 'run failed');
+        // A run that failed before any message is a refusal, such as a model
+        // the account cannot run. The kit then archives the thread.
+        if (run.status === 'failed') {
+          const failure = run.failure ?? 'run failed';
+          throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
+        }
         if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
         if (run.status !== 'completed') return undefined;
         // A completed run with no message yet is one with none at all; the

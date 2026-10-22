@@ -12,7 +12,7 @@
 
 - [x] 3.1 [parallel] [medium] Inside T3, `probe` lists `<family>/<model>` from the manifest: providers in key order, each default first, Gemini once without its effort suffix (design D-5) (verify: node --test tests/t3-resolver/*.test.ts) (✓ node --test tests/t3-resolver/*.test.ts passed)
 - [x] 3.2 [medium] T3 `run` and `start` launch the thread on the request's model. A bare family takes the provider default. `run` adds the effort to a Gemini id, and `start` adds `-medium`. `startSelection` and `START_MODEL` go (design D-6) (verify: node --test tests/t3-resolver/*.test.ts) (✓ node --test tests/t3-resolver/*.test.ts passed)
-- [ ] 3.3 [medium] T3 refusals exit 3: not running, no project, token rejected twice, a refused WebSocket or request, a `git` failure, and a run that failed with no assistant message, which also archives the thread. No reply to `launchThread` stays exit 4 (design D-3) (verify: node --test tests/t3-resolver/*.test.ts)
+- [x] 3.3 [medium] T3 refusals exit 3: not running, no project, token rejected twice, a refused WebSocket or request, a `git` failure, and a run that failed with no assistant message, which also archives the thread. No reply to `launchThread` stays exit 4 (design D-3) (verify: node --test tests/t3-resolver/*.test.ts) (✓ node --test tests/t3-resolver/*.test.ts passed)
 
 ## 4. The cli resolver [depends-on: 1]
 
@@ -36,3 +36,5 @@
 - [ ] 6.2 [easy] Every test, the type check, the verify runs, the bats tests and the flake build pass, and the release copies' `probe` matches the specs (verify: pnpm test && nix flake check)
 
 ## Deviations Ledger
+
+- 3.3: T3 also exits 3 when `t3 auth session issue` cannot issue a token. Design D-3's table lists "token rejected twice" but not this case. It is the same kind of setup refusal under D9. A WebSocket that fails after it opens stays exit 4, because T3 may have acted on the request.

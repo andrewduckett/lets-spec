@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
+import { Refused, SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
 import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
@@ -164,7 +164,7 @@ test('findProject matches the workspace root, or names the known projects', () =
   addProject(db, { id: 'p2', title: 'other', root: '/o' });
   assert.equal(findProject(shared(db), '/r').project_id, 'p1');
   assert.throws(() => findProject(shared(db), '/x'), (error) =>
-    error instanceof SpawnError && /t3 project add \/x/.test(error.message) && /lets-spec, other/.test(error.message));
+    error instanceof Refused && /t3 project add \/x/.test(error.message) && /lets-spec, other/.test(error.message));
 });
 
 test('buildLaunch has the shape the UI sends for a new thread, on the current branch', () => {
@@ -242,13 +242,22 @@ test('waitForResult waits for the run to complete and the message to stop stream
   assert.deepEqual(await waitingAdapter(db, steps).waitForResult(SESSION, { timeoutMs: 60000 }), { text: 'FINDINGS' });
   assert.equal(steps.length, 0);
 });
-test('waitForResult fails on a failed run with its failure', async () => {
+test('waitForResult refuses a run that failed before any assistant message, with its failure', async () => {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'failed');
+  addFailure(db, 'run-1', 'model not available');
+  await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
+    (error) => error instanceof Refused && error.message === 'model not available');
+});
+test('waitForResult fails a run that failed after an assistant message, with its failure', async () => {
+  const db = database();
+  addThread(db, 'T');
+  addRun(db, 'T', 'run-1', 1, 'failed');
+  addMessage(db, 'a1', 'run-1', 'half a review', 0);
   addFailure(db, 'run-1', 'quota exceeded');
   await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
-    (error) => error instanceof SessionFailed && error.message === 'quota exceeded');
+    (error) => error instanceof SessionFailed && !(error instanceof Refused) && error.message === 'quota exceeded');
 });
 test('waitForResult fails when the session stops to ask', async () => {
   for (const [status, pending] of [['waiting', false], ['running', true]] as const) {
@@ -322,11 +331,55 @@ test('dispatch re-issues a rejected token once', async () => {
 test('dispatch fails when the token is rejected twice', async () => {
   const io = fakeIo({ env: {}, results: [{ stdout: 'new\n', stderr: '', code: 0 }], fetch: fakeFetch([401, 403], []), WebSocket: fakeWebSocket(SUCCESS, []) });
   await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'old' }, { type: 'x' }), (error) =>
-    error instanceof SpawnError && error.message === 't3 rejected the token twice');
+    error instanceof Refused && error.message === 't3 rejected the token twice');
 });
-test('dispatch fails on a Defect', async () => {
+test('dispatch is refused on a Defect', async () => {
   const io = fakeIo({ env: {}, fetch: fakeFetch([200], []), WebSocket: fakeWebSocket({ _tag: 'Defect', defect: 'boom' }, []) });
-  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), SpawnError);
+  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), Refused);
+});
+test('dispatch is refused when t3 answers with a failure', async () => {
+  const failure = { _tag: 'Exit', requestId: '1', exit: { _tag: 'Failure', cause: 'no such model' } };
+  const io = fakeIo({ env: {}, fetch: fakeFetch([200], []), WebSocket: fakeWebSocket(failure, []) });
+  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), (error) => error instanceof Refused && /no such model/.test(error.message));
+});
+test('dispatch is refused when the ticket request fails', async () => {
+  const io = fakeIo({ env: {}, fetch: fakeFetch([500], []), WebSocket: fakeWebSocket(SUCCESS, []) });
+  await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), (error) => error instanceof Refused && /HTTP 500/.test(error.message));
+});
+test('dispatch is refused when t3 is unreachable', async () => {
+  const fetch = (async () => {
+    throw Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
+  }) as unknown as typeof globalThis.fetch;
+  await assert.rejects(dispatch(fakeIo({ env: {}, fetch }), { origin: ORIGIN, token: 'tok' }, { type: 'x' }),
+    (error) => error instanceof Refused && /unreachable \(ECONNREFUSED\)/.test(error.message));
+});
+
+// A WebSocket that opens and never answers.
+function silentWebSocket(): typeof WebSocket {
+  return class {
+    listeners: Record<string, ((event: unknown) => void)[]> = {};
+    constructor() {
+      queueMicrotask(() => this.emit('open', {}));
+    }
+    addEventListener(type: string, listener: (event: unknown) => void) {
+      (this.listeners[type] ??= []).push(listener);
+    }
+    emit(type: string, event: unknown) {
+      for (const listener of this.listeners[type] ?? []) listener(event);
+    }
+    send() {}
+    close() {}
+  } as unknown as typeof WebSocket;
+}
+
+test('no reply from t3 is an unknown outcome, not a refusal', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const io = fakeIo({ env: {}, fetch: fakeFetch([200], []), WebSocket: silentWebSocket() });
+  const pending = dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x', threadId: 'T' });
+  // Let the ticket request and the socket's open run before time moves on.
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  t.mock.timers.tick(120_000);
+  await assert.rejects(pending, (error) => error instanceof SpawnError && !(error instanceof Refused) && /no reply from t3/.test(error.message));
 });
 
 // A WebSocket that t3 refuses: it fails and closes without opening.
@@ -361,7 +414,7 @@ test('a refused WebSocket is reported with t3\'s own reason', async () => {
   }) as unknown as typeof globalThis.fetch;
   const io = fakeIo({ env: {}, fetch, WebSocket: refusedWebSocket() });
   await assert.rejects(dispatch(io, { origin: ORIGIN, token: 'tok' }, { type: 'x' }), (error) =>
-    error instanceof SpawnError
+    error instanceof Refused
     && error.message.startsWith('t3 refused the WebSocket connection: Update this client to one that supports orchestration protocol 2.')
     && error.message.includes('After a t3 update'));
   assert.deepEqual(fetches, [`${ORIGIN}/api/auth/websocket-ticket`, `${ORIGIN}/ws`]);
@@ -395,8 +448,8 @@ test('finish sends the token to the running server, never to an origin the handl
   assert.equal(fetches[0][0], `${ORIGIN}/api/auth/websocket-ticket`);
 });
 
-test('finish fails when t3 is not running', async () => {
-  await assert.rejects(createAdapter(fakeIo({ env: {} })).finish(HANDLE, true, { cwd: '/r' }), (error) => error instanceof SpawnError && /not running/.test(error.message));
+test('finish is refused when t3 is not running', async () => {
+  await assert.rejects(createAdapter(fakeIo({ env: {} })).finish(HANDLE, true, { cwd: '/r' }), (error) => error instanceof Refused && /not running/.test(error.message));
 });
 
 const runRequest: SpawnRequest = { kind: 'run', name: 'x-plan-review', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high', readOnly: true };
@@ -440,7 +493,16 @@ test('spawn fails with the add hint when t3 does not know the repo', async () =>
     results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }],
     openDb: () => shared(db),
   });
-  await assert.rejects(createAdapter(io).spawn({ ...runRequest, cwd: '/r' }), /t3 project add \/r; known: other/);
+  await assert.rejects(createAdapter(io).spawn({ ...runRequest, cwd: '/r' }), (error) => error instanceof Refused && /t3 project add \/r; known: other/.test(error.message));
+});
+
+test('spawn is refused when git fails in the repository', async () => {
+  const io = fakeIo({ env: {}, files: RUNNING, results: [{ stdout: '', stderr: 'fatal: not a git repository', code: 128 }] });
+  await assert.rejects(createAdapter(io).spawn(runRequest), (error) => error instanceof Refused && /not a git repository/.test(error.message));
+});
+
+test('spawn is refused when t3 is not running', async () => {
+  await assert.rejects(createAdapter(fakeIo({ env: {} })).spawn(runRequest), (error) => error instanceof Refused && /not running/.test(error.message));
 });
 
 // Spawn a session with a manifest that has defaults, and answer the model
