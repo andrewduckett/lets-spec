@@ -95,7 +95,7 @@ Every agent-facing sentence in the old monorepo section is already in "Choose th
 
 ## Risks / Trade-offs
 
-- [A link to a removed README anchor breaks, in `docs/`, a contrib README or a skill] → The finishing task greps the whole tree for `README.md#` and checks each anchor still exists.
+- [A link to a removed README anchor breaks, in `docs/`, a contrib README or a skill] → `docs/upgrading.md` links `#-updating`, and both contrib READMEs and `docs/upgrading.md` link `#set-up-delegation`, so those two headings keep their text. The finishing task greps the tree for `README.md#` and checks each anchor still exists.
 - [Cutting the routing table hides why a small story skipped the plan review] → The one sentence names `lets-minimal` and points to the `lets-build` skill, which holds the rule.
 - [A cut line was the only place a fact lived] → Before deleting a paragraph, the task checks the fact is in the skill, `--help` or `docs/` page the README now links. If it is not, it stays.
 - [The README lands well above 400 lines] → The budget table caps it at 480. Over that, the task cuts again before it commits.
