@@ -41,6 +41,10 @@ Each listing gets 20 seconds. When one fails, for example because codex
 is signed out, `probe` lists the bare family instead, such as `gpt`, and
 says why on stderr.
 
+A `probe` for `start`, which `lets delegate handoff instructions` sends,
+declines at once and runs no listing, because this resolver never starts
+a handoff.
+
 ## How a review runs
 
 It runs the CLI of the family that `--model` names, in the repository,
@@ -140,8 +144,8 @@ expand `~`. The README's
 [Set up delegation](../../README.md#set-up-delegation) section explains
 the file.
 
-It declines every handoff, so keep `subagent` after it: a handoff then
-falls through to the default, which gives you the prompt to start any
+It declines every handoff, and every probe for one, so keep `subagent`
+after it: a handoff then falls through to the default, which gives you the prompt to start any
 agent with.
 
 ## Check that it works

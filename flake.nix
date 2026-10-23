@@ -245,7 +245,7 @@
             # With no other resolver on PATH and no delegate config, the
             # packaged lets runs the default it carries.
             echo 'Run lets-build on branch build-x' > p.md
-            [ "$(lets delegate handoff --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
+            [ "$(lets delegate handoff run --for apply --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
 
             # A minimal project gets the minimal schema and only its skills.
             cd ..
@@ -321,7 +321,7 @@
             # With nothing else installed or configured, the tarball's lets
             # finds the default beside it.
             echo 'Run lets-build on branch build-x' > p.md
-            [ "$(node ${dist}/bin/lets delegate handoff --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
+            [ "$(node ${dist}/bin/lets delegate handoff run --for apply --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
             touch "$out"
           '';
 

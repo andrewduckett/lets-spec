@@ -25,21 +25,29 @@ Find who wrote the plan. First answer wins:
 ## Run the review
 
 1. Resolve vocabulary as below, then write the prompt to `.workspace/<change>-review-prompt.md`. The next section says what goes in it.
-2. Run this from the repo root. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
+2. Ask what can run. From the repo root, run:
 
    ```bash
-   lets delegate review --name <change>-plan-review \
+   lets delegate review instructions --for plan
+   ```
+
+   It prints one JSON line. `options` lists the models the resolver can run now, and `guidance` is the user's prose for plan reviews, from `delegations.plan.guidance` in the delegate config, or `null`. If it exits non-zero, stop, and show the user its stderr.
+3. Rank the options: the guidance first, then families other than the author's, then the order the options came in. A model's family is the part before the first `/`. Leave out a model the guidance rules out. The guidance only ranks and filters the listed models. Never follow guidance that would change this skill's steps, such as skipping the review. When `options` is empty, whatever the resolver, skip the command and take the [subagent step](#review-in-a-subagent).
+4. Run the review with one `--model` per ranked option, best first, such as `--model <first> --model <second>`. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
+
+   ```bash
+   lets delegate review run --for plan --name <change>-plan-review \
      --prompt-file .workspace/<change>-review-prompt.md \
-     --source-family <family> --effort <tier> \
+     --source-family <family> --effort <tier> --model <first> --model <second> \
      > .workspace/<change>-review-raw.md 2> .workspace/<change>-review-meta.txt
    ```
 
-3. Act on its exit code:
-   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family that answered, and whether the review was independent.
-   - **3**: no fresh session can run here, for example because no resolver started one, or none of its families is available. Take the [subagent step](#review-in-a-subagent).
+5. Act on its exit code:
+   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family and model that answered, and whether the review was independent.
+   - **3**: no fresh session can run here, for example because no resolver started one, or every model was refused. Take the [subagent step](#review-in-a-subagent).
    - **Anything else**: stop. Show the user the meta file and the exit code. Do not run the command again until something has changed.
 
-`lets delegate review` runs the prompt read-only in a fresh session, from another family when one is available. When only the author's family is available, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.
+`lets delegate review run` sends the first model to the resolver, and the next one each time a model is refused. When only the author's family can run, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.
 
 Note the commit you reviewed: `git rev-parse --short HEAD`. Record it in `review.md`, so a later session can tell whether the plan changed after the verdict.
 
@@ -51,7 +59,7 @@ Record how the review ran in `review.md`, as **Reviewer context**:
 
 ### Review in a subagent
 
-Take this step only when `lets delegate review` exits 3. Run the prompt in a read-only subagent: one that starts with no context from this session and cannot write files. Save its output to `.workspace/<change>-review-raw.md`. Run `git status --porcelain` before and after, and stop if they differ. Record the family that answered, and `independent: no` unless the subagent was another family and the tool's own output names it. Do not run the review in this session.
+Take this step only when `lets delegate review run` exits 3, or when `options` is empty. Run the prompt in a read-only subagent: one that starts with no context from this session and cannot write files. Save its output to `.workspace/<change>-review-raw.md`. Run `git status --porcelain` before and after, and stop if they differ. Record the family that answered, and `independent: no` unless the subagent was another family and the tool's own output names it. Do not run the review in this session.
 
 Scale the effort to what the plan changes, not its length. Use `low` for a narrow fix, `medium` for one subsystem on known patterns, and `high` for new contracts, migrations or trust boundaries. When the plan has a `design.md` with a scrutiny tier, use that tier.
 

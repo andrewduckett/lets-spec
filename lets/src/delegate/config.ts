@@ -1,4 +1,5 @@
-// The user's delegate config: the chain, the resolvers lets asks, in order.
+// The user's delegate config: the chain, the resolvers lets asks, in order,
+// and the user's guidance for each kind of delegation.
 // The user writes it by hand, and lets is the only reader. Keys this lets
 // does not know are ignored, so a later lets can add one beside them.
 import { dirname, isAbsolute, join } from 'node:path';
@@ -12,8 +13,10 @@ export const CONFIG_VERSION = 2;
 // which ships beside the running lets.
 export const SUBAGENT_ENTRY = 'subagent';
 
-// Each resolver is an absolute path, or SUBAGENT_ENTRY.
-export type Config = { version: typeof CONFIG_VERSION; resolvers: string[] };
+// Each resolver is an absolute path, or SUBAGENT_ENTRY. delegations is as
+// the user wrote it: only lets delegate <strategy> instructions reads it,
+// through guidanceFor, so a bad entry never stops a run.
+export type Config = { version: typeof CONFIG_VERSION; resolvers: string[]; delegations?: unknown };
 
 export type ConfigDeps = { env: Env; io: Io };
 
@@ -56,7 +59,26 @@ export function parseConfig(text: string, path: string): Config {
       throw fail(`resolvers[${i}] must be an absolute path or ${SUBAGENT_ENTRY}, got ${show(entry)}`);
     }
   });
-  return { version: CONFIG_VERSION, resolvers };
+  return value.delegations === undefined ? { version: CONFIG_VERSION, resolvers } : { version: CONFIG_VERSION, resolvers, delegations: value.delegations };
+}
+
+// The user's guidance for an intent, from delegations.<intent>.guidance, or
+// null when there is no config or any level is missing. Throws a UsageError
+// that names the file and the key when a level has the wrong type. Other
+// intents' entries are not checked.
+export function guidanceFor(config: Config | null, intent: string, path: string): string | null {
+  const fail = (key: string, expected: string, value: unknown) =>
+    new UsageError(`${path}: ${key} must be ${expected}, got ${JSON.stringify(value) ?? String(value)}.`);
+  const delegations = config?.delegations;
+  if (delegations === undefined || delegations === null) return null;
+  if (!isObject(delegations)) throw fail('delegations', 'a mapping', delegations);
+  const entry = delegations[intent];
+  if (entry === undefined || entry === null) return null;
+  if (!isObject(entry)) throw fail(`delegations.${intent}`, 'a mapping', entry);
+  const { guidance } = entry;
+  if (guidance === undefined || guidance === null) return null;
+  if (typeof guidance !== 'string') throw fail(`delegations.${intent}.guidance`, 'a string', guidance);
+  return guidance;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

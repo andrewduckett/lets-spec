@@ -5,7 +5,7 @@ import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
 import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
-  ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', model: 'gpt/gpt-6-luna', ...over });
+  ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', models: ['gpt/gpt-6-luna'], ...over });
 
 const finishes = (calls: [string, Record<string, unknown>][]) => calls.filter(([verb]) => verb === 'finish').map(([, request]) => request);
 
@@ -95,9 +95,38 @@ test('a family missing or unknown is exit 4, and finish is not sent', async () =
 test('a refusal is exit 3, with the resolver\'s reason, and no later resolver is asked', async () => {
   const t = commandDeps({ resolver: false, config: `version: 2\nresolvers: [${FAKE_RESOLVER}, subagent]\n`,
     settings: { FAKE_RESOLVER_EXIT_RUN: '3', FAKE_RESOLVER_STDOUT_RUN: '', FAKE_RESOLVER_STDERR: 'codex refused gpt-6-astra' } });
-  assert.equal(await run(options({ model: 'gpt/gpt-6-astra' }), t.deps), 3);
+  assert.equal(await run(options({ models: ['gpt/gpt-6-astra'] }), t.deps), 3);
   assert.match(t.stderr(), /codex refused gpt-6-astra/);
   assert.equal(t.io.calls.some(([cmd]) => cmd === NODE), false, 'the default was not asked');
+});
+
+const runModels = (calls: [string, Record<string, unknown>][]) => calls.filter(([verb]) => verb === 'run').map(([, request]) => request.model);
+const NO_MODEL_RUN = '{"resolver":"fake","text":"T","family":"gemini","handle":null}';
+
+test('a refused model passes to the next one', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra' } });
+  assert.equal(await run(options({ models: ['gpt/gpt-6-astra', 'gemini'] }), t.deps), 0);
+  assert.deepEqual(runModels(t.resolverCalls()), ['gpt/gpt-6-astra', 'gemini']);
+  assert.equal(t.stdout(), 'FINDINGS\n');
+});
+
+test('a review whose every model is refused is exit 3, naming each model', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra,gemini' } });
+  assert.equal(await run(options({ models: ['gpt/gpt-6-astra', 'gemini'] }), t.deps), 3);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /gpt\/gpt-6-astra: refused gpt\/gpt-6-astra\ngemini: refused gemini/);
+});
+
+test('the metadata names the model sent when the resolver names none', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra', FAKE_RESOLVER_STDOUT_RUN: NO_MODEL_RUN } });
+  assert.equal(await run(options({ models: ['gpt/gpt-6-astra', 'gemini'] }), t.deps), 0);
+  assert.equal(JSON.parse(t.stderr()).model, 'gemini');
+});
+
+test('the metadata names the model sent when the resolver reports a null model', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_STDOUT_RUN: '{"resolver":"fake","text":"T","family":"claude","model":null,"handle":null}' } });
+  assert.equal(await run(options({ models: ['claude'] }), t.deps), 0);
+  assert.equal(JSON.parse(t.stderr()).model, 'claude');
 });
 
 test('a resolver\'s exit 3, 5 and 6 pass through; a usage error or any other code is 4', async () => {
@@ -137,7 +166,7 @@ test('no handle means no finish', async () => {
   assert.equal(await run(options(), t.deps), 0);
   assert.deepEqual(finishes(t.resolverCalls()), []);
   assert.deepEqual(JSON.parse(t.stderr()),
-    { resolver: 'fake', family: 'gpt', model: null, independent: true, handle: null, gitClean: true, durationSeconds: 0 });
+    { resolver: 'fake', family: 'gpt', model: 'gpt/gpt-6-luna', independent: true, handle: null, gitClean: true, durationSeconds: 0 });
 });
 
 test('an empty final message is exit 5, with finish ok false', async () => {

@@ -41,9 +41,14 @@ it, `lets` exits 4 and says its install is incomplete.
 `lets` exits 2 and names the config file.
 
 Only `lets` reads the config. The caller chooses the model: `lets` sends
-the value of `--model` unchanged as the `model` of each `run` and `start`
+each value of `--model` unchanged as the `model` of a `run` or `start`
 request. A resolver runs that model, and never chooses one. It reports
 the models it can run in its `probe` answer, so the caller can choose.
+
+The caller may give `--model` more than once, best first. `lets` sends
+the first model to the resolver the lookup finds. Each time that resolver
+refuses with exit 3, `lets` sends the next model to the same resolver. A
+refusal is an answer, not a decline, so no later resolver is asked.
 
 ## How `lets` runs a resolver
 
@@ -54,9 +59,9 @@ it when something fails.
 
 | Verb | `lets` sends it | Answer |
 |---|---|---|
-| `probe` | never; the verify check, the review skills and people do | `{ resolver, options }` |
-| `run` | for `lets delegate review` | `{ resolver, text, family, model?, handle? }`, after the session's turn ends |
-| `start` | for `lets delegate handoff` | `{ resolver, handle }`, or `{ resolver, handle: null, instructions }`. Returns at once. |
+| `probe` | for `lets delegate review instructions` and `lets delegate handoff instructions`, and the verify check | `{ resolver, options }` |
+| `run` | for `lets delegate review run`, once for each model until one is not refused | `{ resolver, text, family, model?, handle? }`, after the session's turn ends |
+| `start` | for `lets delegate handoff run`, once for each model until one is not refused | `{ resolver, handle }`, or `{ resolver, handle: null, instructions }`. Returns at once. |
 | `finish` | after a `run` that returned a handle | `{}`, or nothing |
 
 ## The request
@@ -68,6 +73,7 @@ verb.
 |---|---|---|
 | `protocol` | every verb | `2` |
 | `cwd` | every verb | The absolute path of the repository root |
+| `verb` | `probe` | Optional. The session verb the probe is for: `run` for a review, `start` for a handoff. `lets` always sends it. Any other value is malformed: the resolver exits 2. |
 | `name` | `run`, `start` | A label for the session: lowercase, a letter first, at most 32 characters |
 | `prompt` | `run`, `start` | The text to send |
 | `sourceFamily` | `run` | The family that wrote the work: `gpt`, `claude` or `gemini` |
@@ -105,7 +111,7 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 |---|---|---|
 | 0 | Success | Reads stdout |
 | 2 | The request is malformed, or its protocol or verb is unknown | Exits 4 and shows the resolver's stderr |
-| 3 | A refusal: the harness or the account said no before the model gave any output. The harness is not running or not set up, there are no tokens left, or it cannot run the model. stderr says why. | Exits 3, and asks no later resolver. The caller may try another model. |
+| 3 | A refusal: the harness or the account said no before the model gave any output. The harness is not running or not set up, there are no tokens left, or it cannot run the model. stderr says why. | Sends the next model the caller gave to the same resolver. Exits 3, naming each model, when none is left. Asks no later resolver. |
 | 4 | A bug, a broken contract, or an outcome the resolver cannot know, such as no reply from the harness | Exits 4 |
 | 5 | The session failed: an error, a stop to ask a question, or an empty message | Exits 5 |
 | 6 | The session did not finish within `timeoutMinutes` | Exits 6 |
@@ -116,6 +122,12 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 
 - **Decline before you start anything.** Exit 75 with nothing on stdout.
   A resolver that prints a response and then declines is a failure.
+- **Decline a probe for a verb you would decline.** A resolver that never
+  handles `start` declines a `probe` whose `verb` is `start`, so the
+  resolver that will really answer the handoff lists the models.
+- **Answer every model the same way.** Once you have answered a request,
+  do not decline the same request for a later model. `lets` treats that
+  as a broken contract and exits 4.
 - **Keep `run` read-only.** When `readOnly` is `true`, the session must
   not write files. `lets` checks the tree anyway, and exits 7 if a file
   outside `.workspace/` changed.

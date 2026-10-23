@@ -28,6 +28,19 @@ test('probe lists the bare family when codex is signed out, and names codex', as
   assert.match(answer.stderr, /^lets-delegate-cli: .*codex/);
 });
 
+test('probe for start declines with every family CLI on PATH, running nothing', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
+  const request = JSON.stringify(buildRequest('probe', { cwd: '/r', verb: 'start' }));
+  assert.deepEqual(await handle('probe', request, createAdapter(io)),
+    { code: 75, stdout: '', stderr: 'lets-delegate-cli: this resolver only runs headless\n' });
+  assert.deepEqual(io.calls, []);
+});
+
+test('probe for run answers cli', async () => {
+  const request = JSON.stringify(buildRequest('probe', { cwd: '/r', verb: 'run' }));
+  assert.deepEqual(await handle('probe', request, createAdapter(fakeIo({ commands: ['claude'] }))), { code: 0, stdout: '{"resolver":"cli","options":["claude"]}\n', stderr: '' });
+});
+
 test('probe declines with no family CLI on PATH', async () => {
   assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['herdr'] }))), NO_CLI);
 });

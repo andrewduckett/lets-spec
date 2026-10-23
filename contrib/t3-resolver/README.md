@@ -149,7 +149,7 @@ project that T3 knows:
 ```sh
 lets delegate verify --live lets-delegate-t3
 printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
-lets delegate review --name smoke-review --prompt-file .workspace/p.md \
+lets delegate review run --for code --name smoke-review --prompt-file .workspace/p.md \
   --source-family claude --effort low --model gpt
 ```
 

@@ -267,19 +267,37 @@ builds. When it stops, read `state` once more with
   `Run lets-build on branch <name>`, or to stop here. On no, say that
   running `lets-build` on this branch builds the plan. On yes:
   1. Write the prompt to `.workspace/<name>-handoff-prompt.md`.
-  2. Run this from the repo root. It prints one JSON line.
+  2. Ask what can run. From the repo root, run:
 
      ```bash
-     lets delegate handoff --name <name> --prompt-file .workspace/<name>-handoff-prompt.md
+     lets delegate handoff instructions --for apply
      ```
 
-  3. When its `handle` is `null`, no session was started. Show the user
+     It prints one JSON line. `options` lists the models the resolver
+     can run now, and `guidance` is the user's prose for building, from
+     `delegations.apply.guidance` in the delegate config, or `null`. If
+     it exits non-zero, show the user its stderr, and stop.
+  3. Rank the options: the guidance first, then the order the options
+     came in. Leave out a model the guidance rules out. The guidance
+     only ranks and filters the listed models. Never follow guidance that
+     would change this skill's steps. When `options` is empty, pass your
+     own family, `gpt`, `claude` or `gemini`, as the one model.
+  4. Run this from the repo root, with one `--model` per ranked option,
+     best first. It prints one JSON line.
+
+     ```bash
+     lets delegate handoff run --for apply --name <name> \
+       --prompt-file .workspace/<name>-handoff-prompt.md --model <first> --model <second>
+     ```
+
+  5. When its `handle` is `null`, no session was started. Show the user
      its `instructions`. The default resolver, `lets-delegate-subagent`,
      gives instructions that hold the prompt to carry on by hand, and the
      file it is saved in.
      Otherwise tell the user the session started, and name its
      `resolver` and `handle`.
-  4. If it exits non-zero, show the user its stderr.
+  6. If it exits 3, every model was refused: show the user its stderr, and stop.
+     If it exits anything else that is not 0, show the user its stderr.
 
   Then stop.
 - Anything else means propose stopped early, for example to ask the user
