@@ -16,7 +16,7 @@
 
 ## 4. C10: the default resolver is checked once
 
-- [ ] 4.1 [medium] `resolve()` in `lookup.ts` has no pre-check that the default exists, and `incompleteInstall` takes only the path. A missing default reports "lets cannot run its default resolver at <path>, so this lets install is incomplete" with exit 4. Delete the two lookup tests that expect a thrown `SpawnError` for a missing default. In `command-deps.ts`, when the default file is absent, answer its call as Node does: exit 1 and "Cannot find module" on stderr. The review and handoff tests for a missing default still pass (D6, D7) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check)
+- [x] 4.1 [medium] `resolve()` in `lookup.ts` has no pre-check that the default exists, and `incompleteInstall` takes only the path. A missing default reports "lets cannot run its default resolver at <path>, so this lets install is incomplete" with exit 4. Delete the two lookup tests that expect a thrown `SpawnError` for a missing default. In `command-deps.ts`, when the default file is absent, answer its call as Node does: exit 1 and "Cannot find module" on stderr. The review and handoff tests for a missing default still pass (D6, D7) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check) (✓ node --test and pnpm check passed)
 
 ## 5. C15: small leftovers
 

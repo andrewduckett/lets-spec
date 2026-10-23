@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { realIo } from '../../../lets/src/io.ts';
 import type { Io } from '../../../lets/src/io.ts';
-import { SpawnError, UsageError } from '../../../lets/src/delegate/errors.ts';
+import { UsageError } from '../../../lets/src/delegate/errors.ts';
 import { callResolver, candidates, resolve, resolveWithModels } from '../../../lets/src/delegate/lookup.ts';
 import { buildRequest } from '../../../lets/src/delegate/protocol.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
@@ -118,12 +118,6 @@ test('a declining override with an all-declining chain is the same usage error',
   const io = fakeIo({ executables: ['/bin/mine', '/a'], results: [decline, decline] });
   await assert.rejects(resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: chain('/a') }),
     (error) => error instanceof UsageError && error.message.includes('declined'));
-});
-
-test('a missing default reached through the subagent entry is exit 4, naming an incomplete install', async () => {
-  const io = fakeIo();
-  await assert.rejects(resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('subagent') }),
-    (error) => error instanceof SpawnError && error.message.includes(SUBAGENT) && error.message.includes('incomplete'));
 });
 
 test('a broken default reached through the subagent entry is exit 4 with the install message', async () => {
@@ -246,13 +240,6 @@ test('the backstop for run is the session timeout plus one minute', async () => 
   assert.equal(outcome.code, 6);
   assert.deepEqual(io.sleeps, [16 * 60000]);
   assert.deepEqual(io.killed, [4242]);
-});
-
-test('a missing default stops the lookup with exit 4, naming the path and an incomplete install', async () => {
-  const io = fakeIo();
-  await assert.rejects(resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: null }),
-    (error) => error instanceof SpawnError && error.message.includes(SUBAGENT) && error.message.includes('incomplete'));
-  assert.deepEqual(io.calls, [], 'nothing was run');
 });
 
 test('a default that fails puts the install message before its own stderr', async () => {

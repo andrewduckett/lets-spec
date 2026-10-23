@@ -68,6 +68,8 @@ export function commandDeps({
       return real.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, FAKE_RESOLVER_LOG: log, ...settings } });
     }
     if (cmd === NODE && args[0] === SUBAGENT) {
+      // As Node answers when the script it is given does not exist.
+      if (!io.exists(SUBAGENT)) return { stdout: '', stderr: `Error: Cannot find module '${SUBAGENT}'`, code: 1 };
       const request = { ...JSON.parse(opts.input!), cwd: repo };
       const result = await real.execFile(process.execPath, [SUBAGENT_SOURCE, ...args.slice(1)], { ...opts, cwd: repo, input: JSON.stringify(request) });
       return { ...result, stdout: result.stdout.replaceAll(repo, '/repo') };

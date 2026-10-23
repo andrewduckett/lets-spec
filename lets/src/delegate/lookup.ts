@@ -7,7 +7,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import type { Child, Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
-import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
+import { ContractError, EXIT, UsageError } from './errors.ts';
 import { DECLINE, exitFor, parseResponse } from './protocol.ts';
 import type { Requests, Responses, Verb } from './protocol.ts';
 import { withTimeout } from './wait.ts';
@@ -94,25 +94,24 @@ export function timeoutFor<V extends Verb>(verb: V, request: Requests[V]): numbe
 
 // Why lets cannot use its own default resolver. lets ships it, so a missing
 // or broken one means the install is broken, not the user's setup.
-const incompleteInstall = (problem: 'find' | 'run', path: string) =>
-  `lets cannot ${problem} its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
+const incompleteInstall = (path: string) =>
+  `lets cannot run its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
 // it reaches a listed resolver that is missing or cannot be run, or when
-// every resolver declines, and a SpawnError when the default is missing.
+// every resolver declines.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
     if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
       throw new UsageError(`${configPath(deps)} lists the resolver ${candidate.command}, which does not exist or is not an executable file.`);
     }
-    if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
     // The default answers 0 or 3, and never declines. Anything else means
     // it could not run.
     if (candidate.builtIn && (outcome === null || (outcome.code !== EXIT.ok && outcome.code !== EXIT.noSession))) {
       const stderr = outcome === null ? 'it declined' : outcome.stderr;
-      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall('run', candidate.name)}\n${stderr}` } };
+      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall(candidate.name)}\n${stderr}` } };
     }
     if (outcome !== null) return { candidate, outcome };
   }
