@@ -1,6 +1,6 @@
 // The real world, as the adapters see it. Tests pass fakes with the same
 // fields instead.
-import { execFile as nodeExecFile } from 'node:child_process';
+import { execFile as nodeExecFile, spawnSync } from 'node:child_process';
 import { accessSync, chmodSync, constants, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
@@ -34,6 +34,27 @@ export type Io = {
   sleep(ms: number): Promise<void>;
   env: Record<string, string | undefined>;
 };
+
+// The parts of the system parentPid reads. Tests pass a fake.
+export type ProcessSys = {
+  readFileSync(path: string, encoding: 'utf8'): string;
+  existsSync(path: string): boolean;
+  spawnSync(cmd: string, args: string[], options: { encoding: 'utf8' }): { stdout?: string | null };
+};
+
+// The parent of a process, from /proc where there is one, else from ps, as
+// on macOS. null when it cannot be found.
+export function parentPid(pid: number, sys: ProcessSys = { readFileSync, existsSync, spawnSync }): number | null {
+  let status: string | null;
+  try {
+    status = sys.readFileSync(`/proc/${pid}/status`, 'utf8');
+  } catch {
+    status = null;
+  }
+  const text = status !== null ? status.match(/^PPid:\s+(\d+)$/m)?.[1]
+    : sys.existsSync('/proc/self') ? undefined : sys.spawnSync('ps', ['-o', 'ppid=', '-p', String(pid)], { encoding: 'utf8' }).stdout?.trim();
+  return text && /^\d+$/.test(text) ? Number(text) : null;
+}
 
 export function realIo(): Io {
   return {
@@ -84,14 +105,7 @@ export function realIo(): Io {
     homedir: () => homedir(),
 
     pid: process.pid,
-    parentPid(pid) {
-      try {
-        const match = readFileSync(`/proc/${pid}/status`, 'utf8').match(/^PPid:\s+(\d+)$/m);
-        return match ? Number(match[1]) : null;
-      } catch {
-        return null;
-      }
-    },
+    parentPid: (pid) => parentPid(pid),
     processAlive(pid) {
       try {
         process.kill(pid, 0);
