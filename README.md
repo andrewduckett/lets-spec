@@ -702,7 +702,7 @@ starts anything, and `lets` asks the next one. One that never handles
 [The resolver contract](docs/resolver-contract.md) gives every field,
 exit code and rule.
 [`contrib/headless-resolver`](contrib/headless-resolver) is a complete
-resolver in about twenty lines of `sh`, to copy from.
+resolver in `sh`, to copy from.
 
 To check your resolver, run:
 
