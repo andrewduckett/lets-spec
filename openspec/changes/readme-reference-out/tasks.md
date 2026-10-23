@@ -4,7 +4,7 @@
 
 ## 1. Tests follow the moved prose
 
-- [ ] 1.1 [easy] The docs-naming test in `tests/skill-interfaces.bats` reads `README.md`, every `docs/*.md` page and the contrib READMEs, with the glob outside quotes as `'$repo'/docs/*.md` (verify: bats -f "the docs name lets delegate review or handoff" tests/skill-interfaces.bats)
+- [x] 1.1 [easy] The docs-naming test in `tests/skill-interfaces.bats` reads `README.md`, every `docs/*.md` page and the contrib READMEs, with the glob outside quotes as `'$repo'/docs/*.md` (verify: bats -f "the docs name lets delegate review or handoff" tests/skill-interfaces.bats) (✓ bats -f "the docs name lets delegate review or handoff" passed; a planted bad mention in docs/ failed it)
 
 ## 2. Move the reference out [depends-on: 1]
 
