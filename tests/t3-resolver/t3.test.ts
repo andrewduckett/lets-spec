@@ -316,6 +316,12 @@ test('with XDG_CONFIG_HOME set, a fresh token is stored under it', async () => {
   assert.equal(io.files.get(XDG_TOKEN), 'fresh-token');
 });
 
+test('an empty XDG_CONFIG_HOME means the token under ~/.config', async () => {
+  const io = fakeIo({ env: { XDG_CONFIG_HOME: '' }, files: { [TOKEN]: 'stored\n' } });
+  assert.equal(await readToken(io), 'stored');
+  assert.equal(io.calls.length, 0);
+});
+
 test('dispatch sends one request frame and returns the success value', async () => {
   const log: Log = [];
   const fetches: [string, RequestInit | undefined][] = [];
