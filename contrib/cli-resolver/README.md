@@ -3,7 +3,7 @@
 A resolver for any terminal. When a Let's Spec skill asks `lets delegate`
 for a review, this resolver runs it headless with the command line tool
 (CLI) of another model family: `codex`, `claude` or `agy`. It works in a
-plain terminal, in herdr, or inside another harness.
+plain terminal, or inside another harness.
 
 | Where you work | A review runs as | A handoff |
 |---|---|---|
