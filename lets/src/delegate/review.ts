@@ -1,4 +1,4 @@
-// lets delegate review: run a prompt in a fresh, read-only session and wait
+// lets delegate review run: run a prompt in a fresh, read-only session and wait
 // for its final message. Checks the tree after, tells the resolver it may
 // clean up, and reports which family answered. No process access here;
 // everything comes through deps.

@@ -1,4 +1,4 @@
-// lets delegate handoff: start a fresh, interactive session with a prompt,
+// lets delegate handoff run: start a fresh, interactive session with a prompt,
 // and return at once. A resolver that cannot reach one answers with the
 // instructions a person needs instead. No process access here; everything
 // comes through deps.
