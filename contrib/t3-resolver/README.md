@@ -124,7 +124,7 @@ t3 project add <path>
 The resolver keeps a T3 token beside `lets`'s own `config.yaml`:
 
 - in `$XDG_CONFIG_HOME/lets-delegate/t3-token` when `XDG_CONFIG_HOME` is
-  set
+  set and not empty
 - in `~/.config/lets-delegate/t3-token` otherwise
 
 It issues a new token when none is stored there, or when T3 rejects the
