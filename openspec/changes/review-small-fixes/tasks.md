@@ -12,7 +12,7 @@
 
 ## 3. A git failure after a review exits 4 (C18)
 
-- [ ] 3.1 [easy] When `git status` fails after the session, `lets delegate review run` exits 4 (`EXIT.spawn`), not 7; stderr still says it could not check the tree, and the session is still finished as not ok. Change the `return EXIT.dirty` in the `SpawnError` branch of `lets/src/delegate/review.ts` (verify: node --test tests/lets/delegate/review.test.ts)
+- [x] 3.1 [easy] When `git status` fails after the session, `lets delegate review run` exits 4 (`EXIT.spawn`), not 7; stderr still says it could not check the tree, and the session is still finished as not ok. Change the `return EXIT.dirty` in the `SpawnError` branch of `lets/src/delegate/review.ts` (verify: node --test tests/lets/delegate/review.test.ts) (✓ node --test tests/lets/delegate/review.test.ts passed)
 
 ## 4. Integration
 

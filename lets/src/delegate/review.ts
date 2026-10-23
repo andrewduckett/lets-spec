@@ -61,7 +61,7 @@ async function review({ name, promptFile, sourceFamily, effort, models, timeoutM
     if (!(error instanceof SpawnError)) throw error;
     await finish(false);
     deps.stderr(`lets delegate: could not check the tree after the session: ${error.message} (${where})\n`);
-    return EXIT.dirty;
+    return EXIT.spawn;
   }
   await finish(clean);
   if (!clean) {
