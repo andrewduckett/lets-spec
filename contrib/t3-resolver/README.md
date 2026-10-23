@@ -32,7 +32,8 @@ Install it once for your user, not in a project. It answers "is this
 process inside T3 Code?", and that is true of your machine, not of a
 repository.
 
-It needs Node 26 or later. It runs `t3` and `git` from your `PATH`.
+It runs on Linux and macOS. It needs Node 26 or later. It runs `t3` and
+`git` from your `PATH`.
 
 ### With home-manager
 
