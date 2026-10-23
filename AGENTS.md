@@ -18,7 +18,7 @@ the next release.
 Run both before you push:
 
 ```bash
-pnpm test          # the bats and Node tests
+pnpm test          # the Node tests, the type check, pnpm verify on every resolver, then the bats tests
 nix flake check    # also builds every flow and the release folder
 ```
 
