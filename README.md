@@ -426,7 +426,7 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
 | `openspec-*` skills | Not committed. The flake generates them from the OpenSpec CLI in its nixpkgs, for the workflows in `build/openspec.json`, so moving nixpkgs can change their text. Each release records the CLI version in its `release.json`. |
 | `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `build.mjs` bundles it into one file with esbuild. |
-| `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
+| `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It owns the contract: `lets` imports the protocol and its errors from here, and the kit imports nothing from `lets/`. |
 | `contrib/t3-resolver/`, `contrib/cli-resolver/` | `lets-delegate-t3` and `lets-delegate-cli`: each is an adapter on the kit, bundled with no runtime dependencies |
 | `contrib/subagent-resolver/` | `lets-delegate-subagent`, the default resolver that ships with `lets`. `lets/contrib/lets-delegate-subagent` links to it, so the source tree's `lets` finds it as an install would |
 | `contrib/headless-resolver` | A complete resolver in `sh`: the worked example for writing your own |

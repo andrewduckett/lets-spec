@@ -16,7 +16,8 @@ This page covers:
 - [Write your own](#write-your-own)
 
 The code that checks the contract is
-[`lets/src/delegate/protocol.ts`](../lets/src/delegate/protocol.ts).
+[`contrib/resolver-kit/src/protocol.ts`](../contrib/resolver-kit/src/protocol.ts).
+The resolver kit owns it, and `lets` imports it from there.
 
 ## How `lets` finds a resolver
 
