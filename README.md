@@ -198,7 +198,7 @@ Then commit:
 - `AGENTS.md`, `CLAUDE.md` and `.claude/skills`
 - `openspec/config.yaml`
 - the skills in `.agents/skills/` and the schemas in `openspec/schemas/`
-- `mise.toml`, if you use mise
+- `mise.toml` and `mise.lock`, if you use mise
 
 With the `ignored` skills mode, `lets sync` adds a block to `.gitignore`
 instead, so git ignores the skills and the schemas. Commit `.gitignore`,
