@@ -1,7 +1,7 @@
 ## 1. The pages the README links to
 
 - [x] 1.1 [parallel] [easy] `docs/monorepo.md` tells a person setting up a monorepo the layout, what a domain and a capability path are, how to map groups to code in `context`, that one change can update several domains, and that skills, branches and pull requests stay shared across the repository. No strict-validation remark, no "sync/archive". (verify: test -f docs/monorepo.md && grep -q 'stay shared across the repository' docs/monorepo.md && ! grep -q 'sync/archive' docs/monorepo.md) (✓ verify command passed)
-- [ ] 1.2 [parallel] [easy] `skills/lets-write-specs/SKILL.md` "Choose the capability paths" says domain names do not map to source folders, so agents use the project context, the request and the code. Nothing else in the skill changes. (verify: grep -q 'do not map to source folders' skills/lets-write-specs/SKILL.md)
+- [x] 1.2 [parallel] [easy] `skills/lets-write-specs/SKILL.md` "Choose the capability paths" says domain names do not map to source folders, so agents use the project context, the request and the code. Nothing else in the skill changes. (verify: grep -q 'do not map to source folders' skills/lets-write-specs/SKILL.md) (✓ verify command passed)
 - [ ] 1.3 [parallel] [easy] The cli README no longer names `herdr`, and the t3 README's "Anything else" row says a declined request goes to "the next resolver in your config", as the cli README does. (verify: ! grep -qi herdr contrib/cli-resolver/README.md && grep -q 'the next resolver in your config answers' contrib/t3-resolver/README.md)
 
 ## 2. The README, top to bottom [depends-on: 1]

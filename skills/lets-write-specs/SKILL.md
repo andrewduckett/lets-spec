@@ -89,6 +89,8 @@ Read shared specs the change depends on, but write a delta only when their
 requirements change. One change can carry deltas for several domains. Leave
 specs read only for context out of the change's delta files. Keep flat paths
 flat; grouping by domain is optional and needs no migration or registry.
+Domain names do not map to source folders, so find the specs a change
+touches from the project context, the request and the code.
 
 ### Preserve the requirement
 
