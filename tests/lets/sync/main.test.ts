@@ -131,3 +131,9 @@ test('a release that ships an unowned skill writes nothing', async () => {
   assert.ok(t.stderr().includes('ships .agents/skills/other, which lets sync does not own.'));
   assert.deepEqual(t.io.files, before);
 });
+
+test('in the ignored mode, check refuses a release that ships an unowned skill', async () => {
+  const t = setup({ env: { WORKFLOW_RELEASE: RELEASE, LETS_SPEC_SKILLS: 'ignored' }, files: unownedFiles, toplevel: '/project' });
+  assert.equal(await run({ check: true }, t.deps), 1);
+  assert.ok(t.stderr().includes('ships .agents/skills/other, which lets sync does not own.'));
+});
