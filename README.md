@@ -58,47 +58,37 @@ This section is for you if you want a project set up, fast.
 
 ## 📦 Set it up
 
+This section is for you if you want the details behind the Quick start.
+
 ### Requirements
 
 | Tool | Version | Why |
 |---|---|---|
-| Nix with flakes, or mise | | Installs the tools below, and runs `lets sync`. |
-| GitHub repository | | The backlog is a GitHub Project linked to it. |
-| GitHub CLI (`gh`) | 2.102.0 or later | The skills set Project fields by name with `gh project item-edit`, and create sub-issues and "blocked by" links. The flake supplies it. With mise, you pin it. |
-| OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. The flake supplies the matching version. With mise, you pin it. See [With mise](#with-mise). |
-| Node | 26 or later | `lets` runs on it. The flake supplies it. With mise, you pin it. |
-| A resolver, optional | any | `lets delegate` runs reviews in a fresh session through a [resolver](#resolvers). Install one that can reach a model family other than the one that writes your code, or the reviews are not independent. With none, the review skills run a subagent instead, and the reviews are not independent. |
+| Nix with flakes, or mise | any | Installs the tools below, and runs `lets sync`. |
+| GitHub repository | — | The backlog is a GitHub Project linked to it. |
+| GitHub CLI (`gh`) | 2.102.0 or later | The skills set Project fields by name, and create sub-issues and "blocked by" links. |
+| OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. |
+| Node | 26 or later | `lets` runs on it. |
+| A resolver, optional | any | Runs reviews in a [fresh session](#-reviews-in-a-fresh-session). Without one that reaches another model family, the reviews are not independent. |
 
-### 1. Choose a flow and a skills mode
+The flake supplies `gh`, the OpenSpec CLI and Node. With mise, you pin them.
 
-| Choice | Values | What it decides |
-|---|---|---|
-| `flow` | `standard` (default) or `minimal` | How each change is planned and built. See [The flows](#-the-flows). |
-| `skills` | `committed` (default) or `ignored` | Whether git tracks the skills and the schemas that `lets sync` copies into the project. See [Committed or ignored skills](docs/lets-sync.md#committed-or-ignored-skills). |
+### With Nix
 
-### 2. Add Let's Spec to your project
-
-Use Nix or mise. Both install the same `lets` command and the same skills.
-
-#### With Nix
-
-Add the flake input:
+Add the flake input, following `main`; your `flake.lock` pins the commit:
 
 ```nix
 inputs.lets-spec.url = "github:sidereal-io/lets-spec";
 ```
 
-Follow the `main` branch. Your `flake.lock` pins the exact commit.
-
-In a flake built with [flake-parts](https://flake.parts), import the
-module and use its packages and shell hook:
+With [flake-parts](https://flake.parts), import the module and use it:
 
 ```nix
 imports = [ inputs.lets-spec.flakeModules.default ];
 perSystem = { config, pkgs, ... }: {
   letsSpec = {
-    flow = "standard";
-    skills = "committed";   # or "ignored"
+    flow = "standard";      # the default
+    skills = "committed";   # the default, or "ignored"
   };
   devShells.default = pkgs.mkShell {
     packages = config.letsSpec.packages;
@@ -107,29 +97,17 @@ perSystem = { config, pkgs, ... }: {
 };
 ```
 
-The module sets the skills mode for `lets sync`, whether the shell hook
-runs it or you do.
+Without flake-parts, add the package named for the flow, such as
+`lets-spec.packages.${system}.standard`, run `lets sync` in `shellHook`
+outside CI, and set `LETS_SPEC_SKILLS` for the skills mode. `standard` and
+`committed` are the defaults; [The flows](#the-flows) and
+[Committed or ignored skills](docs/lets-sync.md#committed-or-ignored-skills)
+explain the others.
 
-In a flake without flake-parts, use the package named for the flow:
+### With mise
 
-```nix
-devShells.default = pkgs.mkShell {
-  packages = [ lets-spec.packages.${system}.standard ];
-  # Skip the sync in CI, so lets sync --check sees the committed tree.
-  shellHook = ''
-    if [ -z "''${CI:-}" ]; then lets sync; fi
-  '';
-  # LETS_SPEC_SKILLS = "ignored";
-};
-```
-
-Without the module, `lets sync` reads the skills mode from the
-`LETS_SPEC_SKILLS` environment variable. `mkShell` sets it when you
-uncomment the line above.
-
-#### With mise
-
-Add this to your project's `mise.toml`:
+Add this to your project's `mise.toml`, then run `mise lock` and commit
+`mise.lock`, so every clone and CI get the same release:
 
 ```toml
 [tools]
@@ -139,134 +117,40 @@ gh = "2.102"
 "github:sidereal-io/lets-spec" = "latest"
 
 [env]
-LETS_SPEC_FLOW = "standard"
-# LETS_SPEC_SKILLS = "ignored"
+LETS_SPEC_FLOW = "standard"         # the default
+# LETS_SPEC_SKILLS = "ignored"      # the default is committed
 
 [hooks]
 enter = "lets sync"
 ```
 
-`latest` installs the newest release once, and stays on it
-until `mise upgrade`. To pin an exact release, replace `latest` with
-its number.
+`standard` and `committed` are the defaults, as with Nix. `latest` stays
+on one release until `mise upgrade`; `auto_update` never moves it. Pin the
+OpenSpec CLI to the version the release notes name, or `lets sync` warns
+you. The `enter` hook needs `mise activate`; without it, run
+`mise exec -- lets sync`.
 
-Then run `mise lock` and commit `mise.lock`, so every clone and CI get
-the same release.
+### First run and commit
 
-mise's `auto_update` does not move this release. mise reads it only
-from your global config, and never updates a tool that the project's
-`mise.toml` sets.
-
-Pin the OpenSpec CLI to the version the release was generated from. Each
-release names it in its GitHub release notes, and in the `openspec` field
-of its `release.json`. The `openspec-*` skills are generated from that
-version. If the CLI on your `PATH` is another version, `lets sync` warns
-you and names the version to pin.
-
-The `enter` hook runs `lets sync` when you `cd` into the project. mise
-runs hooks only in a shell where `mise activate` is set up. Without it,
-run `mise exec -- lets sync` yourself.
-
-### 3. Run `lets sync`
-
-Enter the dev shell, or `cd` into the project with mise. `lets sync`
-runs. The first time, it:
-
-- adds the working rules to `AGENTS.md`, between two markers, and creates
-  `AGENTS.md` if it is missing
-- creates `openspec/config.yaml`, set to your flow's schema. In the
-  standard flow, it also holds the code review rule.
-- links `CLAUDE.md` to `AGENTS.md`, and `.claude/skills` to
-  `.agents/skills`, so Claude Code reads the same files as other agents
-- copies the skills into `.agents/skills/` and the schemas into
-  `openspec/schemas/`. Besides your flow's schema, `lets-minimal` is
-  always copied in, for chores and small stories.
-- lists anything you still need to fix
-
-### 4. Describe your project and commit
+The first `lets sync` adds the working rules to `AGENTS.md`, creates
+`openspec/config.yaml` for your flow, links `CLAUDE.md` and
+`.claude/skills` so Claude Code reads the same files as other agents, and
+copies the skills into `.agents/skills/` and the schemas into
+`openspec/schemas/`.
 
 Add your own instructions to `AGENTS.md`, outside the markers: what the
-project is, its layout and how to run its checks. Agents run those checks
-before they push, and branch each change off the repository's default
-branch.
+project is, its layout and how to run its checks. Then commit, as
+[Quick start](#-quick-start) shows, so every clone has the skills, even
+without Nix or mise. With the `ignored` skills mode, `lets sync` adds a
+block to `.gitignore` instead: commit that, not the copies. After the
+first run, `lets sync` prints nothing when all is well.
 
-Then commit:
+### Monorepos
 
-- `AGENTS.md`, `CLAUDE.md` and `.claude/skills`
-- `openspec/config.yaml`
-- the skills in `.agents/skills/` and the schemas in `openspec/schemas/`
-- `mise.toml` and `mise.lock`, if you use mise
-
-With the `ignored` skills mode, `lets sync` adds a block to `.gitignore`
-instead, so git ignores the skills and the schemas. Commit `.gitignore`,
-and do not commit the copies.
-
-The next time `lets sync` runs, it prints nothing if all is well.
-
-> [!NOTE]
-> With the default `committed` mode, every clone has the skills. A cloud
-> session or a clone without Nix or mise still reads the rules and the
-> skills. The dev shell, from Nix or mise, supplies the tools the skills
-> call: the OpenSpec CLI, `gh` and `lets`.
-
-## Specs in a monorepo
-
-Keep one set of skills and one `openspec/` directory at the repository root.
-This follows [OpenSpec's monorepo recommendation](https://github.com/Fission-AI/OpenSpec/blob/main/docs/existing-projects.md#monorepos-and-work-that-spans-repos).
-Group specs by application, service or feature as the project needs:
-
-```text
-.agents/skills/                        # shared skills
-AGENTS.md                              # shared workflow rules
-openspec/
-  config.yaml                          # shared schema and project context
-  specs/
-    backend/checkout/spec.md
-    frontend/checkout/spec.md
-    shared/user-auth/spec.md
-  changes/
-```
-
-A **domain** is a logical grouping of behavior specs. A **capability path**
-identifies one spec relative to `openspec/specs/`, such as `user-auth` or
-`backend/checkout`. Domain grouping is optional: existing flat paths such as
-`openspec/specs/user-auth/spec.md` continue to work without migration or new
-configuration.
-
-Before planning, the agent lists existing capabilities and reads the affected
-specs, including shared behavior the change depends on:
-
-```sh
-openspec list --specs
-openspec show backend/checkout --type spec
-openspec show shared/user-auth --type spec
-```
-
-Use full capability IDs from the list. `backend/checkout` and
-`frontend/checkout` are different capabilities, even though their last path
-segment is the same. Strict validation alone does not prove that a delta
-targets an existing capability.
-
-Domain names do not automatically map to source directories. Describe useful
-mappings in the existing `openspec/config.yaml` context, for example:
-
-```yaml
-context: |
-  Backend capabilities describe apps/api; frontend capabilities describe apps/web.
-  Shared authentication behavior is implemented in packages/auth.
-```
-
-The agent uses this context, the request and the code to find relevant specs.
-When the scope is clear, it proceeds without a separate domain-selection
-prompt.
-
-One change can update several domains. For a checkout story, put deltas at
-`openspec/changes/add-checkout/specs/backend/checkout/spec.md` and
-`openspec/changes/add-checkout/specs/frontend/checkout/spec.md`. Each full
-capability path matches its main spec under `openspec/specs/` during
-sync/archive. Read shared authentication for context, but include its delta
-only if its requirements change. Skills, Git branches and pull requests stay
-shared across the repository.
+Keep one set of skills and one `openspec/` directory at the repository
+root. Group the specs by application, service or feature, and say in
+`openspec/config.yaml` which code each group describes.
+[Specs in a monorepo](docs/monorepo.md) shows the layout.
 
 ## Shared domain language
 
