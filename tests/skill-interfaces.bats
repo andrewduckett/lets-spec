@@ -152,6 +152,25 @@ flow_texts() {
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 
+@test "the docs name lets delegate review or handoff only with instructions or run" {
+  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo/docs/resolver-contract.md' '$repo'/contrib/*/README.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "the README's warning about #58 is gone" {
+  run grep -n 'issues/58' "$repo/README.md"
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "the README names where the guidance lives, and --for" {
+  grep -qF 'delegations.<intent>.guidance' "$repo/README.md"
+  grep -qF -- '--for' "$repo/README.md"
+}
+
+@test "the resolver contract describes the probe's verb" {
+  grep -qE '^\| `verb` \| `probe` \|' "$repo/docs/resolver-contract.md"
+}
+
 # skill_says <skill> <fixed text>: the skill's SKILL.md holds the text,
 # which may wrap across lines.
 skill_says() {

@@ -23,7 +23,7 @@
 
 ## 5. Docs and release [depends-on: 2, 3, 4]
 
-- [ ] 5.1 [medium] The README's *Fresh sessions*, *Set up delegation* and *Resolvers* sections, and `docs/resolver-contract.md`, describe the strategies, `--for`, `instructions`, the ranked `--model`, `delegations.<intent>.guidance` and the probe's `verb`. The README's warning about #58 is gone (verify: bats tests/skill-interfaces.bats)
+- [x] 5.1 [medium] The README's *Fresh sessions*, *Set up delegation* and *Resolvers* sections, and `docs/resolver-contract.md`, describe the strategies, `--for`, `instructions`, the ranked `--model`, `delegations.<intent>.guidance` and the probe's `verb`. The README's warning about #58 is gone (verify: bats tests/skill-interfaces.bats) (✓ bats tests/skill-interfaces.bats passed)
 - [ ] 5.2 [easy] The `flake.nix` release checks call `lets delegate handoff run --for apply`, and the whole suite and the flake checks pass (verify: pnpm test && nix flake check)
 
 ## Deviations Ledger

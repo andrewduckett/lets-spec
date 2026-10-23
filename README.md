@@ -529,14 +529,29 @@ the author. After
 `lets-build` plans a change, it offers to start the build in a fresh
 session too.
 
-The skills ask for a session with `lets delegate`:
+The skills ask for a session with `lets delegate`. A session has a
+strategy, which says how it runs, and an intent, which says what it is
+for. Every command names its intent with `--for`:
+
+| Strategy | Intents | How the session runs |
+|---|---|---|
+| `review` | `plan`, `code` | Read-only. `lets` waits for the final message. |
+| `handoff` | `apply` | Interactive. `lets` returns at once. |
+
+Each strategy has two commands:
 
 | Command | What it does |
 |---|---|
-| `lets delegate review` | Runs a prompt read-only in a fresh session, on the model `--model` names, waits, and prints the final message. A JSON line on stderr names the family that answered, and whether the review was independent. |
-| `lets delegate handoff` | Starts an interactive session with a prompt, on the model `--model` names, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
+| `lets delegate review instructions --for <plan\|code>` and `lets delegate handoff instructions --for apply` | Prints one JSON line: the resolver that will answer, the models it can run now as `options`, and your guidance for the intent. Starts no session. |
+| `lets delegate review run --for <plan\|code>` | Runs a prompt read-only in a fresh session, waits, and prints the final message. A JSON line on stderr names the family and model that answered, and whether the review was independent. |
+| `lets delegate handoff run --for apply` | Starts an interactive session with a prompt, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
 
-Run `lets delegate review --help` for the options and the exit codes.
+The skill reads `instructions`, ranks the models, and passes them to
+`run` as `--model`, once for each, best first. When the resolver refuses
+a model, `run` sends the next one to the same resolver. It exits 3 only
+when every model is refused.
+
+Run `lets delegate review run --help` for the options and the exit codes.
 
 ### Set up delegation
 
@@ -553,6 +568,15 @@ resolvers:
   - /home/you/.nix-profile/bin/lets-delegate-t3
   - /home/you/.nix-profile/bin/lets-delegate-cli
   - subagent
+delegations:
+  plan:
+    guidance: Prefer the strongest gpt model. Never use gemini.
+  code:
+    guidance: Prefer a gpt model.
+  apply:
+    guidance: |
+      Prefer claude.
+      Use a small model for a chore.
 ```
 
 List the resolvers for your harnesses first, then `lets-delegate-cli`,
@@ -567,24 +591,24 @@ a subagent. `version` is the number `2`. A `config.json` from an earlier
 release is no longer read: when it is there and `config.yaml` is not,
 `lets delegate` stops and names both files.
 
-> [!WARNING]
-> Until [#58](https://github.com/andrewduckett/lets-spec/issues/58)
-> lands, a `lets-delegate-t3` entry runs the first model in T3 Code's
-> catalog for the family it picks, whether or not your account can run
-> it. If T3 Code refuses that model, the review fails, and the `subagent`
-> entry after it does not run, because a refusal is not a decline. If that
-> happens, list `subagent` alone until #58 lands.
+`delegations` is optional. `delegations.<intent>.guidance` is your advice,
+in plain words, on which models to use for that intent: `plan`, `code` or
+`apply`. The skill reads it from `instructions` and uses it to rank and
+leave out models. It does not change what the skill does. Only
+`instructions` reads the key: when it is not a string, `instructions`
+exits 2 and names the file and the key, and `run` ignores it.
 
 ### What a review gets
 
 A review gets the best of these that your machine offers. `lets` tries
 rung 1 with the resolvers your [config](#set-up-delegation) lists. The
-review skill takes rung 2 when the default answers, which starts no
-session, and `lets delegate review` exits 3.
+review skill takes rung 2 when the resolver lists no models, or when
+`lets delegate review run` exits 3: the default answered, which starts no
+session, or every model was refused.
 
 | Rung | What runs | Fresh context | Independent | Needs |
 |---|---|---|---|---|
-| 1 | A session a resolver starts | yes | when the resolver picks another family | a resolver your config lists |
+| 1 | A session a resolver starts | yes | when the skill picks another family | a resolver your config lists |
 | 2 | A read-only subagent in your current harness | yes | no | nothing |
 
 `review.md` records how the review ran: `fresh context, other family`,
@@ -613,20 +637,22 @@ both with no config and for the `subagent` entry, so you never install or
 link it. It answers as `subagent`.
 
 The default starts no session, and picks no model family. For a review,
-it runs nothing: `lets delegate review` exits 3, and the review skill
+it runs nothing: `lets delegate review run` exits 3, and the review skill
 runs a subagent. For a handoff, it writes the prompt to
 `.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
 and that path for you to start any agent in the repository with. The
-JSON line that `lets delegate handoff` prints has `"resolver":"subagent"`.
+JSON line that `lets delegate handoff run` prints has `"resolver":"subagent"`.
 Before this release it said `"default"`, so update any script that
 matches on it.
 
 If that file is missing or Node cannot run it, `lets delegate` exits 4
 and says the `lets` install is incomplete. Reinstall `lets`.
 
-When a session fails, `lets` stops and says why. It never retries, and it
-never falls back to another resolver or family. It leaves the failed
-session in place, so you can read what happened.
+A refusal is not a failure: the harness said no before the model gave
+any output, so `lets` sends the next model you gave to the same resolver.
+When a session fails, `lets` stops and says why. It never retries it, and
+it never falls back to another resolver. It leaves the failed session in
+place, so you can read what happened.
 
 ### The T3 Code and cli resolvers
 
@@ -635,7 +661,7 @@ This repo has two resolvers you can install:
 | Resolver | It answers | A review runs as | A handoff |
 |---|---|---|---|
 | [`lets-delegate-t3`](contrib/t3-resolver/README.md) | Inside T3 Code | A new thread, archived when the review succeeds | Starts a new thread in the sidebar |
-| [`lets-delegate-cli`](contrib/cli-resolver/README.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, so the next resolver answers |
+| [`lets-delegate-cli`](contrib/cli-resolver/README.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, and declines its probe, so the next resolver answers |
 
 Install each one you want once for your user, with home-manager, a Nix
 profile or the release tarball. It is never part of a project: it answers
@@ -667,9 +693,11 @@ default, `lets-delegate-subagent`.
 
 Any executable can be a resolver. `lets` runs it as `<resolver> <verb>`,
 writes one JSON request to its stdin, and reads one JSON response from its
-stdout. The verbs are `probe`, `run`, `start` and `finish`. A resolver
-that does not handle a request where it runs exits 75 before it starts
-anything, and `lets` asks the next one.
+stdout. The verbs are `probe`, `run`, `start` and `finish`. A `probe`
+names the verb it is for, `run` or `start`, in its `verb` field. A
+resolver that does not handle a request where it runs exits 75 before it
+starts anything, and `lets` asks the next one. One that never handles
+`start` should decline a probe for `start` too.
 
 [The resolver contract](docs/resolver-contract.md) gives every field,
 exit code and rule.
