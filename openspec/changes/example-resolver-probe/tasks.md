@@ -2,7 +2,7 @@
 
 - [x] 1.1 [easy] `contrib/headless-resolver probe` with `"verb":"start"` exits 75, prints nothing on stdout, and prints `headless-resolver: this resolver only runs headless` on stderr; with `"verb":"run"` or no `verb` it still prints `{"resolver":"headless-sh","options":["claude"]}`. Test it in a new `tests/lets/delegate/headless-resolver.test.ts` (verify: node --test tests/lets/delegate/headless-resolver.test.ts) (✓ node --test tests/lets/delegate/headless-resolver.test.ts passed)
 - [x] 1.2 [easy] The contract's embedded copy of the script matches the script again, and the prose before it says the example declines `start` and a probe for `start` (verify: bats tests/skill-interfaces.bats) (✓ bats tests/skill-interfaces.bats passed)
-- [ ] 1.3 [medium] With a delegate config that lists the absolute path of `contrib/headless-resolver`, then `subagent`, `lets delegate handoff instructions --for apply` prints a JSON line with `"resolver":"subagent"` (verify: node --test tests/lets/delegate/cli.test.ts)
+- [x] 1.3 [medium] With a delegate config that lists the absolute path of `contrib/headless-resolver`, then `subagent`, `lets delegate handoff instructions --for apply` prints a JSON line with `"resolver":"subagent"` (verify: node --test tests/lets/delegate/cli.test.ts) (✓ node --test tests/lets/delegate/cli.test.ts passed)
 
 ## 2. verify checks the probe for start
 
