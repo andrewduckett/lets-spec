@@ -2,7 +2,7 @@
 
 The decisions are in brainstorm.md (D1 to D11). Every task edits `README.md`.
 
-- [ ] 1.1 [easy] The example under *Set it up → With mise* installs `"github:sidereal-io/lets-spec" = "latest"`, with no `asset_pattern` and no `andrewduckett` (verify: `! grep -qE 'asset_pattern|andrewduckett' README.md && grep -qF '"github:sidereal-io/lets-spec" = "latest"' README.md`)
+- [x] 1.1 [easy] The example under *Set it up → With mise* installs `"github:sidereal-io/lets-spec" = "latest"`, with no `asset_pattern` and no `andrewduckett` (verify: `! grep -qE 'asset_pattern|andrewduckett' README.md && grep -qF '"github:sidereal-io/lets-spec" = "latest"' README.md`) (✓ verify passed)
 - [x] 1.2 [easy] The sentence that says to change the version and the `asset_pattern` together is gone. In its place, *With mise* says that `latest` installs the newest release once and stays on it until `mise upgrade`, and that to pin an exact release you replace `latest` with its number (verify: `! grep -q 'Change them together' README.md && grep -q 'until `mise upgrade`' README.md`) (✓ verify passed)
 - [ ] 1.3 [easy] *With mise* tells the reader to run `mise lock` and commit `mise.lock`, so every clone and CI get the same release (verify: `grep -q 'mise lock' README.md`)
 - [ ] 1.4 [easy] *With mise* has one sentence that warns against `auto_update`: it moves the release on its own, and the enter hook then rewrites committed skills on whatever branch you are on (verify: `grep -q 'auto_update' README.md`)

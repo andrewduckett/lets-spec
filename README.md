@@ -139,7 +139,7 @@ Add this to your project's `mise.toml`:
 node = "26"
 gh = "2.102"
 "npm:@fission-ai/openspec" = "1.13.2"   # the version in the release notes
-"github:andrewduckett/lets-spec" = { version = "0.1.0", asset_pattern = "lets-spec-0.1.0.tar.gz" }
+"github:sidereal-io/lets-spec" = "latest"
 
 [env]
 LETS_SPEC_FLOW = "standard"
