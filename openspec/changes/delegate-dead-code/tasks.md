@@ -28,4 +28,4 @@
 
 ## 6. Check everything
 
-- [ ] 6.1 [easy] The whole suite and the Nix build pass (verify: pnpm test && nix flake check)
+- [x] 6.1 [easy] The whole suite and the Nix build pass (verify: pnpm test && nix flake check) (✓ pnpm test and nix flake check passed)
