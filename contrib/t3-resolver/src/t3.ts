@@ -28,7 +28,8 @@ import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
 import { pollUntil } from 'resolver-kit/wait.ts';
 
-export const TOKEN_FILE_SUFFIX = '.config/lets-delegate/t3-token';
+// Where the token lives under the config folder, beside lets's config.yaml.
+export const TOKEN_FILE = 'lets-delegate/t3-token';
 
 // The protocol this adapter speaks. t3 refuses a WebSocket that names another.
 export const ORCHESTRATION_PROTOCOL = 2;
@@ -196,7 +197,9 @@ export function readFinalMessage(db: Db, runId: string): { text: string; streami
   return { text: typeof text === 'string' ? text : '', streaming: row.streaming === 1 };
 }
 
-const tokenPath = (io: Io) => `${io.homedir()}/${TOKEN_FILE_SUFFIX}`;
+// $XDG_CONFIG_HOME/lets-delegate/t3-token, or ~/.config/... when it is unset
+// or empty: the rule configPath in lets/src/delegate/config.ts follows.
+const tokenPath = (io: Io) => `${io.env.XDG_CONFIG_HOME || `${io.homedir()}/.config`}/${TOKEN_FILE}`;
 
 // Issue a token with the server's own CLI, so it lands in the same auth store.
 async function issueToken(io: Io): Promise<string> {

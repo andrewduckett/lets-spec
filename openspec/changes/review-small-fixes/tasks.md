@@ -5,7 +5,7 @@
 
 ## 2. The T3 token follows XDG_CONFIG_HOME (C14)
 
-- [ ] 2.1 [easy] With `XDG_CONFIG_HOME=/cfg`, `readToken` in `contrib/t3-resolver/src/t3.ts` returns the token stored at `/cfg/lets-delegate/t3-token` and issues none; with no token stored there, it writes the fresh token to that path. Use the same rule as `configPath` in `lets/src/delegate/config.ts` (verify: node --test tests/t3-resolver/t3.test.ts)
+- [x] 2.1 [easy] With `XDG_CONFIG_HOME=/cfg`, `readToken` in `contrib/t3-resolver/src/t3.ts` returns the token stored at `/cfg/lets-delegate/t3-token` and issues none; with no token stored there, it writes the fresh token to that path. Use the same rule as `configPath` in `lets/src/delegate/config.ts` (verify: node --test tests/t3-resolver/t3.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed)
 - [ ] 2.2 [easy] With `XDG_CONFIG_HOME` unset, and with it set to the empty string, `readToken` reads and writes `~/.config/lets-delegate/t3-token` (verify: node --test tests/t3-resolver/t3.test.ts)
 - [ ] 2.3 [easy] With `XDG_CONFIG_HOME=/cfg`, nothing at `/cfg/lets-delegate/t3-token`, and `old` stored at `~/.config/lets-delegate/t3-token`, `readToken` issues a new token, writes it to `/cfg/lets-delegate/t3-token`, and never returns `old` (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts)
 - [ ] 2.4 [easy] `contrib/t3-resolver/README.md` says the token lives in `$XDG_CONFIG_HOME/lets-delegate/t3-token` when that is set, beside `lets`'s `config.yaml`, and in `~/.config/lets-delegate/t3-token` otherwise; and that `T3CODE_HOME` sets the T3 base directory the resolver reads and issues tokens against (verify: grep -q XDG_CONFIG_HOME contrib/t3-resolver/README.md && grep -q T3CODE_HOME contrib/t3-resolver/README.md)
