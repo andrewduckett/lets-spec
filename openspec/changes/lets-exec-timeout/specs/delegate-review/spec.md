@@ -13,4 +13,4 @@ When `lets delegate review run` exits 0, the JSON line it prints on stderr SHALL
 
 #### Scenario: A plan review
 - **WHEN** a resolver answers a run, and the user runs `lets delegate review run --for plan`
-- **THEN** the command exits 0, and its stderr ends with one JSON line whose `for` is `plan`
+- **THEN** the command exits 0, and its stderr ends with one JSON line that starts `{"for":"plan",` and holds `resolver`, `family`, `model`, `independent`, `handle`, `gitClean` and `durationSeconds`
