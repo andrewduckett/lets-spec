@@ -133,7 +133,8 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
   outside `.workspace/` changed.
 - **Honour `timeoutMinutes` in `run`.** `lets` waits one minute more, then
   stops the resolver. Every other verb gets five minutes. `lets delegate
-  verify` gives each of its shape checks 60 seconds.
+  verify` gives each call 60 seconds, except the live `run`, which gets
+  the same extra minute.
 - **Never retry, and never fall back.** If you cannot do the thing, fail,
   and leave the session in place so a person can read it.
 - **Accept `finish` for every handle you return.** Never fail it because
