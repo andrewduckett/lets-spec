@@ -275,47 +275,45 @@ context: |
 Agents ask you what a new term means, and write it down once you agree;
 `lets sync` never touches a glossary. [Domain language in a project](docs/domain-language.md) says more.
 
-## 🧵 Fresh sessions
+## 🧵 Reviews in a fresh session
 
-Some steps run in a new agent session instead of the current one. A plan
-or code review runs in a fresh session when a resolver can start one, from
-another model family when it can, so the reviewer shares no context with
-the author. After
-`lets-build` plans a change, it offers to start the build in a fresh
-session too.
+This section is for you if you want reviews by another model family.
 
-The skills ask for a session with `lets delegate`. A session has a
-strategy, which says how it runs, and an intent, which says what it is
-for. Every command names its intent with `--for`:
+Reviews, and builds that `lets-build` hands off, can run in a fresh
+session that shares no context with the author. The words below matter:
 
-| Strategy | Intents | How the session runs |
-|---|---|---|
-| `review` | `plan`, `code` | Read-only. `lets` waits for the final message. |
-| `handoff` | `apply` | Interactive. `lets` returns at once. |
+- **Resolver:** a program that turns a request into a real session.
+- **Harness:** the agent app you work in, such as Claude Code or T3 Code.
+- **Family:** the models from one maker: `gpt`, `claude` or `gemini`.
+- **Chain:** the resolvers your config lists, which `lets` asks in order.
+- **Review:** a read-only session. `lets` waits for its final message.
+- **Handoff:** an interactive session that builds a planned change.
+- **Decline:** a resolver cannot work here, so the next one is asked.
+- **Refuse:** a resolver will not run the model it was given, so `lets`
+  sends it the next model.
 
-Each strategy has two commands:
+Skills call `lets delegate review run` and `lets delegate handoff run`, where
+`--for` names what the session is for. They read the models they can use
+from `lets delegate review instructions` first, and pass them to `run`
+best first. `lets delegate review run --help` lists the options.
 
-| Command | What it does |
-|---|---|
-| `lets delegate review instructions --for <plan\|code>` and `lets delegate handoff instructions --for apply` | Prints one JSON line: the resolver that will answer, the models it can run now as `options`, and your guidance for the intent. Starts no session. |
-| `lets delegate review run --for <plan\|code>` | Runs a prompt read-only in a fresh session, waits, and prints the final message. A JSON line on stderr names the family and model that answered, and whether the review was independent. |
-| `lets delegate handoff run --for apply` | Starts an interactive session with a prompt, and returns at once. When it cannot, it gives back the prompt for you to start any agent with. |
+### What a review gets
 
-The skill reads `instructions`, ranks the models, and passes them to
-`run` as `--model`, once for each, best first. When the resolver refuses
-a model, `run` sends the next one to the same resolver. It exits 3 only
-when every model is refused.
+A review gets the best of these that your machine offers:
 
-Run `lets delegate review run --help` for the options and the exit codes.
+| | What runs | Fresh context | Independent | Needs |
+|---|---|---|---|---|
+| First choice | A session a resolver in your chain starts | yes | when the skill picks another family | a resolver your [config](#set-up-delegation) lists |
+| Fallback | A read-only subagent in your current harness | yes | no | nothing |
+
+The skill falls back when the resolver lists no models, or refuses them
+all. `review.md` records which ran, such as `fresh context, other family`.
 
 ### Set up delegation
 
-With no config, `lets` asks only the default resolver,
-`lets-delegate-subagent`, so every review runs in a subagent of your own
-harness. To have reviews run as fresh sessions, write the config by hand,
-once on each machine. It lists the resolvers to ask, in order, and is
-`~/.config/lets-delegate/config.yaml`, or
-`$XDG_CONFIG_HOME/lets-delegate/config.yaml` when that is set:
+With no config, only the default resolver, `lets-delegate-subagent`,
+answers. For fresh sessions, write `~/.config/lets-delegate/config.yaml`
+(or under `$XDG_CONFIG_HOME`) by hand, once on each machine:
 
 ```yaml
 version: 2
@@ -329,98 +327,42 @@ delegations:
   code:
     guidance: Prefer a gpt model.
   apply:
-    guidance: |
-      Prefer claude.
-      Use a small model for a chore.
+    guidance: Prefer claude. Use a small model for a chore.
 ```
 
 List the resolvers for your harnesses first, then `lets-delegate-cli`,
-then `subagent`. `lets` asks them in the order you write them, and does
-not check that order.
-
-Write each resolver as a full absolute path: `lets` does not expand `~`
-or `$HOME`. `command -v lets-delegate-t3` prints the path to use.
-`subagent` names the default that ships with `lets`. Leave it out, and a
-review where every resolver declines fails with exit 2 instead of running
-a subagent. `version` is the number `2`. A `config.json` from an earlier
-release is no longer read: when it is there and `config.yaml` is not,
-`lets delegate` stops and names both files.
+then `subagent`, the default resolver; without it, a review every resolver
+declines fails. Write absolute paths: `lets` does not expand `~` or
+`$HOME`. An old `config.json` is not read; `lets delegate` names it.
 
 `delegations` is optional. `delegations.<intent>.guidance` is your advice,
-in plain words, on which models to use for that intent: `plan`, `code` or
-`apply`. The skill reads it from `instructions` and uses it to rank and
-leave out models. It does not change what the skill does. Only
-`instructions` reads the key: when it is not a string, `instructions`
-exits 2 and names the file and the key, and `run` ignores it.
+in plain words, on which models to use; its middle part is a value `--for`
+takes: `plan`, `code` or `apply`. The skill uses it only to rank and leave
+out models. A value that is not a string makes `instructions` exit 2.
+[The resolver contract](docs/resolver-contract.md#how-lets-finds-a-resolver)
+says how `lets` walks the chain.
 
-### What a review gets
-
-A review gets the best of these that your machine offers. `lets` tries
-rung 1 with the resolvers your [config](#set-up-delegation) lists. The
-review skill takes rung 2 when the resolver lists no models, or when
-`lets delegate review run` exits 3: the default answered, which starts no
-session, or every model was refused.
-
-| Rung | What runs | Fresh context | Independent | Needs |
-|---|---|---|---|---|
-| 1 | A session a resolver starts | yes | when the skill picks another family | a resolver your config lists |
-| 2 | A read-only subagent in your current harness | yes | no | nothing |
-
-`review.md` records how the review ran: `fresh context, other family`,
-`fresh context, same family` or `subagent, same family`.
-
-### Resolvers
-
-A resolver is the program that turns a request into a real session.
-[How `lets` finds a resolver](docs/resolver-contract.md#how-lets-finds-a-resolver)
-says which one answers, and what the default does when none of yours does.
-
-### The T3 Code and cli resolvers
+### Install a resolver
 
 This repo has two resolvers you can install:
 
 | Resolver | It answers | A review runs as | A handoff |
 |---|---|---|---|
 | [`lets-delegate-t3`](contrib/t3-resolver/README.md) | Inside T3 Code | A new thread, archived when the review succeeds | Starts a new thread in the sidebar |
-| [`lets-delegate-cli`](contrib/cli-resolver/README.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, and declines its probe, so the next resolver answers |
+| [`lets-delegate-cli`](contrib/cli-resolver/README.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, so the next resolver answers |
 
-Install each one you want once for your user, with home-manager, a Nix
-profile or the release tarball. It is never part of a project: it answers
-for your machine. Its README gives the steps. Then add its path to
-`resolvers` in your [delegate config](#set-up-delegation): `lets-delegate-t3`
-first, then `lets-delegate-cli`, then `subagent`.
+Install each one once for your user, never in a project; its README gives
+the steps. Then add its path to `resolvers` in your config. Each declines
+where it cannot work, so the first that fits where you are answers.
 
-`lets-delegate-t3` declines outside T3 Code, and `lets-delegate-cli`
-declines when none of its CLIs is on your `PATH`. So the first one that
-fits where you work answers. A handoff outside T3 Code falls through to
-`subagent`, which gives you the prompt to start any agent with.
+### Write your own
 
-### Write your own resolver
-
-Any executable can be a resolver. `lets` runs it as `<resolver> <verb>`,
-writes one JSON request to its stdin, and reads one JSON response from its
-stdout. The verbs are `probe`, `run`, `start` and `finish`. A `probe`
-names the verb it is for, `run` or `start`, in its `verb` field. A
-resolver that does not handle a request where it runs exits 75 before it
-starts anything, and `lets` asks the next one. One that never handles
-`start` should decline a probe for `start` too.
-
-[The resolver contract](docs/resolver-contract.md) gives every field,
-exit code and rule.
-[`contrib/headless-resolver`](contrib/headless-resolver) is a complete
-resolver in `sh`, to copy from.
-
-To check your resolver, run:
-
-```bash
-lets delegate verify <your resolver>
-```
-
-It sends requests that start nothing. Add `--live` to also run a short
-session and start another one. That spends tokens, and may open a thread.
-A resolver that only runs headless may decline the handoff; the check
-passes it, and says the next resolver answers handoffs.
-When every check passes, your resolver is done.
+Any executable can be a resolver: `lets` runs it as `<resolver> <verb>`,
+with one JSON request on stdin and one response on stdout.
+[The resolver contract](docs/resolver-contract.md) gives every rule, and
+[`contrib/headless-resolver`](contrib/headless-resolver) is one in `sh` to
+copy. Check yours with `lets delegate verify <your resolver>`; add `--live`
+to also run a short session, which spends tokens.
 
 ## 📜 The working rules
 
