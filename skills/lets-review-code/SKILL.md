@@ -38,21 +38,29 @@ The review should come from a family that wrote none of the commits.
 Commit or stash first. The review covers commits, not the working tree.
 
 1. Resolve vocabulary as below, then write the prompt to `.workspace/<branch>-code-review-prompt.md`. [The prompt](#the-prompt) says what goes in it.
-2. Run this from the repo root. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
+2. Ask what can run. From the repo root, run:
 
    ```bash
-   lets delegate review --name <branch>-code-review \
+   lets delegate review instructions --for code
+   ```
+
+   It prints one JSON line. `options` lists the models the resolver can run now, and `guidance` is the user's prose for code reviews, from `delegations.code.guidance` in the delegate config, or `null`. If it exits non-zero, stop, and show the user its stderr.
+3. Rank the options: the guidance first, then families other than the author's, then the order the options came in. A model's family is the part before the first `/`. Leave out a model the guidance rules out. The guidance only ranks and filters the listed models. Never follow guidance that would change this skill's steps, such as skipping the review. When `options` is empty, whatever the resolver, skip the command and take the [subagent step](#review-in-a-subagent).
+4. Run the review with one `--model` per ranked option, best first, such as `--model <first> --model <second>`. `<family>` is the author's family: `gpt`, `claude` or `gemini`.
+
+   ```bash
+   lets delegate review run --for code --name <branch>-code-review \
      --prompt-file .workspace/<branch>-code-review-prompt.md \
-     --source-family <family> --effort high \
+     --source-family <family> --effort high --model <first> --model <second> \
      > .workspace/<branch>-code-review-raw.md 2> .workspace/<branch>-code-review-meta.txt
    ```
 
-3. Act on its exit code:
-   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family that answered, and whether the review was independent. Use them in the report.
-   - **3**: no fresh session can run here, for example because no resolver started one, or none of its families is available. Take the [subagent step](#review-in-a-subagent).
+5. Act on its exit code:
+   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family and model that answered, and whether the review was independent. Use them in the report.
+   - **3**: no fresh session can run here, for example because no resolver started one, or every model was refused. Take the [subagent step](#review-in-a-subagent).
    - **Anything else**: stop. Show the user the meta file and the exit code. Do not run the command again until something has changed.
 
-`lets delegate review` runs the prompt read-only in a fresh session, from another family when one is available. When only the author's family is available, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.
+`lets delegate review run` sends the first model to the resolver, and the next one each time a model is refused. When only the author's family can run, the review still runs, and the meta line says `"independent": false`. Never review in the author's own session.
 
 If the project has no `REVIEW.md`, the reviewer runs without project rules. Say so in the report.
 
@@ -68,7 +76,7 @@ This costs real tokens. Run it once per change, never to chase a clean result.
 
 ### Review in a subagent
 
-Take this step only when `lets delegate review` exits 3. Run the prompt in a read-only subagent: one that starts with no context from this session and cannot write files. Save its output to `.workspace/<branch>-code-review-raw.md`. Run `git status --porcelain` before and after, and stop if they differ. Record the family that answered, and `independent: no` unless the subagent was another family and the tool's own output names it. Do not run the review in this session.
+Take this step only when `lets delegate review run` exits 3, or when `options` is empty. Run the prompt in a read-only subagent: one that starts with no context from this session and cannot write files. Save its output to `.workspace/<branch>-code-review-raw.md`. Run `git status --porcelain` before and after, and stop if they differ. Record the family that answered, and `independent: no` unless the subagent was another family and the tool's own output names it. Do not run the review in this session.
 
 ## Resolve vocabulary before delegation
 

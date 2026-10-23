@@ -147,6 +147,39 @@ flow_texts() {
   done
 }
 
+# skill_says <skill> <fixed text>: the skill's SKILL.md holds the text.
+skill_says() {
+  grep -qF -- "$2" "$repo/skills/$1/SKILL.md" || { echo "$1 does not say: $2"; return 1; }
+}
+
+@test "each review skill asks lets for its intent's options, then runs with a ranked list" {
+  for pair in lets-review-plan:plan lets-review-code:code; do
+    skill="${pair%%:*}" intent="${pair##*:}"
+    skill_says "$skill" "lets delegate review instructions --for $intent"
+    skill_says "$skill" "lets delegate review run --for $intent"
+    skill_says "$skill" "--model <first> --model <second>"
+    skill_says "$skill" "delegations.$intent.guidance"
+  done
+}
+
+@test "each review skill ranks by the guidance, then other families, then the order given" {
+  for skill in lets-review-code lets-review-plan; do
+    skill_says "$skill" "the guidance first, then families other than the author's, then the order the options came in"
+  done
+}
+
+@test "each review skill takes the subagent step when there are no options" {
+  for skill in lets-review-code lets-review-plan; do
+    skill_says "$skill" "When \`options\` is empty, whatever the resolver, skip the command and take the [subagent step]"
+  done
+}
+
+@test "each skill that delegates lets the guidance only rank and filter models" {
+  for skill in lets-review-code lets-review-plan; do
+    skill_says "$skill" "The guidance only ranks and filters the listed models"
+  done
+}
+
 @test "lets-build says a handoff's instructions hold the prompt to carry on by hand" {
   grep -q 'hold the prompt to carry on by hand' "$repo/skills/lets-build/SKILL.md"
 }
