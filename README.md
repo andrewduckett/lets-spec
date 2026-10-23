@@ -735,14 +735,11 @@ nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 
 ### With mise
 
-Dependabot does not read `mise.toml`. Update the pin by hand, or with
-[Renovate](https://docs.renovatebot.com), which does. Change these
-together:
-
-- the `lets-spec` version and its `asset_pattern`
-- the OpenSpec CLI, to the version named in the new release's notes
-
-Then run `mise install`, run `lets sync`, and commit what it wrote.
+1. Run `mise upgrade`.
+2. Set the OpenSpec CLI in `mise.toml` to the version named in the new
+   release's notes, and run `mise install`.
+3. Run `lets sync`.
+4. Commit `mise.lock` with what `lets sync` wrote.
 
 ## 🛠️ Development
 
