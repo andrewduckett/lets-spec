@@ -138,7 +138,8 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
   and leave the session in place so a person can read it.
 - **Accept `finish` for every handle you return.** Never fail it because
   the session is already gone. For a handle you never issued, exit 0 or 4
-  and print nothing.
+  and print nothing. When `finish` fails, `lets` reports it on stderr, and
+  the review's result and exit code stay the same.
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in
