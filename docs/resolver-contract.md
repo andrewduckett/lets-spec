@@ -160,8 +160,8 @@ To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
 Here is a complete one in `sh`,
 [`contrib/headless-resolver`](../contrib/headless-resolver). It runs `claude`
-headless and read-only. It declines `start`, so the default,
-`lets-delegate-subagent`, handles handoffs.
+headless and read-only. It declines `start`, and it declines a probe
+for `start`, so the default, `lets-delegate-subagent`, handles handoffs.
 
 ```sh
 #!/bin/sh
@@ -178,7 +178,11 @@ fi
 field() { printf '%s' "$request" | jq -r ".$1"; }
 
 case "$1" in
-  probe) echo '{"resolver":"headless-sh","options":["claude"]}' ;;
+  probe)
+    # It declines start, so it declines a probe for start too, and the
+    # handoff probes the next resolver in the chain.
+    [ "$(field verb)" = start ] && { echo "headless-resolver: this resolver only runs headless" >&2; exit 75; }
+    echo '{"resolver":"headless-sh","options":["claude"]}' ;;
   run)
     model=$(field model)
     case "$model" in
