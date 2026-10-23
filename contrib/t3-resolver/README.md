@@ -121,8 +121,16 @@ Add your repository as a T3 project once:
 t3 project add <path>
 ```
 
-The resolver keeps a T3 token in `~/.config/lets-delegate/t3-token`. It
-issues a new one when T3 rejects it.
+The resolver keeps a T3 token beside `lets`'s own `config.yaml`:
+
+- in `$XDG_CONFIG_HOME/lets-delegate/t3-token` when `XDG_CONFIG_HOME` is
+  set
+- in `~/.config/lets-delegate/t3-token` otherwise
+
+It issues a new token when none is stored there, or when T3 rejects the
+one it has. T3 Code keeps its data in `~/.t3`. If you set `T3CODE_HOME`,
+the resolver reads T3 Code's data from that folder instead, and issues
+its tokens against it.
 
 ## Check that it works
 
