@@ -273,14 +273,15 @@ context: |
 ```
 
 Agents ask you what a new term means, and write it down once you agree;
-`lets sync` never touches a glossary. [Domain language in a project](docs/domain-language.md) says more.
+`lets sync` never touches a glossary.
+[Domain language in a project](docs/domain-language.md) says more.
 
 ## 🧵 Reviews in a fresh session
 
 This section is for you if you want reviews by another model family.
 
 Reviews, and builds that `lets-build` hands off, can run in a fresh
-session that shares no context with the author. The words below matter:
+session that shares no context with the author. These words come up:
 
 - **Resolver:** a program that turns a request into a real session.
 - **Harness:** the agent app you work in, such as Claude Code or T3 Code.
@@ -293,8 +294,8 @@ session that shares no context with the author. The words below matter:
   sends it the next model.
 
 Skills call `lets delegate review run` and `lets delegate handoff run`, where
-`--for` names what the session is for. They read the models they can use
-from `lets delegate review instructions` first, and pass them to `run`
+`--for` names what the session is for. Each first asks the matching
+`instructions` command which models it can use, and passes them to `run`
 best first. `lets delegate review run --help` lists the options.
 
 ### What a review gets
@@ -469,7 +470,8 @@ To try an unmerged change in a project, override the input for one shell:
 ### After a T3 Code update
 
 `lets-delegate-t3` depends on T3 Code's internals. After each T3 Code
-update, run the smoke test in [its README](contrib/t3-resolver/README.md#after-a-t3-update).
+update, run the smoke test in
+[its README](contrib/t3-resolver/README.md#after-a-t3-update).
 
 ## 📄 License
 

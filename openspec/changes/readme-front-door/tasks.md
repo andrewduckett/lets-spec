@@ -14,7 +14,7 @@
 
 ## 3. The whole README [depends-on: 2]
 
-- [ ] 3.1 [medium] The README is at most 480 lines (aim 420). Every H2 has an emoji and opens with one sentence naming its reader. Every relative link and in-page `#` link in the changed files resolves, including `README.md#-updating` and `README.md#set-up-delegation` from `docs/` and the contrib READMEs. `intent` appears only in `delegations.<intent>.guidance`. (verify: test "$(wc -l <README.md)" -le 480 && ! grep -nE '^## [A-Za-z`]' README.md && test "$(grep -oE '\bintent\b' README.md | wc -l)" -eq "$(grep -oF 'delegations.<intent>.guidance' README.md | wc -l)")
+- [x] 3.1 [medium] The README is at most 480 lines (aim 420). Every H2 has an emoji and opens with one sentence naming its reader. Every relative link and in-page `#` link in the changed files resolves, including `README.md#-updating` and `README.md#set-up-delegation` from `docs/` and the contrib READMEs. `intent` appears only in `delegations.<intent>.guidance`. (verify: test "$(wc -l <README.md)" -le 480 && ! grep -nE '^## [A-Za-z`]' README.md && test "$(grep -oE '\bintent\b' README.md | wc -l)" -eq "$(grep -oF 'delegations.<intent>.guidance' README.md | wc -l)") (✓ verify command passed; 478 lines; link check found 0 broken links)
 - [ ] 3.2 [easy] The project's checks pass. (verify: pnpm test && nix flake check)
 
 ## Deviations Ledger
