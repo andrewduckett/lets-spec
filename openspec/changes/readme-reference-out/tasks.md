@@ -15,7 +15,7 @@
 
 ## 3. Check the whole [depends-on: 2]
 
-- [ ] 3.1 [easy] The project's checks pass (verify: pnpm test && nix flake check)
+- [x] 3.1 [easy] The project's checks pass (verify: pnpm test && nix flake check) (✓ pnpm test and nix flake check passed)
 
 ## Deviations Ledger
 
