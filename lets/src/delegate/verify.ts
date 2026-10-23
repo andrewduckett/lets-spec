@@ -63,6 +63,9 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
   const probed = await call('probe', probe());
   report('probe answers { resolver, options } or declines with 75', checkProbe(probed));
+  // A probe for start, as a handoff sends it.
+  const probedStart = await call('probe', probe({ verb: 'start' }));
+  report('probe for start answers { resolver, options } or declines with 75', checkProbe(probedStart));
   report('an unknown verb exits 2', exits(await call('lets-verify-verb', probe()), [2]));
   report('a request that is not JSON exits 2', exits(await call('probe', 'not json'), [2]));
   report(`protocol 99 exits 2 (this is protocol ${PROTOCOL})`, exits(await call('probe', probe({ protocol: 99 })), [2]));

@@ -11,6 +11,7 @@ import type { Deps } from '../../../lets/src/io.ts';
 
 const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
 const SUBAGENT = fileURLToPath(new URL('../../../contrib/subagent-resolver/bin/lets-delegate-subagent', import.meta.url));
+const EXAMPLE = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
 
 // Real deps in a fresh git repo. settings go into the env of each command
 // the check runs, for the fake resolver.
@@ -66,6 +67,51 @@ test('the probe asks for run', async () => {
   await run({ command: [fixture('fake-resolver')], live: false }, t.deps);
   const first = readFileSync(log, 'utf8').split('\n').find((line) => line.startsWith('probe\t'))!;
   assert.equal(JSON.parse(first.split('\t')[1]).verb, 'run');
+});
+
+test('the probe for start is checked on its own line', async () => {
+  const t = setup();
+  await run({ command: [fixture('fake-resolver')], live: false }, t.deps);
+  assert.match(t.output(), /^ok {4}probe for start answers \{ resolver, options \} or declines with 75$/m);
+});
+
+test('the probe for start sends start as its verb', async () => {
+  const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');
+  const t = setup({ FAKE_RESOLVER_LOG: log });
+  await run({ command: [fixture('fake-resolver')], live: false }, t.deps);
+  const verbs = readFileSync(log, 'utf8').split('\n').filter((line) => line.startsWith('probe\t{')).map((line) => JSON.parse(line.split('\t')[1]).verb);
+  assert.ok(verbs.includes('start'), verbs.join(' '));
+});
+
+test('a probe for start that declines with nothing on stdout passes', async () => {
+  const t = setup({ FAKE_RESOLVER_EXIT_PROBE_START: '75', FAKE_RESOLVER_STDOUT_PROBE_START: '' });
+  await run({ command: [fixture('fake-resolver')], live: false }, t.deps);
+  assert.match(t.output(), /^ok {4}probe for start answers/m);
+});
+
+test('a probe for start without options fails its check, naming options', async () => {
+  const t = setup({ FAKE_RESOLVER_STDOUT_PROBE_START: '{"resolver":"x"}' });
+  assert.equal(await run({ command: [fixture('fake-resolver')], live: false }, t.deps), 1);
+  assert.match(t.output(), /^FAIL {2}probe for start answers.*options/m);
+  assert.match(t.output(), /^ok {4}probe answers/m);
+});
+
+test('a probe for start that declines and prints fails its check', async () => {
+  const t = setup({ FAKE_RESOLVER_EXIT_PROBE_START: '75' });
+  assert.equal(await run({ command: [fixture('fake-resolver')], live: false }, t.deps), 1);
+  assert.match(t.output(), /^FAIL {2}probe for start answers.*: it printed /m);
+});
+
+test('the sh example passes the probe for start by declining it', async () => {
+  const t = setup();
+  assert.equal(await run({ command: [EXAMPLE], live: false }, t.deps), 0, t.output());
+  assert.match(t.output(), /^ok {4}probe for start answers/m);
+});
+
+test('the default, lets-delegate-subagent, answers the probe for start', async () => {
+  const t = setup();
+  assert.equal(await run({ command: [SUBAGENT], live: false }, t.deps), 0, t.output());
+  assert.match(t.output(), /^ok {4}probe for start answers/m);
 });
 
 // The models of the live run requests, in order, with the probe answering options.
