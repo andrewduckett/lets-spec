@@ -8,7 +8,7 @@
 ## 2. README and AGENTS.md
 
 - [x] 2.1 [easy] The README's upgrade note says `openspec/config.yaml` must name your flow's schema, not `lets-standard` or `lets-minimal` (verify: `grep -q "your flow's schema" README.md && ! grep -q 'must now say `schema: lets-standard` or' README.md`) (✓ verify passed)
-- [ ] 2.2 [easy] The README's `lets sync` exit table says that outside a git repository it writes nothing, says so, and exits 0 (verify: `awk '/^\| Exit \| When \|/,/^$/' README.md | grep -qi 'git repo'`)
+- [x] 2.2 [easy] The README's `lets sync` exit table says that outside a git repository it writes nothing, says so, and exits 0 (verify: `awk '/^\| Exit \| When \|/,/^$/' README.md | grep -qi 'git repo'`) (✓ verify passed)
 - [ ] 2.3 [easy] The README describes `contrib/headless-resolver` as a complete resolver in `sh`, with no line count (verify: `! grep -qi 'twenty lines' README.md && grep -q 'contrib/headless-resolver' README.md`)
 - [ ] 2.4 [easy] The `pnpm test` comment in `AGENTS.md` names the Node tests, the type check, `pnpm verify` and the bats tests (verify: `grep '^pnpm test' AGENTS.md | grep -q 'pnpm verify' && grep '^pnpm test' AGENTS.md | grep -qi 'type'`)
 

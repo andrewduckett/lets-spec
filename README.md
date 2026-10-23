@@ -778,7 +778,7 @@ starting. It changes nothing when it exits with any other code.
 
 | Exit | When |
 |---|---|
-| 0 | The run finished, with or without warnings. |
+| 0 | The run finished, with or without warnings. Or it ran outside a git repository, so it wrote nothing and said so. |
 | 1 | It cannot find the release, or the folder it finds is not a valid release. Or no release ships for the `LETS_SPEC_FLOW` you set, or `LETS_SPEC_SKILLS` is not `committed`, `ignored` or empty. With `--check`, also when the project is out of date. |
 | 2 | You gave it an unknown option. |
 
