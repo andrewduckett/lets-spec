@@ -71,7 +71,7 @@ The stderr line's `model` is the resolver's `model` when it gives one. Otherwise
 - *Alternative:* validate in `parseConfig`. Rejected: that would make `run` fail on a bad guidance block (D16).
 
 ### D-7. A new `delegate/instructions.ts`
-It reads the config, resolves `probe` with `{ verb }` through `resolve()`, and prints `{ strategy, for, resolver, options, guidance }`. The strategy maps to the protocol verb through one table: `review` → `run`, `handoff` → `start`. That table also lives in `cli.ts`'s strategy definitions, so the intents and the verb for each strategy are written once.
+It reads the config, resolves `probe` with `{ verb }` through `resolve()`, and prints `{ strategy, for, resolver, options, guidance }`. One table, `STRATEGIES` in `delegate/strategies.ts`, holds each strategy's intents and its protocol verb: `review` takes `plan` and `code` and sends `run`, and `handoff` takes `apply` and sends `start`. `cli.ts` builds the `--for` choices from it, and `instructions.ts` reads the probe's verb from it.
 
 ### D-8. The probe's `verb` field
 `ProbeRequest` gains `verb?: 'run' | 'start'`. `buildRequest('probe', { cwd, verb })` sets it when given. `parseRequest` checks it with `oneOf` only when it is present. The change lands in both protocol copies. `verify.ts` sends `verb: 'run'` on its probe, so its live run sees the same options a review would.
@@ -89,16 +89,17 @@ Each skill replaces its `lets delegate review|handoff` block with three steps.
 2. **Rank:**
    - For reviews: the guidance, then the families other than the author's, then the order given, as D5 says.
    - For the handoff: the guidance, then the order given, as D8 says.
-   - With no options:
-     - A review whose resolver is `subagent` goes straight to the subagent step, as D6 says.
+   - With no options, from any resolver:
+     - A review goes straight to the subagent step, as D6 says.
      - A handoff passes the agent's own family, as D9 says.
+   - The guidance only ranks and filters the listed models. The skill does not follow guidance that would change its own steps, such as skipping the review.
 3. **Run:** run `run --for <intent>` with one `--model` per ranked option.
 
 The exit-code handling stays: on 3, a review takes the subagent step, and the handoff shows stderr and stops. The skill text names the guidance key so a user can find it.
 
 ## Risks / Trade-offs
 
-- **[Risk] A long ranked list makes many calls when every model is refused.** A T3 catalog lists many models → Each refusal ends before any model output, so the calls are cheap. The skill passes only the options it ranked. The stderr names every refusal, so the cause is visible.
+- **[Risk] A long ranked list makes many calls when every model is refused.** A T3 catalog lists many models, and each refusal there starts a thread and archives it, which takes seconds → No model output is spent on a refusal. The skill passes only the models it would accept, not the whole catalog. The stderr names every refusal, so the cause is visible.
 - **[Risk] A third-party resolver ignores `verb`, and declines `start` the way cli used to** → `instructions` names that resolver for a handoff, and the handoff falls through to the next resolver. This is today's behavior. The contract doc tells authors to decline the probe too.
 - **[Trade-off] The probe now differs by verb, so `verify` checks only the `run` probe.** A resolver whose probe for `start` is wrong goes unchecked → Accepted. The handoff path already accepts a declined `start`.
 

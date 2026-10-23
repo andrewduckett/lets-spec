@@ -23,7 +23,7 @@
 - **THEN** the resolver receives a `start` request
 
 ### Requirement: A refused model passes to the next
-`run` SHALL take `--model` one or more times, as a ranked list. It SHALL send the first model to the resolver that answers. While that resolver exits 3, `run` SHALL send the next model to the same resolver, and SHALL stop at the first answer that is not exit 3. It SHALL NOT ask a later resolver in the chain after a refusal. When every model is refused, `run` SHALL exit 3, print nothing on stdout, and name each model with its refusal on stderr.
+`run` SHALL take `--model` one or more times, as a ranked list. It SHALL send the first model to the resolver that answers. While that resolver exits 3, `run` SHALL send the next model to the same resolver, and SHALL stop at the first answer that is not exit 3. It SHALL NOT ask a later resolver in the chain after a refusal. When every model is refused, `run` SHALL exit 3, print nothing on stdout, and name each model with its refusal on stderr. The review's JSON line on stderr SHALL name, as `model`, the model the resolver reports, or the model `lets` sent when the resolver reports none or `null`.
 
 #### Scenario: The first model is refused
 - **WHEN** the user runs `lets delegate review run --for code --model gpt/gpt-6-astra --model gemini` with the other required options, and the resolver exits 3 for `gpt/gpt-6-astra` and answers for `gemini`
@@ -44,6 +44,10 @@
 #### Scenario: The review names the model that ran
 - **WHEN** the resolver refuses `gpt/gpt-6-astra`, then answers for `gemini` with no `model` in its response
 - **THEN** the JSON line on stderr has `"model":"gemini"`
+
+#### Scenario: The resolver reports a null model
+- **WHEN** the resolver answers for `--model claude` with `"model":null` in its response
+- **THEN** the JSON line on stderr has `"model":"claude"`
 
 ## MODIFIED Requirements
 
