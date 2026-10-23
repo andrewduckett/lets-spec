@@ -156,6 +156,10 @@ its number.
 Then run `mise lock` and commit `mise.lock`, so every clone and CI get
 the same release.
 
+Do not set `auto_update` on `lets-spec`. It moves the release on its
+own, and the `enter` hook then rewrites committed skills on whatever
+branch you are on.
+
 Pin the OpenSpec CLI to the version the release was generated from. Each
 release names it in its GitHub release notes, and in the `openspec` field
 of its `release.json`. The `openspec-*` skills are generated from that
