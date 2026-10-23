@@ -113,6 +113,10 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
     const declined = started.code === DECLINE;
     const answer = declined ? silent(started) : parsed('start', started);
     report('start answers with a handle or instructions, or declines', typeof answer === 'string' ? answer : null);
+    // A handoff takes the first resolver whose probe for start answers, so
+    // one that answers the probe and then declines start leaves it with none.
+    report('a resolver that declines start also declines its probe', declined && probedStart.code === 0
+      ? 'its probe for start answered, so a handoff picks it and then gets no session' : null);
     if (declined && answer === null) {
       deps.stdout('      it declined start; the next resolver in the chain answers handoffs\n');
     } else if (answer !== null && typeof answer !== 'string') {
