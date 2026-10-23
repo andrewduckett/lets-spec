@@ -8,7 +8,7 @@
 
 ## 2. C3: one list of session markers
 
-- [ ] 2.1 [easy] `lets/src/delegate/env.ts` is gone. `config.ts` and `lookup.ts` type `env` as `Deps['env']`. `docs/resolver-contract.md` sends resolver authors to `contrib/resolver-kit/src/env.ts` for `SESSION_MARKERS` (verify: pnpm check && ! grep -rn "delegate/env" lets docs tests)
+- [x] 2.1 [easy] `lets/src/delegate/env.ts` is gone. `config.ts` and `lookup.ts` type `env` as `Deps['env']`. `docs/resolver-contract.md` sends resolver authors to `contrib/resolver-kit/src/env.ts` for `SESSION_MARKERS` (verify: pnpm check && ! grep -rn "delegate/env" lets docs tests) (✓ pnpm check passed, grep found nothing)
 
 ## 3. C9: no unreachable guards
 

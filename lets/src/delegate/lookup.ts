@@ -4,10 +4,9 @@
 // stands in for the chain. The first that does not decline answers. Nothing
 // is looked up on PATH. No process access here; everything comes through io.
 import { join, resolve as resolvePath } from 'node:path';
-import type { Child, Io } from '../io.ts';
+import type { Child, Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
-import type { Env } from './env.ts';
 import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
 import { DECLINE, exitFor, parseResponse } from './protocol.ts';
 import type { Requests, Responses, Verb } from './protocol.ts';
@@ -31,7 +30,7 @@ export type Outcome<V extends Verb> = { code: number; response: Responses[V] | n
 
 // config: the user's delegate config, or null when there is none.
 // packageRoot: the folder lets runs from. nodePath: the Node that runs lets.
-export type LookupDeps = { env: Env; io: Io; cwd: string; config: Config | null; packageRoot: string; nodePath: string };
+export type LookupDeps = { env: Deps['env']; io: Io; cwd: string; config: Config | null; packageRoot: string; nodePath: string };
 
 // The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
 // names a file that is missing or that this process cannot run.

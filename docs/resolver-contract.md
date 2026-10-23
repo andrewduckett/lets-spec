@@ -150,7 +150,7 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in
-  [`lets/src/delegate/env.ts`](../lets/src/delegate/env.ts).
+  [`contrib/resolver-kit/src/env.ts`](../contrib/resolver-kit/src/env.ts).
 
 ## Write your own
 
