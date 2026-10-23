@@ -25,7 +25,7 @@
 ## Test Seams
 
 - **Primary test seam:** `pnpm test`, which runs `tests/skill-interfaces.bats` over the README, `docs/` and the contrib READMEs.
-- **Existing seams reused:** `tests/skill-interfaces.bats`. No new test. The task that finishes the README also runs one-off checks: `wc -l README.md`, every relative link in the changed files resolves, every H2 has an emoji, and no `herdr`, `rung`, `strategy` or `intent` is left in the README's prose.
+- **Existing seams reused:** `tests/skill-interfaces.bats`. No new test. The task that finishes the README also runs one-off checks: `wc -l README.md`, every relative link and every in-page `#` link in the changed files resolves, every H2 has an emoji, and no `herdr`, `rung` or `strategy` is left in the README. `intent` appears only in the key `delegations.<intent>.guidance`.
 
 ## Scrutiny Tier & Blast Radius
 
@@ -42,7 +42,7 @@ The README follows the #70 D1 outline. Each section has a budget, so the total l
 |---|---|---|
 | Title, 🧐 What is this thing? | The two skills, `lets-setup-backlog`, `lets sync`, "not part of OpenSpec", a six-line contents list | 25 |
 | ✨ Why | The five aims, each in short sentences | 15 |
-| 🚀 Quick start | Four numbered steps: add it (links to Nix or mise), enter the shell and see the success line, commit, run `lets-setup-backlog` then `lets-shape` or `lets-build` | 25 |
+| 🚀 Quick start | Four numbered steps: add it (links to Nix or mise), enter the shell and see the success line, commit with the one command, run `lets-setup-backlog` then `lets-shape` or `lets-build`. The success line is named as the last line the first run prints. | 25 |
 | 📦 Set it up | Requirements (Version column filled or dropped), With Nix, With mise, First run and commit, Monorepos note | 85 |
 | ⚙️ Usage | The backlog, `lets-setup-backlog`, `lets-shape`, `lets-build`, The Project fields, The flows, Your project's vocabulary | 135 |
 | 🧵 Reviews in a fresh session | Definitions, What a review gets, Set up delegation, Install a resolver, Write your own | 75 |
@@ -61,14 +61,14 @@ Rule (D4): where the README repeats a skill, `--help` or a `docs/` page, keep on
 - **What's inside:** removed. The skills and `lets sync` go in "What is this thing?". The parts go in Development > Layout. The paragraph on committed copies goes in "First run and commit".
 - **Requirements:** the "The flake supplies it. With mise, you pin it." cells go. The Nix and mise sections say it once each. The resolver row says "not independent" once.
 - **With Nix / With mise:** each snippet says `standard` and `committed` are the defaults, and links "The flows" and `docs/lets-sync.md#committed-or-ignored-skills` (D6). The mise `auto_update` paragraph and the OpenSpec version paragraph shrink to one sentence each.
-- **First run and commit:** merges steps 3 and 4. It names the success line, lists what `lets sync` wrote in one short list, and gives one `git add … && git commit` command. The `ignored` mode gets one sentence.
+- **First run and commit:** merges steps 3 and 4. It lists what `lets sync` wrote in one short list, and what to add to `AGENTS.md`. It does not repeat the success line or the commit command; Quick start holds those, and this section links back. The `ignored` mode gets one sentence.
 - **Monorepos:** the three-sentence note from #70 finding 3, linking `docs/monorepo.md`.
 - **The backlog:** the mermaid chart goes; the "You want to | Run" table says the same thing. "Packet" is defined once here: "An issue's packet is its body, filled in from its Kind's template. `lets-shape` writes it; `lets-build` checks it."
 - **`lets-build`:** keep the four-row branch table. "Finding the issue", "Confirming the packet" and "Routing" shrink to one short paragraph. The routing table goes: "Chores and most XS or S stories use `lets-minimal`; the skill says the exact rule."
 - **The Project fields:** keep the fields table. The status table becomes three sentences. Keep the blocker warning.
 - **The flows:** keep the comparison table and the `standard` steps table. The `minimal` steps table goes, because the comparison table already lists its three planning steps. Keep "Turning the code review off", shorter.
 - **Your project's vocabulary:** the 12-line draft from #70 finding 2, linking `docs/domain-language.md` (D8).
-- **Reviews in a fresh session:** opens with one sentence naming its reader, then a definition list: resolver, harness, family, chain, review, handoff, decline and refuse. "Strategy" and "intent" go; one sentence says what `review` and `handoff` do and what `--for` names (D9). The two command tables become that sentence plus `lets delegate review run --help`. The rungs become the First choice / Fallback table (D10). "Set up delegation" keeps the config example, the order rule, the absolute-path rule and `delegations.<intent>.guidance`; the rest links to `docs/resolver-contract.md`. "Resolvers" folds into the definitions. "Install a resolver" keeps the two-row table and one paragraph. "Write your own" keeps four lines, the contract link and the verify command.
+- **Reviews in a fresh session:** opens with one sentence naming its reader, then a definition list: resolver, harness, family, chain, review, handoff, decline and refuse. "Strategy" and "intent" go as terms; one sentence says what `lets delegate review run` and `lets delegate handoff run` do and what `--for` names (D9). The README always names these commands with `run` or `instructions`, never the bare group, which `tests/skill-interfaces.bats:156` rejects. The two command tables become that sentence plus `lets delegate review run --help`. The rungs become the First choice / Fallback table (D10). "Set up delegation" keeps the config example, the order rule, the absolute-path rule and `delegations.<intent>.guidance`, where it says `<intent>` is the value `--for` takes: `plan`, `code` or `apply`; the rest links to `docs/resolver-contract.md`. "Resolvers" folds into the definitions. The Requirements table's link to `#resolvers` changes to point at this section. "Install a resolver" keeps the two-row table and one paragraph. "Write your own" keeps four lines, the contract link and the verify command.
 - **Updating:** keep. The `--override-input` tip moves to Development, because only someone working on Let's Spec uses it.
 - **Development:** Layout keeps its table and gains the rows for the flow skills, the generated OpenSpec skills and the release tarball. "Generated OpenSpec skills" becomes one Layout row. The Testing list after `nix flake check` shrinks to one sentence; the `pnpm` table stays.
 
@@ -82,7 +82,7 @@ Rule (D4): where the README repeats a skill, `--help` or a `docs/` page, keep on
 
 ### `docs/monorepo.md`
 
-About 40 lines, for the person setting up a monorepo: the layout, what a domain and a capability path are, how to tell agents which code each group describes in `context`, and that one change can update several domains. It drops the remark about strict validation and the term "sync/archive".
+About 40 lines, for the person setting up a monorepo: the layout, what a domain and a capability path are, how to tell agents which code each group describes in `context`, that one change can update several domains, and that skills, branches and pull requests stay shared across the repository. It drops the remark about strict validation and the term "sync/archive".
 
 ### `skills/lets-write-specs/SKILL.md`
 
