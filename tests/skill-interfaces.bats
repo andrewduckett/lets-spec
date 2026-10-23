@@ -147,9 +147,15 @@ flow_texts() {
   done
 }
 
-# skill_says <skill> <fixed text>: the skill's SKILL.md holds the text.
+@test "each lets delegate review or handoff the prose names is followed by instructions or run" {
+  run bash -c "$(declare -f prose); repo='$repo'; prose | xargs grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
+  [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+# skill_says <skill> <fixed text>: the skill's SKILL.md holds the text,
+# which may wrap across lines.
 skill_says() {
-  grep -qF -- "$2" "$repo/skills/$1/SKILL.md" || { echo "$1 does not say: $2"; return 1; }
+  tr -s '[:space:]' ' ' < "$repo/skills/$1/SKILL.md" | grep -qF -- "$2" || { echo "$1 does not say: $2"; return 1; }
 }
 
 @test "each review skill asks lets for its intent's options, then runs with a ranked list" {
@@ -175,9 +181,18 @@ skill_says() {
 }
 
 @test "each skill that delegates lets the guidance only rank and filter models" {
-  for skill in lets-review-code lets-review-plan; do
+  for skill in lets-review-code lets-review-plan lets-build; do
     skill_says "$skill" "The guidance only ranks and filters the listed models"
   done
+}
+
+@test "lets-build's handoff asks lets for options, then runs with a ranked list" {
+  skill_says lets-build "lets delegate handoff instructions --for apply"
+  skill_says lets-build "lets delegate handoff run --for apply"
+  skill_says lets-build "delegations.apply.guidance"
+  skill_says lets-build "the guidance first, then the order the options came in"
+  skill_says lets-build "When \`options\` is empty, pass your own family"
+  skill_says lets-build "If it exits 3, every model was refused: show the user its stderr, and stop."
 }
 
 @test "lets-build says a handoff's instructions hold the prompt to carry on by hand" {

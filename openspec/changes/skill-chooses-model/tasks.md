@@ -19,7 +19,7 @@
 ## 4. Skills [depends-on: 3]
 
 - [x] 4.1 [parallel] [medium] `lets-review-plan` and `lets-review-code` ask with `lets delegate review instructions --for plan|code`. They rank by the guidance, then other families, then the order given, and pass the ranked list to `review run`. With no options from any resolver, they take the subagent step. On exit 3, they take the subagent step. The guidance only ranks and filters models (design D-10) (verify: bats tests/skill-interfaces.bats) (✓ bats tests/skill-interfaces.bats passed)
-- [ ] 4.2 [parallel] [easy] `lets-build`'s handoff asks with `lets delegate handoff instructions --for apply`, ranks by the guidance, then the order given, and passes the ranked list to `handoff run --for apply`. With no options, it passes the agent's own family. On exit 3, it shows stderr and stops (design D-10) (verify: bats tests/skill-interfaces.bats)
+- [x] 4.2 [parallel] [easy] `lets-build`'s handoff asks with `lets delegate handoff instructions --for apply`, ranks by the guidance, then the order given, and passes the ranked list to `handoff run --for apply`. With no options, it passes the agent's own family. On exit 3, it shows stderr and stops (design D-10) (verify: bats tests/skill-interfaces.bats) (✓ bats tests/skill-interfaces.bats passed)
 
 ## 5. Docs and release [depends-on: 2, 3, 4]
 
