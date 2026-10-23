@@ -7,7 +7,7 @@
 ## 2. The skills [depends-on: 1]
 
 - [x] 2.1 [complex] Rewrite `lets-shape`'s "Glossary handoff" as numbered steps with one actor each, under the same heading. Keep every obligation S1 to S18 in design.md's behaviour inventory. (verify: `bats tests/skill-interfaces.bats`) (✓ `bats tests/skill-interfaces.bats` passed; steps 1–18 map one-to-one to S1–S18)
-- [ ] 2.2 [complex] Rewrite `lets-build`'s "Glossary preflight" and "Import the glossary checkpoint" as numbered steps with one actor each, under the same headings. Keep every obligation B2 to B8. (verify: `bats tests/skill-interfaces.bats`)
+- [x] 2.2 [complex] Rewrite `lets-build`'s "Glossary preflight" and "Import the glossary checkpoint" as numbered steps with one actor each, under the same headings. Keep every obligation B2 to B8. (verify: `bats tests/skill-interfaces.bats`) (✓ `bats tests/skill-interfaces.bats` passed; B2–B8 checked step by step)
 - [ ] 2.3 [easy] Rewrite the preflight sentence in `lets-build`'s "Find the source of demand" (B1) and the import exception in "Rules" (B9) to match 2.2, with the same meaning. (verify: `bats tests/skill-interfaces.bats`)
 - [ ] 2.4 [easy] In `skills/lets-shape/references/domain-language.md`, replace the paragraph that starts "Shaping follows its checkpoint" with the three sentences design.md Decision 3 describes. (verify: `bats tests/skill-interfaces.bats`)
 
