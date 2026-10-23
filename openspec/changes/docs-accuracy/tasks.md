@@ -3,7 +3,7 @@
 - [x] 1.1 [easy] Every install snippet and this repository's `mise.toml` name `sidereal-io/lets-spec`. Only the `0.1.0` mise snippet in the README keeps the old owner, because #25 owns it (verify: `! grep -rn andrewduckett README.md contrib mise.toml | grep -v 'version = "0.1.0"'`) (✓ verify passed)
 - [x] 1.2 [easy] ADR-002's top note says plainly that its first decision still holds and that ADR-006 replaced the second, about `reviewers`. Its status stays `accepted` (verify: `f=docs/decisions/ADR-002-lets-owns-the-delegate-config.md; grep -q '^status: accepted$' $f && ! grep -q 'Superseded in part' $f && grep -q '^> .*ADR-006' $f`) (✓ verify passed)
 - [x] 1.3 [easy] ADR-003 opens with a note saying that `lets-delegate-cli` opens no harness window, so it answers wherever `codex`, `claude` or `agy` is on `PATH`. Its status stays `accepted` (verify: `f=docs/decisions/ADR-003-one-resolver-per-harness.md; grep -q '^status: accepted$' $f && grep -q '^> .*lets-delegate-cli' $f`) (✓ verify passed)
-- [ ] 1.4 [easy] ADR-005's Context is two paragraphs, the second starting "One constraint shapes how the default is named", with no word changed (verify: `f=docs/decisions/ADR-005-the-config-lists-the-chain.md; grep -q '^One constraint shapes how the default is named' $f && [ "$(git show main:$f | tr -s ' \n' ' ')" = "$(tr -s ' \n' ' ' < $f)" ]`)
+- [x] 1.4 [easy] ADR-005's Context is two paragraphs, the second starting "One constraint shapes how the default is named", with no word changed (verify: `f=docs/decisions/ADR-005-the-config-lists-the-chain.md; grep -q '^One constraint shapes how the default is named' $f && [ "$(git show main:$f | tr -s ' \n' ' ')" = "$(tr -s ' \n' ' ' < $f)" ]`) (✓ verify passed)
 
 ## 2. README and AGENTS.md
 
