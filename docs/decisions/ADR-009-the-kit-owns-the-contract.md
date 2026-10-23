@@ -23,7 +23,7 @@ The kit holds the only copy of `protocol.ts` and `errors.ts`. `lets` lists `reso
 ## Consequences
 
 - Easier: a contract edit is made once, and `lets` and every resolver build from the same code.
-- Easier: no copies test, and no code in either file that its side never runs.
+- Easier: no copies test. Code that only one side runs, such as parsing a request or a response, lives once in the shared file, and no test stops anyone tidying it.
 - Easier: the protocol tests live beside the kit, with the code they test.
 - Harder: `lets` cannot build without the kit. A change to the kit's `exports` map, or to the names it exports, can break `lets`.
 - Harder: someone who reads only `lets/` sees the contract's names but not their code. They must follow the import into `contrib/resolver-kit/`.
