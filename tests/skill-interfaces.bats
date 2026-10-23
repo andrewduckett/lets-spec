@@ -140,6 +140,13 @@ flow_texts() {
     <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$doc")
 }
 
+@test "the resolver contract says verify probes for start, and --live matches it to start" {
+  local text
+  text=$(tr '\n' ' ' <"$repo/docs/resolver-contract.md")
+  [[ "$text" == *"It probes for \`start\` as well as \`run\`"* ]]
+  [[ "$text" == *"but answers its probe for \`start\` fails"* ]]
+}
+
 @test "the review skills say exit 3 also means no resolver started a session" {
   for skill in lets-review-code lets-review-plan; do
     grep -q '\*\*3\*\*: no fresh session can run here, for example because no resolver started one' \

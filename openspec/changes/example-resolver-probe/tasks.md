@@ -12,6 +12,6 @@
 
 ## 3. Contract and integration
 
-- [ ] 3.1 [easy] The contract's paragraph on `lets delegate verify` says it probes for `start` as well as `run`, and that `--live` fails a resolver that declines `start` but answers its probe; the embedded script stays identical to `contrib/headless-resolver` (verify: bats tests/skill-interfaces.bats)
+- [x] 3.1 [easy] The contract's paragraph on `lets delegate verify` says it probes for `start` as well as `run`, and that `--live` fails a resolver that declines `start` but answers its probe; the embedded script stays identical to `contrib/headless-resolver` (verify: bats tests/skill-interfaces.bats) (✓ bats tests/skill-interfaces.bats passed)
 - [ ] 3.2 [easy] `lets delegate verify` passes for all four shipped resolvers, and the whole suite passes (verify: pnpm test)
 - [ ] 3.3 [easy] The flake builds every flow and the release folder with the changed script (verify: nix flake check)

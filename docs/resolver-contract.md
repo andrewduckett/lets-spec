@@ -220,8 +220,11 @@ Run the verify check against yours until it passes:
 lets delegate verify <your resolver>
 ```
 
-It sends requests that start nothing. Add `--live` to also run a short
-session and start another. That spends tokens, and may open a thread. A
-resolver that only runs headless may decline `start` with exit 75 and
-nothing on stdout: the check passes it, and says the next resolver in the
-chain answers handoffs.
+It sends requests that start nothing. It probes for `start` as well as
+`run`, and checks each answer on its own line. Add `--live` to also run a
+short session and start another. That spends tokens, and may open a
+thread. A resolver that only runs headless may decline `start` with exit
+75 and nothing on stdout: the check passes it, and says the next resolver
+in the chain answers handoffs. A resolver that declines `start` but
+answers its probe for `start` fails, because a handoff would pick it and
+get no session.
