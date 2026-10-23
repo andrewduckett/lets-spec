@@ -48,7 +48,7 @@ home.packages = [
 ### With a Nix profile
 
 ```sh
-nix profile add github:andrewduckett/lets-spec#lets-delegate-t3
+nix profile add github:sidereal-io/lets-spec#lets-delegate-t3
 ```
 
 ### With mise
@@ -58,7 +58,7 @@ outside `bin/`, so mise never puts it on a project's `PATH`. Link it onto
 yours. Use the `lets-spec` version from your project's `mise.toml`:
 
 ```sh
-ln -sf "$(mise where github:andrewduckett/lets-spec@<version>)/contrib/lets-delegate-t3" ~/.local/bin/
+ln -sf "$(mise where github:sidereal-io/lets-spec@<version>)/contrib/lets-delegate-t3" ~/.local/bin/
 ```
 
 The link names one version. After you update `lets-spec`, run it again

@@ -88,7 +88,7 @@ Use Nix or mise. Both install the same `lets` command and the same skills.
 Add the flake input:
 
 ```nix
-inputs.lets-spec.url = "github:andrewduckett/lets-spec";
+inputs.lets-spec.url = "github:sidereal-io/lets-spec";
 ```
 
 Follow the `main` branch. Your `flake.lock` pins the exact commit.
@@ -685,7 +685,7 @@ default, `lets-delegate-subagent`.
 | You installed it with | Do this |
 |---|---|
 | home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-cli` in `home.packages` |
-| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:andrewduckett/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
+| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:sidereal-io/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
 | mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-cli` from the release folder |
 | A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/cli-resolver/bin/lets-delegate-cli` instead |
 
