@@ -8,7 +8,7 @@ The decisions are in brainstorm.md (D1 to D11). Every task edits `README.md`.
 - [x] 1.4 [easy] *With mise* has one sentence that warns against `auto_update`: it moves the release on its own, and the enter hook then rewrites committed skills on whatever branch you are on (verify: `grep -q 'auto_update' README.md`) (✓ verify passed)
 - [x] 1.5 [easy] Step 4's list of files to commit names `mise.lock` beside `mise.toml` (verify: `grep -qF '`mise.toml` and `mise.lock`, if you use mise' README.md`) (✓ verify passed)
 - [x] 1.6 [easy] *Updating → With mise* says: run `mise upgrade`, set the OpenSpec CLI to the version in the release notes, run `lets sync`, and commit `mise.lock` with what `lets sync` wrote. The Dependabot, Renovate and `asset_pattern` lines are gone (verify: `! grep -qE 'Dependabot does not read|Renovate' README.md && grep -q 'mise upgrade' README.md`) (✓ verify passed)
-- [ ] 1.7 [easy] The project's checks pass with the new README (verify: `pnpm test`)
+- [x] 1.7 [easy] The project's checks pass with the new README (verify: `pnpm test`) (✓ pnpm test passed)
 
 ## Deviations Ledger
 
