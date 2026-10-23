@@ -21,4 +21,4 @@
 
 ## 4. Checks
 
-- [ ] 4.1 [easy] The project's checks pass with every edit in place (verify: `pnpm test && nix flake check`)
+- [x] 4.1 [easy] The project's checks pass with every edit in place (verify: `pnpm test && nix flake check`) (✓ pnpm test and nix flake check passed)
