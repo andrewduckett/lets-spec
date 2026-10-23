@@ -21,7 +21,7 @@
 
 ## Test Seams
 
-- **Primary test seam:** `tests/sync-rules.bats`, through its `fragment` helper. A new test checks that the rules block has no "readiness", no `planningHome.root`, no `root.path` and no "narrow exception", and that it names "Kind, Priority, Size and Status".
+- **Primary test seam:** `tests/sync-rules.bats`, through its `fragment` helper. A new test checks that the rules block has no "readiness", no `planningHome.root`, no `root.path` and no "narrow exception", and that it names "Kind, Priority, Size and Status" and the path `.agents/skills/lets-shape/references/domain-language.md`.
 - **Existing seams reused:** `tests/skill-interfaces.bats` already checks that `lets-shape` links its domain-language reference. For the skill prose, the check is the inventory below. The plan review and the code review compare each rewritten section against it, line by line.
 
 ## Scrutiny Tier & Blast Radius
@@ -45,13 +45,13 @@ Alternative: keep the YAML example of a replacement glossary. Rejected: the refe
 
 Each section keeps its heading, so every anchor still works. Inside, the text becomes short subsections of numbered steps, in the order an agent meets them. In `lets-shape`: decide whether to ask, ask who carries the edits, record the choice, set up a documentation pull request, link blockers, and hand over. In `lets-build`: check the prerequisite, check the checkpoint, import it, and recover from a failed import. Each step names its actor: "you" for the agent, "the user" for the person.
 
-The sentence in `lets-build`'s "Find the source of demand" that points at the preflight, and the transfer exception in "Rules", are rewritten to match. Neither changes meaning.
+The sentence in `lets-build`'s "Find the source of demand" that points at the preflight, and the transfer exception in "Rules", are rewritten to match. Neither changes meaning. The links in Claim step 2 and in Propose stay as they are, because the anchors do not change.
 
 Alternative: move the glossary procedure into a reference file. Rejected: it adds a file, and the story is about wording, not structure.
 
 ### 3. The reference keeps its field names
 
-`skills/lets-shape/references/domain-language.md` is for agents, so `planningHome.root` and `root.path` stay. Only the paragraph that starts "Shaping follows its checkpoint" changes. It becomes two plain sentences that say which skill owns the handoff and where a brainstorm commits a definition.
+`skills/lets-shape/references/domain-language.md` is for agents, so `planningHome.root` and `root.path` stay. Only the paragraph that starts "Shaping follows its checkpoint" changes. It becomes three plain sentences: which skill owns the handoff, where a brainstorm commits a definition, and that you keep any edits the user already made.
 
 ### 4. `docs/domain-language.md` for the project owner
 
@@ -100,8 +100,8 @@ The rewritten sections must keep every line below. The reviewers tick them off.
   - B5b. The range from base to head holds exactly the recorded commits, with no merges and no unrelated history. Each commit touches only the recorded glossary paths. Inspect each commit's diff, not only the total. A shared glossary path set by an explicit `context` replacement is allowed. Skill files, config, code and other paths are not. From a source change branch, take only the recorded glossary commits and their parents, never implementation commits, and check that their context is on the proposed base. Never import a commit from a planning store into the code repository.
   - B5c. Record the starting branch and the working tree and index status. Check that owned paths match the shaping baseline. Keep any user edits. Never force a checkout, reset or stash automatically. Rehearse the import on the proposed base in a throwaway checkout under `.workspace/`, before claiming. Compare patches and contents to find edits already present, and import no duplicate. Resolve a partial or conflicting patch before claiming. The real working tree stays unchanged.
 - B6. Continue the normal packet, blocker and routing checks. If the owner or the base changed, repeat the owner and base check just before claiming. The import is the only implementation step this skill adds.
-- B7. After the claim and the new branch, and before proposing, cherry-pick only the verified commits, in order. Skip any already present. Keep them as separate `docs:` commits. Record the destination branch, commits and pull request in the issue's **Glossary handoff**. Keep the holding branch until the destination holds the edits. Only a new branch gets an import. Resuming an existing change goes straight to OpenSpec.
-- B8. If the transfer fails: abort the cherry-pick. Return to the starting branch without losing user changes. Delete only the branch this attempt created, and only after proving it holds no work beyond its base; if earlier picks survived, keep it and report how to recover. Never delete an existing change branch, reset unrelated commits or force a checkout. Release the assignment and set Status back to Todo, even if the Git cleanup failed. Report every cleanup failure and anything kept: branch, commits or claim. Then stop.
+- B7. After the claim and the new branch, and before proposing, cherry-pick only the verified commits, in order. Skip any already present. Keep them as separate `docs:` commits. Record the destination branch, the commits and, once it exists, the pull request in the issue's **Glossary handoff**. Keep the holding branch until the destination holds the edits. Only a new branch gets an import. Resuming an existing change goes straight to OpenSpec.
+- B8. If the transfer fails: abort the cherry-pick. Return to the starting branch without losing user changes. Delete only the branch this attempt created, and only after proving it holds no work beyond its base; if earlier picks survived, keep it and report how to recover. Never delete an existing change branch, reset unrelated commits or force a checkout. Release the assignment and set Status back to Todo with the same commands as a failed branch creation in Claim, even if the Git cleanup failed. Report every cleanup failure and anything kept: branch, commits or claim. Then stop.
 - B9. The "Rules" section still says the verified glossary import is the only exception to "never write an artifact or code yourself", and that it allows no other edits.
 
 ## Risks / Trade-offs
