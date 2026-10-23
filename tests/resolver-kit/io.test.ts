@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { realIo } from '../../contrib/resolver-kit/src/io.ts';
+import { parentPid, realIo } from '../../contrib/resolver-kit/src/io.ts';
 
 test('execFile writes its input to the command\'s stdin', async () => {
   const { stdout, code } = await realIo().execFile('cat', [], { input: 'Say "hi".\nIt\'s fine.' });
@@ -17,4 +17,28 @@ test('execFile stops a command that runs past its timeout, and says it timed out
 test('a command that ends in time has not timed out', async () => {
   const result = await realIo().execFile('true', [], { timeoutMs: 10000 });
   assert.deepEqual(result, { stdout: '', stderr: '', code: 0, timedOut: false });
+});
+
+// A fake system for parentPid: files maps a path to its text, and ps is
+// what `ps` prints. calls records each command it runs.
+function fakeSys({ files = {}, ps = '' }: { files?: Record<string, string>; ps?: string }) {
+  const calls: string[][] = [];
+  return {
+    calls,
+    readFileSync(path: string) {
+      if (!(path in files)) throw new Error(`ENOENT: ${path}`);
+      return files[path];
+    },
+    existsSync: (path: string) => path in files,
+    spawnSync(cmd: string, args: string[]) {
+      calls.push([cmd, ...args]);
+      return { stdout: ps };
+    },
+  };
+}
+
+test('parentPid reads the PPid from /proc, and runs no ps', () => {
+  const sys = fakeSys({ files: { '/proc/self': '', '/proc/42/status': 'Name:\tnode\nPPid:\t7\n' } });
+  assert.equal(parentPid(42, sys), 7);
+  assert.deepEqual(sys.calls, []);
 });

@@ -1,6 +1,6 @@
 // The real world, as the adapters see it. Tests pass fakes with the same
 // fields instead.
-import { execFile as nodeExecFile } from 'node:child_process';
+import { execFile as nodeExecFile, spawnSync } from 'node:child_process';
 import { accessSync, chmodSync, constants, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
@@ -34,6 +34,23 @@ export type Io = {
   sleep(ms: number): Promise<void>;
   env: Record<string, string | undefined>;
 };
+
+// The parts of the system parentPid reads. Tests pass a fake.
+export type ProcessSys = {
+  readFileSync(path: string, encoding: 'utf8'): string;
+  existsSync(path: string): boolean;
+  spawnSync(cmd: string, args: string[], options: { encoding: 'utf8' }): { stdout?: string | null };
+};
+
+// The parent of a process: null when it cannot be found.
+export function parentPid(pid: number, sys: ProcessSys = { readFileSync, existsSync, spawnSync }): number | null {
+  try {
+    const match = sys.readFileSync(`/proc/${pid}/status`, 'utf8').match(/^PPid:\s+(\d+)$/m);
+    return match ? Number(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function realIo(): Io {
   return {
