@@ -1,11 +1,7 @@
-// Copied from lets/src/delegate/protocol.ts, so each resolver installs on its own.
-// Keep the two the same: a test compares them, and the verify check runs
-// against each resolver in CI.
-
 // The resolver contract. lets runs a resolver as `<resolver> <verb>`, writes
 // one JSON request to its stdin, and reads one JSON response from its stdout.
-// The contrib resolver keeps a copy of this file; a test and the verify
-// check keep the two in step.
+// The resolver kit owns this contract: lets imports it from here, and the
+// verify check runs it against each resolver in CI.
 import { isAbsolute } from 'node:path';
 import { ContractError, EXIT, UsageError } from './errors.ts';
 
