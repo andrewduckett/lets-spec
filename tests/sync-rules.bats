@@ -1,3 +1,5 @@
+bats_require_minimum_version 1.5.0
+
 load support/common
 load support/release
 load support/project
@@ -29,6 +31,16 @@ stale_block=$'<!-- BEGIN lets-spec rules -->\nold rules\n<!-- END lets-spec rule
     ! grep -q 'Nix store' rules
   done
   cmp -s rules-committed rules-ignored
+}
+
+@test "the rules block names only plain things a project owner knows" {
+  fragment | tr '\n' ' ' | tr -s ' ' >rules
+  run ! grep -qi 'readiness' rules
+  run ! grep -qF 'planningHome.root' rules
+  run ! grep -qF 'root.path' rules
+  run ! grep -qF 'narrow exception' rules
+  grep -qF 'Kind, Priority, Size and Status' rules
+  grep -qF '`.agents/skills/lets-shape/references/domain-language.md`' rules
 }
 
 @test "sync appends the rules after a blank line, and keeps the project's text" {
