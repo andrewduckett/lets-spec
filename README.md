@@ -366,68 +366,38 @@ to also run a short session, which spends tokens.
 
 ## 📜 The working rules
 
-`lets sync` keeps the shared rules in `AGENTS.md`, between these
-markers:
+This section is for you if you want to know the rules your agents follow.
 
-```markdown
-<!-- BEGIN lets-spec rules. ... -->
-<!-- END lets-spec rules -->
-```
-
-Every agent reads them, with or without Nix or mise. In short, they say:
+`lets sync` keeps the shared rules in `AGENTS.md`, between two
+`lets-spec rules` marker comments. Every agent reads them. In short:
 
 - Plan product changes with OpenSpec.
-- One change is one branch and one pull request. A change that depends on
-  another branches off it, and its pull request targets the other's.
+- One change is one branch and one pull request, stacked on any it needs.
 - Make one commit per unit of work, with Conventional Commits.
 - Run the project's checks before you push.
-- Use `lets-shape` and `lets-build` for the backlog; never set a Project field by hand.
+- Only `lets-shape` and `lets-build` set Project fields.
 - You own the merge.
 - Change requests on a ready pull request reopen its archived change.
 - Never edit what Let's Spec puts in the project.
 
 The full text is in [`overlays/AGENTS.md`](overlays/AGENTS.md). Never edit
-the text between the markers in a project: `lets sync` rewrites it.
-Change it here instead.
-
-## ⚙️ `lets sync`
-
-`lets sync` copies the skills, the schemas and the working rules into your
-project, and keeps them up to date. [`docs/lets-sync.md`](docs/lets-sync.md)
-says what it owns, the skills modes, what `--check` checks, its
-environment and its exit codes.
+it in a project: `lets sync` rewrites it. What else `lets sync` owns, and
+what `--check` checks, is in [`docs/lets-sync.md`](docs/lets-sync.md).
 
 ## 🔄 Updating
 
-Commit what `lets sync` writes in the same pull request as the new pin.
-That pull request then holds the pin, the rules and the skills together.
+This section is for you if your project wants a newer Let's Spec.
 
-If you are moving up from an older release, read
-[`docs/upgrading.md`](docs/upgrading.md) first: some releases need a step
-of your own.
+Commit what `lets sync` writes in the same pull request as the new pin.
+Moving up from an older release? Read [`docs/upgrading.md`](docs/upgrading.md)
+first: some releases need a step of your own.
 
 ### With Nix
 
-Dependabot's `nix` entry opens a pull request when `main` moves here. To
-update at once:
-
-```sh
-nix flake update lets-spec
-```
-
-Then enter the dev shell. `lets sync` copies the new skills and schemas, and
-rewrites the rules in `AGENTS.md` if they changed. Commit what it wrote.
-
-A Dependabot pull request changes only `flake.lock`. So `lets sync --check`
-fails in CI until someone checks out its branch, enters the dev shell and
-commits the result.
-
-To try an unmerged change to Let's Spec in a project, override the input
-for one shell:
-
-```sh
-nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
-```
+Run `nix flake update lets-spec`, enter the dev shell, and commit what
+`lets sync` wrote. Dependabot's `nix` entry opens a pull request when
+`main` moves, but it changes only `flake.lock`, so `lets sync --check`
+fails in CI until someone enters the dev shell on its branch and commits.
 
 ### With mise
 
@@ -439,89 +409,48 @@ nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 
 ## 🛠️ Development
 
-To work on Let's Spec itself, enter the dev shell with `nix develop`, or
-run `mise install`. Both give you Node 26, pnpm, bats, `jq`, `yq` and the
-OpenSpec CLI. Then run `pnpm install` once.
+This section is for you if you want to work on Let's Spec itself.
+
+Enter the dev shell with `nix develop`, or run `mise install`. Both give
+you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
+`pnpm install` once.
 
 ### Layout
 
 | Path | What it holds |
 |---|---|
 | `flake.nix` | Reads `flows.json`, calls `build/`, and defines the packages and checks |
-| `flows.json` | Each flow's schemas and skills. The first schema is the flow's default. |
-| `nix/flake-module.nix` | The flake module that projects import |
+| `flows.json` | Each flow's recipe: its schemas from `schemas/` and the skills they call, plus the entry points. The first schema is the flow's default and names it. The build fails if a recipe names a missing schema or skill, or lists one twice. |
+| `nix/flake-module.nix` | The flake module that projects import. It puts the OpenSpec CLI, `lets` and `gh` in the dev shell, and runs `lets sync` when the shell starts. |
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
+| `openspec-*` skills | Not committed. The flake generates them from the OpenSpec CLI in its nixpkgs, for the workflows in `build/openspec.json`, so moving nixpkgs can change their text. Each release records the CLI version in its `release.json`. |
 | `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `build.mjs` bundles it into one file with esbuild. |
 | `contrib/resolver-kit/` | The code the TypeScript resolvers share: the protocol, the request handler and the bundle step. It imports nothing from `lets/`; it keeps copies of the protocol files, and a test checks they match. |
 | `contrib/t3-resolver/`, `contrib/cli-resolver/` | `lets-delegate-t3` and `lets-delegate-cli`: each is an adapter on the kit, bundled with no runtime dependencies |
 | `contrib/subagent-resolver/` | `lets-delegate-subagent`, the default resolver that ships with `lets`. `lets/contrib/lets-delegate-subagent` links to it, so the source tree's `lets` finds it as an install would |
-| `docs/resolver-contract.md` | The resolver contract, which every resolver keeps |
 | `contrib/headless-resolver` | A complete resolver in `sh`: the worked example for writing your own |
-| `package.json`, `pnpm-workspace.yaml`, `tsconfig.json` | The pnpm workspace, its scripts, and the type check's settings |
-| `skills/` | The authored skills, one `lets-*` folder each |
+| `docs/` | The pages the README links to, and the decision records in `docs/decisions/` |
+| `package.json`, `pnpm-workspace.yaml`, `tsconfig.json`, `mise.toml` | The pnpm workspace, its scripts, the type check's settings, and the tools for working without Nix |
+| `skills/` | The authored skills, one `lets-*` folder each: the entry points, and the flow skills the schemas call |
 | `schemas/` | The OpenSpec schemas, each with its templates |
 | `overlays/` | The rules fragment and the files `lets sync` creates in a project. Each flow has its own `openspec/config.yaml`, in `openspec/config.d/<schema>.yaml` |
-| `tests/*.bats` | End-to-end tests: `lets sync` in real git repos, the release build, the pinned OpenSpec CLI reading each schema, and every command, file and skill the prose names |
-| `tests/lets/`, `tests/resolver-kit/`, `tests/t3-resolver/`, `tests/cli-resolver/`, `tests/subagent-resolver/` | Unit tests for the `lets` command and the contrib resolvers, run with fakes |
-| `mise.toml` | This repo's own development tools, for working without Nix |
-| `.github/workflows/ci.yml` | Runs `nix flake check`, and a smoke test of the release folder with mise |
-| `.github/workflows/release.yml` | Publishes the release tarball when a `v*` tag is pushed |
-
-A flow is a recipe: its schemas from `schemas/`, and the skills from `skills/`
-that the schemas call, plus the entry points. The first schema is the
-default, and the flow is named after it. Both flows also ship `lets-minimal`.
-The build fails if a recipe names a schema or skill that does not exist, or
-lists a skill twice.
-
-### Generated OpenSpec skills
-
-The flake builds the `openspec-*` skills from the OpenSpec CLI in its
-nixpkgs, for the workflows listed in `build/openspec.json`. They are not
-committed to this repo. When `flake.lock` moves nixpkgs, the CLI version
-may change, and the skill text with it. Each release records the CLI
-version in its `release.json`.
+| `tests/` | `*.bats`: end-to-end tests of `lets sync`, the release build, each schema, and every command, file and skill the prose names. The folders: unit tests for `lets` and each resolver, run with fakes. |
+| `.github/workflows/` | `ci.yml` runs `nix flake check` and a mise smoke test; `release.yml` publishes a release when a `v*` tag is pushed |
 
 ### Releases
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
-a release for every flow, and the four resolvers in `contrib/`:
-`headless-resolver`, `lets-delegate-cli`, `lets-delegate-subagent` and
-`lets-delegate-t3`. Its version is
-`0.0.0-dev`. Each Node bundle is one file that any Node 26 runs, with no
-`node_modules` beside it. Only `bin/` goes on a mise project's `PATH`.
-
-`nix build .#lets-delegate-t3` and `nix build .#lets-delegate-cli` build
-the contrib resolvers as packages for a user's profile. The `lets`
-package carries `lets-delegate-subagent` in its own `contrib/`.
-
-Release tags are `v<major>.<minor>.<patch>`. When you push one, the
-release workflow builds the folder, sets its version from the tag, and
-publishes `lets-spec-<version>.tar.gz` as a GitHub release. The release
-notes name the OpenSpec CLI version.
-
-This repository uses Let's Spec on itself, pinned to the last published
-release in its `mise.toml`. After you push a tag, open a pull request that
-bumps that pin, runs `mise install` and `lets sync`, and commits what
-`lets sync` wrote.
+a release for every flow, and the four resolvers in `contrib/`, each one
+file with no `node_modules`. `nix build .#lets-delegate-t3` and
+`.#lets-delegate-cli` build those resolvers for a user's profile. Pushing a
+`v<major>.<minor>.<patch>` tag publishes `lets-spec-<version>.tar.gz`, with
+the OpenSpec CLI version in its notes. Then bump this repository's own
+mise pin, and commit what `lets sync` wrote.
 
 ### Testing
 
-```sh
-nix flake check
-```
-
-This:
-
-- runs the bats tests, the Node tests and the type check
-- runs the verify check against the default,
-  `lets-delegate-subagent`, each contrib resolver and the shell example
-- builds every flow
-- builds the `dist` folder, the release tarball's contents, and runs its
-  `lets sync` in a sample project
-- sets up a sample project with the packaged commands
-- evaluates the flake-parts module
-
-In the dev shell:
+`nix flake check` runs the tests, builds every flow and the release, and
+sets up sample projects. In the dev shell:
 
 | Command | What it runs |
 |---|---|
@@ -534,12 +463,14 @@ In the dev shell:
 Node runs the TypeScript source directly, so you do not need to build
 before you test. With mise, `mise run test` runs `pnpm test`.
 
-### After a t3 update
+To try an unmerged change in a project, override the input for one shell:
+`nix develop --override-input lets-spec path:/path/to/your/clone`.
 
-`lets-delegate-t3` depends on t3's internal protocol and database. After
-each t3 update, run the smoke test in
-[its README](contrib/t3-resolver/README.md#after-a-t3-update).
+### After a T3 Code update
+
+`lets-delegate-t3` depends on T3 Code's internals. After each T3 Code
+update, run the smoke test in [its README](contrib/t3-resolver/README.md#after-a-t3-update).
 
 ## 📄 License
 
-[GNU General Public License v3.0](LICENSE).
+If you want to reuse this code, it is under the [GNU GPL v3.0](LICENSE).
