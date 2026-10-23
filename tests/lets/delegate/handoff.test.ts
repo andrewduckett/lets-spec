@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { run } from '../../../lets/src/delegate/handoff.ts';
 import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE } from './fixtures/command-deps.ts';
 
-const options = { name: 'Fix Login', promptFile: 'p.md', model: 'claude' };
+const options = { name: 'Fix Login', promptFile: 'p.md', models: ['claude'] };
 
 test('a handoff prints the resolver and its handle as one JSON line', async () => {
   const t = commandDeps();
@@ -64,7 +64,7 @@ test('a leftover config.json is exit 2, naming both files', async () => {
 
 test('with no resolver, the default hands back the prompt and where it is saved', async () => {
   const t = commandDeps({ resolver: false, files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
-  assert.equal(await run({ name: 'build-x', promptFile: 'p.md', model: 'claude' }, t.deps), 0);
+  assert.equal(await run({ name: 'build-x', promptFile: 'p.md', models: ['claude'] }, t.deps), 0);
   const { resolver, handle, instructions } = JSON.parse(t.stdout());
   assert.equal(resolver, 'subagent');
   assert.equal(handle, null);
@@ -104,6 +104,27 @@ test('a refusal is exit 3, with the resolver\'s reason', async () => {
   assert.equal(await run(options, t.deps), 3);
   assert.match(t.stderr(), /t3 has no project/);
   assert.equal(t.stdout(), '');
+});
+
+const startModels = (calls: [string, Record<string, unknown>][]) => calls.filter(([verb]) => verb === 'start').map(([, request]) => request.model);
+
+test('a refused model passes to the next one', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra' } });
+  assert.equal(await run({ ...options, models: ['gpt/gpt-6-astra', 'claude'] }, t.deps), 0);
+  assert.deepEqual(startModels(t.resolverCalls()), ['gpt/gpt-6-astra', 'claude']);
+});
+
+test('a handoff whose every model is refused is exit 3, naming each model', async () => {
+  const t = commandDeps({ settings: { FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra,claude' } });
+  assert.equal(await run({ ...options, models: ['gpt/gpt-6-astra', 'claude'] }, t.deps), 3);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /gpt\/gpt-6-astra: refused gpt\/gpt-6-astra\nclaude: refused claude/);
+});
+
+test('a refusal never moves down the chain', async () => {
+  const t = commandDeps({ resolver: false, config: `version: 2\nresolvers: [${FAKE_RESOLVER}, subagent]\n`, settings: { FAKE_RESOLVER_REFUSE: 'gpt,claude' } });
+  assert.equal(await run({ ...options, models: ['gpt', 'claude'] }, t.deps), 3);
+  assert.equal(t.io.calls.some(([cmd]) => cmd === NODE), false, 'the default was not asked');
 });
 
 test('any other failure of the resolver is exit 4', async () => {

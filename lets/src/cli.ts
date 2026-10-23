@@ -199,8 +199,8 @@ delegate
   .requiredOption('--prompt-file <path>', 'the file that holds the prompt')
   .addOption(modelOption())
   .addHelpText('after', HANDOFF_HELP)
-  .action(async (options: HandoffOptions) => {
-    process.exitCode = await handoff(options, realDeps());
+  .action(async ({ model, ...options }: Omit<HandoffOptions, 'models'> & { model: string }) => {
+    process.exitCode = await handoff({ ...options, models: [model] }, realDeps());
   });
 
 delegate
