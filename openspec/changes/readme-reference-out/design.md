@@ -13,8 +13,12 @@ It also holds a full copy of `contrib/headless-resolver`, which a bats
 test pins to the file.
 
 Links into the moved text: the README's own `#committed-or-ignored-skills`
-(twice) and `#resolvers` (once). The contrib READMEs link only to
-`#set-up-delegation`, which stays.
+(twice). The README's `#resolvers` link keeps its target, because the
+heading stays. The contrib READMEs link only to `#set-up-delegation`,
+which stays.
+
+Links out of the moved text: the "Switching" note links to
+`#set-up-delegation` in the README.
 
 ## Goals / Non-Goals
 
@@ -22,7 +26,8 @@ Links into the moved text: the README's own `#committed-or-ignored-skills`
 
 - Each fact has one home. Text moves; it is not copied.
 - Moved text keeps its wording, apart from headings and links that the
-  new page needs.
+  new page needs. A link in moved text that targets the README becomes
+  `../README.md#<anchor>`.
 
 **Non-Goals:**
 
@@ -66,21 +71,20 @@ The README's Updating section keeps its opening, "With Nix" and "With
 mise", and ends with one sentence that links to the page.
 
 **Resolvers folds into the contract's "How `lets` finds a resolver".**
-The contract lacks three facts, and gains them there:
+The contract lacks two facts, and gains them there:
 
 - For a review, the default runs nothing: `lets delegate review run`
   exits 3, and the review skill runs a subagent.
 - For a handoff, the default writes the prompt to
   `.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
   and that path.
-- When a session fails, `lets` stops. It never retries, and never asks
-  another resolver.
-
 Everything else in "Resolvers" is already in the contract, and is
-dropped. The README's `#resolvers` link points at
-`docs/resolver-contract.md#how-lets-finds-a-resolver`. The README's
-"Write your own resolver" subsection, which stays, already links to the
-contract.
+dropped. That includes what `lets` does when a session fails: the
+contract's exit code table says it. The README keeps the `### Resolvers`
+heading and one sentence: a resolver is the program that turns a request
+into a real session, and the contract's "How `lets` finds a resolver"
+says how `lets` picks one. So the README's `#resolvers` link still
+works.
 
 **The script copy goes.** The contract keeps the sentences that link to
 `contrib/headless-resolver` and say what it does, and the sentence that
@@ -91,7 +95,10 @@ one click away.
 
 **The docs-naming test reads every page in `docs/`.** It now lists
 `README.md` and `docs/resolver-contract.md`. It changes to `README.md`
-and `docs/*.md`, so the two new pages are covered. No other test reads
+and `docs/*.md`, so the two new pages are covered. The glob stays
+outside quotes, as `'$repo'/docs/*.md`, like the contrib glob beside it.
+A quoted glob matches no file, and the test would pass while reading
+nothing. No other test reads
 the moved text.
 
 No decision here is costly to reverse, so none needs an ADR.

@@ -12,7 +12,7 @@ https://github.com/sidereal-io/lets-spec/issues/77
 | D3 | Where do the Resolvers facts go? | Into "How `lets` finds a resolver" in `docs/resolver-contract.md`. Only facts the contract lacks are added, such as where the default writes a handoff prompt. | User |
 | D4 | How is `docs/upgrading.md` ordered? | By release, newest first: the 0.5 notes (the default now answers as `subagent`; `lets-delegate-resolver` is gone), then `lets-sync` to `lets sync`, then linked skills. | Evidence: `git tag --contains` on the commits that wrote each note |
 | D5 | What happens to the 42-line script in the contract? | Cut the code block. Keep the link to `contrib/headless-resolver` and the sentences around it. Drop the test that pins the copy to the file. | User |
-| D6 | Which links must change? | The README's own links to `#committed-or-ignored-skills` and `#resolvers` point at the new pages. `#set-up-delegation`, which the contrib READMEs use, stays in the README. | Evidence: grep for `README.md#` and `](#` |
+| D6 | Which links must change? | The README's own links to `#committed-or-ignored-skills` point at the new page. `#resolvers` and `#set-up-delegation` stay in the README, so their links stay. | Evidence: grep for `README.md#` and `](#` |
 | D7 | How do the tests follow the moved prose? | The test that checks how docs name `lets delegate review` and `handoff` reads every `docs/*.md`, not just the contract. No new tests. | User |
 | D8 | When is it done? | Every fact in a moved section is on its new page, or already in the contract. No link breaks. `pnpm test` and `nix flake check` pass. | User |
 
