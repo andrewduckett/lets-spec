@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { realIo } from '../../../lets/src/io.ts';
 import type { Io } from '../../../lets/src/io.ts';
 import { SpawnError, UsageError } from '../../../lets/src/delegate/errors.ts';
-import { callResolver, candidates, resolve } from '../../../lets/src/delegate/lookup.ts';
+import { callResolver, candidates, resolve, resolveWithModels } from '../../../lets/src/delegate/lookup.ts';
 import { buildRequest } from '../../../lets/src/delegate/protocol.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
@@ -288,4 +288,63 @@ test('a failing default is named by its path, not by the Node that runs it', asy
   const { outcome } = await resolve('start', buildRequest('start', { cwd: '/r', name: 'x', prompt: 'P', model: 'claude' }), { env: {}, io, cwd: '/r', ...SELF, config: null });
   assert.match(outcome.stderr, new RegExp(`\n${SUBAGENT} broke the contract`));
   assert.doesNotMatch(outcome.stderr, /\/bin\/node/);
+});
+
+// resolveWithModels: a ranked list of models, tried in turn on one resolver.
+const runFor = (model: string) => buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'low', model });
+const refuse = (model: string) => ({ stdout: '', stderr: `warming up\nrefused ${model}`, code: 3 });
+const ran = (family: string) => ({ stdout: JSON.stringify({ resolver: 'a', text: 'T', family }), stderr: '', code: 0 });
+// The model of each request the fake io sent, in order.
+const modelsSent = (io: ReturnType<typeof fakeIo>) => io.calls.map(([, , opts]) => JSON.parse(opts.input!).model);
+const lookup = (io: Io, ...resolvers: string[]) => ({ env: {}, io, cwd: '/r', ...SELF, config: chain(...resolvers) });
+
+test('resolveWithModels sends only the first model when it is not refused', async () => {
+  const io = fakeIo({ executables: ['/a'], results: [ran('gpt')] });
+  const { outcome, model } = await resolveWithModels('run', runFor, ['gpt', 'gemini'], lookup(io, '/a'));
+  assert.equal(outcome.code, 0);
+  assert.equal(model, 'gpt');
+  assert.deepEqual(modelsSent(io), ['gpt']);
+});
+
+test('resolveWithModels sends the next model to the same resolver on a refusal', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [decline, refuse('gpt/gpt-6-astra'), ran('gemini')] });
+  const { candidate, outcome, model } = await resolveWithModels('run', runFor, ['gpt/gpt-6-astra', 'gemini'], lookup(io, '/a', '/b'));
+  assert.equal(outcome.code, 0);
+  assert.equal(candidate.name, '/b');
+  assert.equal(model, 'gemini');
+  assert.deepEqual(io.calls.map(([cmd]) => cmd), ['/a', '/b', '/b']);
+});
+
+test('resolveWithModels stops at the first answer that is not a refusal', async () => {
+  const io = fakeIo({ executables: ['/a'], results: [refuse('gpt'), { stdout: '', stderr: 'broke', code: 5 }] });
+  const { outcome } = await resolveWithModels('run', runFor, ['gpt', 'claude', 'gemini'], lookup(io, '/a'));
+  assert.equal(outcome.code, 5);
+  assert.deepEqual(modelsSent(io), ['gpt', 'claude']);
+});
+
+test('resolveWithModels sends no later model after a failure that is not a refusal', async () => {
+  const io = fakeIo({ executables: ['/a'], results: [{ stdout: '', stderr: 'broke', code: 5 }] });
+  const { outcome } = await resolveWithModels('run', runFor, ['gpt', 'gemini'], lookup(io, '/a'));
+  assert.equal(outcome.code, 5);
+  assert.deepEqual(modelsSent(io), ['gpt']);
+});
+
+test('resolveWithModels names each refused model with the last line of its refusal', async () => {
+  const io = fakeIo({ executables: ['/a'], results: [refuse('gpt/gpt-6-astra'), refuse('gemini')] });
+  const { outcome } = await resolveWithModels('run', runFor, ['gpt/gpt-6-astra', 'gemini'], lookup(io, '/a'));
+  assert.deepEqual(outcome, { code: 3, response: null, stderr: 'gpt/gpt-6-astra: refused gpt/gpt-6-astra\ngemini: refused gemini' });
+});
+
+test('resolveWithModels never asks a later resolver after a refusal', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [refuse('claude'), refuse('gpt')] });
+  await resolveWithModels('run', runFor, ['claude', 'gpt'], lookup(io, '/a', '/b'));
+  assert.deepEqual(io.calls.map(([cmd]) => cmd), ['/a', '/a']);
+});
+
+test('resolveWithModels treats a decline after an answer as exit 4', async () => {
+  const io = fakeIo({ executables: ['/a', '/b'], results: [refuse('claude'), decline] });
+  const { outcome } = await resolveWithModels('run', runFor, ['claude', 'gpt'], lookup(io, '/a', '/b'));
+  assert.equal(outcome.code, 4);
+  assert.match(outcome.stderr, /\/a declined/);
+  assert.deepEqual(io.calls.map(([cmd]) => cmd), ['/a', '/a']);
 });

@@ -121,3 +121,37 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
   // never declines.
   throw new UsageError(`every resolver declined. ${configPath(deps)} lists the resolvers to ask; add subagent to fall back to a subagent.`);
 }
+
+// Ask for a session on each model in turn, best first. The chain picks the
+// resolver for the first model, and every later model goes to that same
+// resolver: a refusal (exit 3) is an answer, not a decline, so no later
+// resolver is asked. It stops at the first answer that is not a refusal.
+// When every model is refused, the outcome is exit 3, with one line per
+// model on stderr. model is the model of the last request sent. Throws as
+// resolve does.
+export async function resolveWithModels<V extends 'run' | 'start'>(
+  verb: V, requestFor: (model: string) => Requests[V], models: string[], deps: LookupDeps,
+) {
+  if (models.length === 0) throw new UsageError('give at least one model');
+  const refusals: string[] = [];
+  const refused = (model: string, stderr: string) => refusals.push(`${model}: ${stderr.trim().split('\n').at(-1) || 'refused'}`);
+  let [model] = models;
+  const first = await resolve(verb, requestFor(model), deps);
+  const { candidate } = first;
+  let { outcome } = first;
+  for (const next of models.slice(1)) {
+    if (outcome.code !== EXIT.noSession) break;
+    refused(model, outcome.stderr);
+    model = next;
+    const request = requestFor(model);
+    // The resolver already answered this request for another model, so a
+    // decline now breaks the contract.
+    outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) })
+      ?? { code: EXIT.spawn, response: null, stderr: `${candidate.name} declined ${verb} for ${model} after it answered for ${models[0]}. A resolver that answers a request must answer it for any model.` };
+  }
+  if (outcome.code === EXIT.noSession) {
+    refused(model, outcome.stderr);
+    outcome = { code: EXIT.noSession, response: null, stderr: refusals.join('\n') };
+  }
+  return { candidate, outcome, model, refusals };
+}
