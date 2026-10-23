@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import type { Db } from '../../contrib/resolver-kit/src/io.ts';
+import { parentPid, type Db } from '../../contrib/resolver-kit/src/io.ts';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
 import { createAdapter } from '../../contrib/t3-resolver/src/t3.ts';
@@ -24,6 +24,20 @@ const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
 
 test('probe inside T3 Code with no model manifest answers t3 with no options', async () => {
   assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3())), { code: 0, stdout: '{"resolver":"t3","options":[]}\n', stderr: '' });
+});
+
+test('probe inside T3 Code on a system with no /proc finds the T3 server with ps', async () => {
+  const parents: Record<string, string> = { 100: '   50\n', 50: '    7\n', 7: '    1\n' };
+  // No file exists, as on macOS, and ps prints each process's parent.
+  const sys = {
+    readFileSync(path: string): string {
+      throw new Error(`ENOENT: ${path}`);
+    },
+    existsSync: () => false,
+    spawnSync: (_cmd: string, args: string[]) => ({ stdout: parents[args.at(-1)!] ?? '' }),
+  };
+  const noProc = { ...insideT3(), parentPid: (pid: number) => parentPid(pid, sys) };
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(noProc)), { code: 0, stdout: '{"resolver":"t3","options":[]}\n', stderr: '' });
 });
 
 test('probe declines when the running T3 server is not an ancestor', async () => {
