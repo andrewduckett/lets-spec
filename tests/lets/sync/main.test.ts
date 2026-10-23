@@ -121,3 +121,13 @@ test('in the ignored mode, a failed git ls-files counts as nothing tracked', asy
   assert.equal(await run({ check: false }, t.deps), 0);
   assert.ok(!t.stderr().includes('git still tracks'));
 });
+
+const unownedFiles = { ...releaseFiles, [`${RELEASE}/overlay/.agents/skills/other/SKILL.md`]: 'skill' };
+
+test('a release that ships an unowned skill writes nothing', async () => {
+  const t = setup({ files: unownedFiles, toplevel: '/project' });
+  const before = new Map(t.io.files);
+  assert.equal(await run({ check: false }, t.deps), 1);
+  assert.ok(t.stderr().includes('ships .agents/skills/other, which lets sync does not own.'));
+  assert.deepEqual(t.io.files, before);
+});

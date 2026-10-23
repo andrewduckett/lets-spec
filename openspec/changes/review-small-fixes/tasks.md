@@ -1,6 +1,6 @@
 ## 1. lets sync checks the release before it writes (C12)
 
-- [ ] 1.1 [easy] `lets sync` in a git project that has never synced, with a release that ships the skill folder `.agents/skills/other`, exits 1, prints `ships .agents/skills/other, which lets sync does not own.` on stderr, and writes no file: `AGENTS.md`, `.gitignore` and the managed folders are as they were. Move the `releasePaths({ release, io })` call up beside `requireRelease` at the top of `steps` in `lets/src/sync/main.ts` (verify: node --test tests/lets/sync/main.test.ts)
+- [x] 1.1 [easy] `lets sync` in a git project that has never synced, with a release that ships the skill folder `.agents/skills/other`, exits 1, prints `ships .agents/skills/other, which lets sync does not own.` on stderr, and writes no file: `AGENTS.md`, `.gitignore` and the managed folders are as they were. Move the `releasePaths({ release, io })` call up beside `requireRelease` at the top of `steps` in `lets/src/sync/main.ts` (verify: node --test tests/lets/sync/main.test.ts) (✓ node --test tests/lets/sync/main.test.ts passed)
 - [ ] 1.2 [easy] `LETS_SPEC_SKILLS=ignored lets sync --check` refuses the same release with exit 1 and the same stderr. Today only the committed mode's check reaches `releasePaths` (verify: node --test tests/lets/sync/main.test.ts)
 
 ## 2. The T3 token follows XDG_CONFIG_HOME (C14)

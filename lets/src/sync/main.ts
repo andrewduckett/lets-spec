@@ -5,7 +5,7 @@ import type { Deps, Io } from '../io.ts';
 import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.ts';
 import { checkConfig } from './config.ts';
 import { checkClaude, createInitFiles, linkClaude } from './init.ts';
-import { isManaged } from './managed.ts';
+import { isManaged, releasePaths } from './managed.ts';
 import { AGENTS, defaultSchema, findRelease, openspecVersionWarning, requireRelease } from './release.ts';
 import { checkSkills, syncSkills } from './skills.ts';
 
@@ -45,6 +45,8 @@ async function steps(check: boolean, deps: Deps) {
   const { io } = deps;
   const release = findRelease(deps.env, deps.packageRoot, io);
   requireRelease(release, io);
+  // Refuse a release that ships an unowned path before anything is written.
+  releasePaths({ release, io });
   const schemaName = defaultSchema(release, io);
 
   const git = await io.execFile('git', ['rev-parse', '--show-toplevel'], { cwd: deps.cwd });
