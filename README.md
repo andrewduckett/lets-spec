@@ -88,7 +88,7 @@ Use Nix or mise. Both install the same `lets` command and the same skills.
 Add the flake input:
 
 ```nix
-inputs.lets-spec.url = "github:andrewduckett/lets-spec";
+inputs.lets-spec.url = "github:sidereal-io/lets-spec";
 ```
 
 Follow the `main` branch. Your `flake.lock` pins the exact commit.
@@ -685,7 +685,7 @@ default, `lets-delegate-subagent`.
 | You installed it with | Do this |
 |---|---|
 | home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-cli` in `home.packages` |
-| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:andrewduckett/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
+| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:sidereal-io/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
 | mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-cli` from the release folder |
 | A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/cli-resolver/bin/lets-delegate-cli` instead |
 
@@ -702,7 +702,7 @@ starts anything, and `lets` asks the next one. One that never handles
 [The resolver contract](docs/resolver-contract.md) gives every field,
 exit code and rule.
 [`contrib/headless-resolver`](contrib/headless-resolver) is a complete
-resolver in about twenty lines of `sh`, to copy from.
+resolver in `sh`, to copy from.
 
 To check your resolver, run:
 
@@ -778,7 +778,7 @@ starting. It changes nothing when it exits with any other code.
 
 | Exit | When |
 |---|---|
-| 0 | The run finished, with or without warnings. |
+| 0 | The run finished, with or without warnings. Or it found the release but ran outside a git repository, so it wrote nothing and said so. |
 | 1 | It cannot find the release, or the folder it finds is not a valid release. Or no release ships for the `LETS_SPEC_FLOW` you set, or `LETS_SPEC_SKILLS` is not `committed`, `ignored` or empty. With `--check`, also when the project is out of date. |
 | 2 | You gave it an unknown option. |
 
@@ -931,9 +931,9 @@ git ignore the links. The first run of this version:
 
 That first commit is large. Later updates change only what changed.
 
-`openspec/config.yaml` must now say `schema: lets-standard` or
-`schema: lets-minimal`. If it does not, `lets sync` warns with the value
-to set.
+`openspec/config.yaml` must name your flow's schema, the one the release
+you installed ships as its default. If it does not, `lets sync` warns with
+the value to set.
 
 ## 🛠️ Development
 

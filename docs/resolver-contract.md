@@ -113,8 +113,8 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 | 2 | The request is malformed, or its protocol or verb is unknown | Exits 4 and shows the resolver's stderr |
 | 3 | A refusal: the harness or the account said no before the model gave any output. The harness is not running or not set up, there are no tokens left, or it cannot run the model. stderr says why. | Sends the next model the caller gave to the same resolver. Exits 3, naming each model, when none is left. Asks no later resolver. |
 | 4 | A bug, a broken contract, or an outcome the resolver cannot know, such as no reply from the harness | Exits 4 |
-| 5 | The session failed: an error, a stop to ask a question, or an empty message | Exits 5 |
-| 6 | The session did not finish within `timeoutMinutes` | Exits 6 |
+| 5 | The session failed: an error, a stop to ask a question, or an empty message | `review run` exits 5. `handoff run` exits 4. |
+| 6 | The session did not finish within `timeoutMinutes` | `review run` exits 6. `handoff run` exits 4. |
 | 75 | Decline: this resolver does not handle this request here | Asks the next resolver |
 | Any other | A bug in the resolver | Exits 4 and shows the resolver's stderr |
 
@@ -132,12 +132,15 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
   not write files. `lets` checks the tree anyway, and exits 7 if a file
   outside `.workspace/` changed.
 - **Honour `timeoutMinutes` in `run`.** `lets` waits one minute more, then
-  stops the resolver. Every other verb gets five minutes.
+  stops the resolver. Every other verb gets five minutes. `lets delegate
+  verify` gives each call 60 seconds, except the live `run`, which gets
+  the same extra minute.
 - **Never retry, and never fall back.** If you cannot do the thing, fail,
   and leave the session in place so a person can read it.
 - **Accept `finish` for every handle you return.** Never fail it because
   the session is already gone. For a handle you never issued, exit 0 or 4
-  and print nothing.
+  and print nothing. When `finish` fails, `lets` reports it on stderr, and
+  the review's result and exit code stay the same.
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in

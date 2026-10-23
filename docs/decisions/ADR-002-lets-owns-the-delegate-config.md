@@ -8,7 +8,7 @@ description: Architecture decision record (ADR) for lets owning the delegate con
 
 # ADR-002: lets owns the delegate config, and resolvers get reviewers through the request
 
-> Superseded in part. The first decision stands: only `lets` reads the config, which now lists resolvers in order (ADR-005). The second no longer holds: the config stores nothing about models, so `lets` sends no `reviewers`. ADR-006 replaces it: a resolver reports the models it can run, and the caller chooses one.
+> The first decision still holds: only `lets` reads the config, which now lists resolvers in order (ADR-005). ADR-006 replaced the second decision, `reviewers` in the request. The config stores nothing about models, so `lets` sends no `reviewers`. Instead a resolver reports the models it can run, and the caller chooses one.
 
 ## Context
 
