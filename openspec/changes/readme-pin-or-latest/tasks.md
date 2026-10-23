@@ -13,3 +13,4 @@ The decisions are in brainstorm.md (D1 to D11). Every task edits `README.md`.
 ## Deviations Ledger
 
 - Order: 1.2 and 1.6 are done before 1.1. The check for 1.1 needs `asset_pattern` gone from the whole README, and 1.2 and 1.6 remove the other two mentions.
+- Review fix: the code review showed that mise reads `auto_update` only from global config, and never updates a tool a project's `mise.toml` sets (mise docs, 2026.10.17; 2026.10.3 has no `auto_update`). The 1.4 warning described something that cannot happen, so D8's sentence now says that `auto_update` does not move this release.
