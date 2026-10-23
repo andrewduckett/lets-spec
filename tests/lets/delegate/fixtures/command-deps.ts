@@ -8,6 +8,7 @@
 //   settings:  the fake resolver's FAKE_RESOLVER_* variables
 //   gitBefore: what `git status -z` prints before the session
 //   gitAfter:  what it prints after; default gitBefore
+//   gitAfterFails: true when `git status` fails after the session
 //   commands:  the commands on PATH
 //   executables: more paths that are executable files, beside the fake
 //              resolver; they answer from results when run
@@ -36,6 +37,7 @@ type Options = {
   settings?: Record<string, string>;
   gitBefore?: string;
   gitAfter?: string;
+  gitAfterFails?: boolean;
   commands?: string[];
   executables?: string[];
   results?: ExecResult[];
@@ -45,7 +47,7 @@ type Options = {
 };
 
 export function commandDeps({
-  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, commands = [], executables = [], results = [],
+  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, gitAfterFails = false, commands = [], executables = [], results = [],
   files = { [PROMPT_FILE]: 'PROMPT TEXT' }, config, subagent = true,
 }: Options = {}) {
   const log = join(mkdtempSync(join(tmpdir(), 'lets-delegate-')), 'calls');
@@ -60,7 +62,10 @@ export function commandDeps({
   io.execFile = async (cmd, args, opts = {}) => {
     io.calls.push([cmd, args, opts]);
     if (cmd === 'git' && args[0] === 'rev-parse') return { stdout: '/repo\n', stderr: '', code: 0 };
-    if (cmd === 'git') return { stdout: statusCalls++ === 0 ? gitBefore : gitAfter, stderr: '', code: 0 };
+    if (cmd === 'git') {
+      if (statusCalls++ === 0) return { stdout: gitBefore, stderr: '', code: 0 };
+      return gitAfterFails ? { stdout: '', stderr: 'index.lock exists', code: 128 } : { stdout: gitAfter, stderr: '', code: 0 };
+    }
     if (cmd === FAKE_RESOLVER) {
       return real.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, FAKE_RESOLVER_LOG: log, ...settings } });
     }

@@ -6,14 +6,14 @@ import { Refused, SessionFailed, SpawnError } from '../../contrib/resolver-kit/s
 import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
-  optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE_SUFFIX,
+  optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE,
 } from '../../contrib/t3-resolver/src/t3.ts';
 import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
-const TOKEN = `/home/u/${TOKEN_FILE_SUFFIX}`;
+const TOKEN = `/home/u/.config/${TOKEN_FILE}`;
 const ORIGIN = 'http://127.0.0.1:3773';
 const RUNNING = { [RUNTIME]: JSON.stringify({ pid: 7, origin: ORIGIN }), [TOKEN]: 'tok' };
 
@@ -300,6 +300,32 @@ test('a stored token is used as it is', async () => {
   const io = fakeIo({ env: {}, files: { [TOKEN]: 'stored\n' } });
   assert.equal(await readToken(io), 'stored');
   assert.equal(io.calls.length, 0);
+});
+
+const XDG_TOKEN = `/cfg/${TOKEN_FILE}`;
+
+test('with XDG_CONFIG_HOME set, the token stored under it is used', async () => {
+  const io = fakeIo({ env: { XDG_CONFIG_HOME: '/cfg' }, files: { [XDG_TOKEN]: 'stored\n' } });
+  assert.equal(await readToken(io), 'stored');
+  assert.equal(io.calls.length, 0);
+});
+
+test('with XDG_CONFIG_HOME set, a fresh token is stored under it', async () => {
+  const io = fakeIo({ env: { XDG_CONFIG_HOME: '/cfg' }, results: [{ stdout: 'fresh-token\n', stderr: '', code: 0 }] });
+  await readToken(io);
+  assert.equal(io.files.get(XDG_TOKEN), 'fresh-token');
+});
+
+test('an empty XDG_CONFIG_HOME means the token under ~/.config', async () => {
+  const io = fakeIo({ env: { XDG_CONFIG_HOME: '' }, files: { [TOKEN]: 'stored\n' } });
+  assert.equal(await readToken(io), 'stored');
+  assert.equal(io.calls.length, 0);
+});
+
+test('with XDG_CONFIG_HOME set, a token only under ~/.config is replaced by a fresh one under XDG_CONFIG_HOME', async () => {
+  const io = fakeIo({ env: { XDG_CONFIG_HOME: '/cfg' }, files: { [TOKEN]: 'old\n' }, results: [{ stdout: 'fresh-token\n', stderr: '', code: 0 }] });
+  assert.equal(await readToken(io), 'fresh-token');
+  assert.equal(io.files.get(XDG_TOKEN), 'fresh-token');
 });
 
 test('dispatch sends one request frame and returns the success value', async () => {

@@ -146,6 +146,14 @@ test('a tree the session changed is exit 7, with finish ok false and no findings
   assert.deepEqual(finishes(t.resolverCalls()).map(({ ok }) => ok), [false]);
 });
 
+test('a git status that fails after the session is exit 4, with finish ok false', async () => {
+  const t = commandDeps({ gitAfterFails: true });
+  assert.equal(await run(options(), t.deps), 4);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /could not check the tree after the session: git status failed in \/repo: index.lock exists \(fake f-1\)/);
+  assert.deepEqual(finishes(t.resolverCalls()).map(({ ok }) => ok), [false]);
+});
+
 test('files the user had already changed, and scratch files, do not count', async () => {
   const t = commandDeps({ gitBefore: ' M src/a.js\0?? .envrc\0', gitAfter: ' M src/a.js\0?? .envrc\0?? .workspace/x\0' });
   assert.equal(await run(options(), t.deps), 0);
