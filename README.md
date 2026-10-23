@@ -617,39 +617,8 @@ session, or every model was refused.
 ### Resolvers
 
 A resolver is the program that turns a request into a real session.
-`lets` asks these in order, and the first that does not decline answers:
-
-1. The executable that `LETS_SPEC_RESOLVER` names, when it is set.
-2. Each resolver your [delegate config](#set-up-delegation) lists, in
-   order. When `lets` reaches one that is missing or not an executable
-   file, it exits 2 and names the path and the config file.
-
-With no config, the default, `lets-delegate-subagent`, takes the place of
-step 2. `lets` looks for nothing on your `PATH`: a resolver is asked only
-when the config lists it or `LETS_SPEC_RESOLVER` names it. When every
-resolver declines, `lets delegate` exits 2, says so, and names the config
-file.
-
-The default is a program that ships with `lets`, in the release tarball,
-the Nix package and this repository's source tree alike. `lets` runs it
-from `contrib/lets-delegate-subagent` beside itself, with its own Node,
-both with no config and for the `subagent` entry, so you never install or
-link it. It answers as `subagent`.
-
-The default starts no session, and picks no model family. For a review,
-it runs nothing: `lets delegate review run` exits 3, and the review skill
-runs a subagent. For a handoff, it writes the prompt to
-`.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
-and that path for you to start any agent in the repository with.
-
-If that file is missing or Node cannot run it, `lets delegate` exits 4
-and says the `lets` install is incomplete. Reinstall `lets`.
-
-A refusal is not a failure: the harness said no before the model gave
-any output, so `lets` sends the next model you gave to the same resolver.
-When a session fails, `lets` stops and says why. It never retries it, and
-it never falls back to another resolver. It leaves the failed session in
-place, so you can read what happened.
+[How `lets` finds a resolver](docs/resolver-contract.md#how-lets-finds-a-resolver)
+says which one answers, and what the default does when none of yours does.
 
 ### The T3 Code and cli resolvers
 

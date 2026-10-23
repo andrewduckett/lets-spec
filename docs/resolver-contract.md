@@ -37,6 +37,12 @@ it from `contrib/lets-delegate-subagent` beside itself with its own Node,
 and it answers as `subagent`. When that file is missing or Node cannot run
 it, `lets` exits 4 and says its install is incomplete.
 
+The default starts no session, and picks no model family. For a review,
+it runs nothing: `lets delegate review run` exits 3, and the review skill
+runs a subagent. For a handoff, it writes the prompt to
+`.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
+and that path for you to start any agent in the repository with.
+
 `lets` asks nothing it finds on `PATH`. When every resolver declines,
 `lets` exits 2 and names the config file.
 
