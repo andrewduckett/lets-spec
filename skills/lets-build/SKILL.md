@@ -102,7 +102,14 @@ Then take the first case that applies:
    none, say the backlog has nothing ready, suggest the `lets-shape`
    skill to shape more, and stop.
 
-Before selecting `next`, apply only the owner/prerequisite check in the first paragraph of [Glossary preflight](#glossary-preflight) to each candidate in rank order. Defer fetching, commit inspection and transfer rehearsal to Claim for the selected candidate. Skip unresolved prerequisites; if none remain, say the backlog has nothing ready, suggest `lets-shape`, and stop without selecting or confirming a packet. For a named issue, report the unresolved owner or checkpoint and stop. Then go on to [Confirm the packet](#confirm-the-packet).
+Before you select `next`, run only
+[Check the prerequisite](#check-the-prerequisite) on each candidate, in
+rank order. Fetching, the commit checks and the rehearsal wait for Claim,
+and only for the candidate you select. Skip a candidate with an unresolved
+prerequisite. If none is left, say the backlog has nothing ready, suggest
+the `lets-shape` skill, and stop, without selecting a candidate or
+confirming a packet. For a named issue, report the unresolved owner or
+checkpoint, and stop. Otherwise, go on to [Confirm the packet](#confirm-the-packet).
 
 ## Confirm the packet
 
@@ -357,8 +364,9 @@ ready.
 - Never claim an issue on a change's branch, and never propose, apply or
   archive from the default branch.
 - Never write an artifact or code yourself, outside the skills you
-  invoke. The sole transfer exception is the verified glossary-only
-  checkpoint import above; it authorizes no other implementation edits.
+  invoke. The only exception is
+  [Import the glossary checkpoint](#import-the-glossary-checkpoint), for
+  verified glossary commits. It allows no other edits.
 - One issue per run.
 - The handoff is the only new session this skill starts, and only after
   the user says yes.
