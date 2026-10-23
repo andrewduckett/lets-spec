@@ -42,14 +42,18 @@ export type ProcessSys = {
   spawnSync(cmd: string, args: string[], options: { encoding: 'utf8' }): { stdout?: string | null };
 };
 
-// The parent of a process: null when it cannot be found.
+// The parent of a process, from /proc where there is one, else from ps, as
+// on macOS. null when it cannot be found.
 export function parentPid(pid: number, sys: ProcessSys = { readFileSync, existsSync, spawnSync }): number | null {
+  let status: string | null;
   try {
-    const match = sys.readFileSync(`/proc/${pid}/status`, 'utf8').match(/^PPid:\s+(\d+)$/m);
-    return match ? Number(match[1]) : null;
+    status = sys.readFileSync(`/proc/${pid}/status`, 'utf8');
   } catch {
-    return null;
+    status = null;
   }
+  const text = status !== null ? status.match(/^PPid:\s+(\d+)$/m)?.[1]
+    : sys.existsSync('/proc/self') ? undefined : sys.spawnSync('ps', ['-o', 'ppid=', '-p', String(pid)], { encoding: 'utf8' }).stdout?.trim();
+  return text && /^\d+$/.test(text) ? Number(text) : null;
 }
 
 export function realIo(): Io {

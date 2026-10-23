@@ -42,3 +42,9 @@ test('parentPid reads the PPid from /proc, and runs no ps', () => {
   assert.equal(parentPid(42, sys), 7);
   assert.deepEqual(sys.calls, []);
 });
+
+test('with no /proc, parentPid asks ps, and trims what it prints', () => {
+  const sys = fakeSys({ ps: '   7\n' });
+  assert.equal(parentPid(42, sys), 7);
+  assert.deepEqual(sys.calls, [['ps', '-o', 'ppid=', '-p', '42']]);
+});
