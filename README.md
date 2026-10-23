@@ -149,8 +149,9 @@ LETS_SPEC_FLOW = "standard"
 enter = "lets sync"
 ```
 
-The `lets-spec` version and the `asset_pattern` name the same release.
-Change them together.
+`latest` installs the newest release once, and stays on it
+until `mise upgrade`. To pin an exact release, replace `latest` with
+its number.
 
 Pin the OpenSpec CLI to the version the release was generated from. Each
 release names it in its GitHub release notes, and in the `openspec` field
