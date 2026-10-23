@@ -17,7 +17,7 @@
 
 ## 4. Checks [depends-on: 3]
 
-- [ ] 4.1 [medium] Run the project's full checks, and fix what they report. (verify: `pnpm test && nix flake check`)
+- [x] 4.1 [medium] Run the project's full checks, and fix what they report. (verify: `pnpm test && nix flake check`) (✓ `pnpm test` and `nix flake check` passed, nothing to fix)
 
 ## Deviations Ledger
 
