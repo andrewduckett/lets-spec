@@ -54,8 +54,6 @@ export function commandDeps({
   const real = realIo();
   const all = { ...files, ...(config === undefined ? {} : { [CONFIG]: config }), ...(subagent ? { [SUBAGENT]: '' } : {}) };
   const io = fakeIo({ files: all, executables: [FAKE_RESOLVER, ...executables] });
-  // The fake resolver is a real process, so its deadlines are real too.
-  io.sleep = real.sleep;
   let statusCalls = 0;
   io.execFile = async (cmd, args, opts = {}) => {
     io.calls.push([cmd, args, opts]);
@@ -74,7 +72,6 @@ export function commandDeps({
       const result = await real.execFile(process.execPath, [SUBAGENT_SOURCE, ...args.slice(1)], { ...opts, cwd: repo, input: JSON.stringify(request) });
       return { ...result, stdout: result.stdout.replaceAll(repo, '/repo') };
     }
-    opts.started?.({ kill: () => io.killed.push(4242) });
     return results.shift() ?? { stdout: '', stderr: '', code: 0 };
   };
 

@@ -225,13 +225,13 @@ test('a resolver that cannot start is exit 4', async () => {
   assert.match(outcome.stderr, /cannot run \/opt\/r\/lets-delegate-t3: spawn EACCES/);
 });
 
-test('a resolver past the timeout is killed and reported as exit 6', async () => {
+test('a resolver past the timeout is stopped and reported as exit 6', async () => {
   const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r', ...SELF, config: null });
   const started = Date.now();
   const outcome = await callResolver(candidate, 'probe', probeRequest, { io: ioWith({ FAKE_RESOLVER_SLEEP_MS: '30000' }), timeoutMs: 200 });
   assert.equal(outcome?.code, 6);
   assert.match(outcome!.stderr, /did not answer probe/);
-  assert.ok(Date.now() - started < 10000, 'the resolver was killed, not waited for');
+  assert.ok(Date.now() - started < 10000, 'the resolver was stopped, not waited for');
 });
 
 test('the backstop for run is the session timeout plus one minute', async () => {

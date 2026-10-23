@@ -98,7 +98,6 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
     isExecutable: () => false,
     homedir: () => '/home/u',
     now: () => 0,
-    sleep: async () => {},
   };
   return io;
 }

@@ -17,8 +17,6 @@ export type FakeIo = Io & {
   files: Map<string, string>;
   dirs: string[];
   removed: string[];
-  killed: number[];
-  sleeps: number[];
 };
 
 type Options = { results?: Result[]; files?: Record<string, string>; executables?: string[] } & Partial<Io>;
@@ -33,24 +31,15 @@ export function fakeIo({ results = [], files = {}, executables = [], ...override
     files: new Map(Object.entries(files)),
     dirs: [],
     removed: [],
-    killed: [],
-    sleeps: [],
 
     async execFile(cmd, args, opts = {}) {
       io.calls.push([cmd, args, opts]);
-      opts.started?.({ kill: () => io.killed.push(4242) });
       const next = results.shift() ?? { stdout: '', stderr: '', code: 0 };
       return typeof next === 'function' ? next(cmd, args, opts) : next;
     },
     isExecutable: (path) => executables.includes(path),
     homedir: () => '/home/u',
     now: () => 0,
-    // Resolves on the next turn of the event loop, so a command that has
-    // already answered wins a race against it.
-    async sleep(ms) {
-      io.sleeps.push(ms);
-      await new Promise((resolve) => setImmediate(resolve));
-    },
 
     readFile: (path) => io.files.get(path) ?? null,
     readBytes: (path) => (io.files.has(path) ? Buffer.from(io.files.get(path)!) : null),

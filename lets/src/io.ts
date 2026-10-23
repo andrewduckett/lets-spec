@@ -7,23 +7,17 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { setTimeout as sleepFor } from 'node:timers/promises';
 
 // What a command printed, and its exit code. code is null when the command
 // cannot start. timedOut: the command ran past timeoutMs, and was stopped.
 export type ExecResult = { stdout: string; stderr: string; code: number | null; timedOut?: boolean };
 
-// The running command, for a caller that may need to kill it.
-export type Child = { kill(): void };
-
 // env replaces the whole environment. input is written to stdin, which is
-// closed either way. started receives the child as soon as it exists.
-// timeoutMs stops the command when it runs longer.
+// closed either way. timeoutMs stops the command when it runs longer.
 export type ExecOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   input?: string;
-  started?: (child: Child) => void;
   timeoutMs?: number;
 };
 
@@ -50,8 +44,6 @@ export type Io = {
   // The user's home folder.
   homedir(): string;
   now(): number;
-  // Rejects when signal aborts, so a caller can cancel a long wait.
-  sleep(ms: number, signal?: AbortSignal): Promise<void>;
 };
 
 // Everything a command needs from the real world.
@@ -118,14 +110,13 @@ export function realIo(): Io {
 
     // Resolves on any exit code, and on a timeout. code is null when the
     // command cannot start.
-    execFile(cmd, args, { cwd, env, input, started, timeoutMs } = {}) {
+    execFile(cmd, args, { cwd, env, input, timeoutMs } = {}) {
       return new Promise((resolve) => {
         const child = nodeExecFile(cmd, args, { cwd, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
           clearTimeout(timer);
           if (error && typeof error.code === 'string') return resolve({ stdout: '', stderr: error.message, code: null });
           resolve({ stdout, stderr, code: error ? ((error.code as number | undefined) ?? 1) : 0 });
         });
-        started?.(child);
         // Stop the command, and stop waiting at once: a child of the command
         // may keep its output open long after the command itself is gone.
         const timer = timeoutMs === undefined ? undefined : setTimeout(() => {
@@ -151,6 +142,5 @@ export function realIo(): Io {
     },
     homedir: () => homedir(),
     now: () => Date.now(),
-    sleep: (ms, signal) => sleepFor(ms, undefined, { signal }),
   };
 }

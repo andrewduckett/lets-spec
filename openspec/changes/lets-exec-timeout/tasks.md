@@ -3,7 +3,7 @@
 - [x] 1.1 [medium] The real `execFile` takes `timeoutMs`. When time runs out, it kills the child and resolves at once with `timedOut: true`, even when a child of the command keeps stdout open, as `sh -c '(sleep 30) & sleep 30'` does. A 200 ms deadline returns in under 10 seconds. Without `timeoutMs`, results are as before (verify: node --test tests/lets/io.test.ts) (✓ node --test tests/lets/io.test.ts passed)
 - [x] 1.2 [medium] `callResolver` passes its deadline to `execFile` as `timeoutMs`, and a result with `timedOut: true` gives exit 6 with "did not answer <verb> in <time>, so it was stopped". The backstop test checks that `run` is given `timeoutMs` of `16 * 60000`, from `io.calls` (verify: node --test tests/lets/delegate/lookup.test.ts) (✓ node --test tests/lets/delegate/lookup.test.ts passed)
 - [x] 1.3 [easy] `verify`'s `call` passes its deadline as `timeoutMs`, and a result with `timedOut: true` counts as `code: null` with "no answer in <n> seconds, so it was stopped". A new test in `verify.test.ts` queues such a result and sees the check fail with that message (verify: node --test tests/lets/delegate/verify.test.ts) (✓ node --test tests/lets/delegate/verify.test.ts passed)
-- [ ] 1.4 [easy] `lets/src/delegate/wait.ts`, the `Child` type, `ExecOptions.started` and `Io.sleep` are gone, and so are `killed`, `sleeps` and `sleep` in the delegate and sync fakes and `io.sleep = real.sleep` in `command-deps.ts`. The old `started` and `sleep` tests in `io.test.ts` go (verify: test ! -e lets/src/delegate/wait.ts && ! grep -rnE 'sleeps|killed|started\?\.|Io\.sleep|io\.sleep' lets/src tests/lets && pnpm check)
+- [x] 1.4 [easy] `lets/src/delegate/wait.ts`, the `Child` type, `ExecOptions.started` and `Io.sleep` are gone, and so are `killed`, `sleeps` and `sleep` in the delegate and sync fakes and `io.sleep = real.sleep` in `command-deps.ts`. The old `started` and `sleep` tests in `io.test.ts` go (verify: test ! -e lets/src/delegate/wait.ts && ! grep -rnE 'sleeps|killed|started\?\.|Io\.sleep|io\.sleep' lets/src tests/lets && pnpm check) (✓ the verify command passed)
 
 ## 2. One command wrapper [depends-on: 1]
 
@@ -23,3 +23,4 @@
 ## Deviations Ledger
 
 - 1.1: On a timeout, `execFile` also destroys the child's stdout and stderr streams. Without that, a child of the command that keeps the pipes open holds the Node event loop, so `lets` cannot exit until that child does.
+- 1.4: The lookup test name and message said the resolver was "killed", which the task's `grep` matches. They now say "stopped".
