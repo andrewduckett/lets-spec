@@ -18,3 +18,7 @@
 - [x] 3.2 [easy] The project's checks pass. (verify: pnpm test && nix flake check) (✓ pnpm test passed; nix flake check passed)
 
 ## Deviations Ledger
+
+- 2.3: the `lets-shape` phases table became one sentence listing the phases, to fit the line budget. The skill holds the table's detail (D4).
+- 2.5: the working rules' marker code block became one sentence naming the `lets-spec rules` marker comments, to fit the line budget.
+- 3.1: the README is 478 lines, under the 480 cap but above the 420 aim. Cutting further would have dropped tables the design keeps.
