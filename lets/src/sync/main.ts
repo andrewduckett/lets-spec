@@ -4,6 +4,7 @@ import { isAbsolute, join, relative } from 'node:path';
 import type { Deps, Io } from '../io.ts';
 import { applyBlock, blockLines, blockState, LEGACY_LINKS, removeBlock, renderBlock, RULES, SKILLS, SKILLS_BODY } from './block.ts';
 import { checkConfig } from './config.ts';
+import { UsageError } from './errors.ts';
 import { checkClaude, createInitFiles, linkClaude } from './init.ts';
 import { isManaged, releasePaths } from './managed.ts';
 import { AGENTS, defaultSchema, findRelease, openspecVersionWarning, requireRelease } from './release.ts';
@@ -17,8 +18,6 @@ const SKILLS_UNPAIRED = `${GITIGNORE} has a lets-spec skills marker without its 
 // so the shell passes them to git unexpanded.
 const MANAGED_PATTERNS = ['.agents/skills/lets-*', '.agents/skills/openspec-*', 'openspec/schemas/lets-*'];
 const TRACKED_COPIES = `git still tracks lets-spec copies that ${GITIGNORE} ignores. Run: git rm -r --cached --ignore-unmatch -- ${MANAGED_PATTERNS.map((pattern) => `'${pattern}'`).join(' ')}, then commit.`;
-
-export class UsageError extends Error {}
 
 // check: change nothing, and exit 1 if the project is out of date.
 export async function run({ check }: { check: boolean }, deps: Deps) {
@@ -66,7 +65,7 @@ async function steps(check: boolean, deps: Deps) {
     const failures = checkRules(blockState(RULES, io.readFile(agentsPath), rulesBlock));
     const gitignoreState = blockState(SKILLS, io.readFile(gitignorePath), skillsBlock);
     if (mode === 'committed') {
-      failures.push(...checkSkills({ release, schemaName, root, io }));
+      failures.push(...checkSkills({ release, root, io }));
       if (gitignoreState === 'current' || gitignoreState === 'stale' || gitignoreState === 'unpaired') {
         failures.push(`lets-spec: ${GITIGNORE} still has the lets-spec skills block. Run lets sync, then commit ${GITIGNORE}.`);
       }
@@ -99,7 +98,7 @@ async function steps(check: boolean, deps: Deps) {
   const exclude = await excludePath(root, io);
   if (exclude !== null) warnings.push(...removeLegacyLinks({ root, exclude, io, stdout: say }));
 
-  syncSkills({ release, schemaName, root, mode, io, stdout: say });
+  syncSkills({ release, root, mode, io, stdout: say });
 
   if (mode === 'ignored') {
     const ignored = applyBlock(SKILLS, io.readFile(gitignorePath), skillsBlock);

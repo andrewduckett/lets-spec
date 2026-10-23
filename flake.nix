@@ -34,9 +34,9 @@
       workspaceSource = lib.fileset.toSource {
         root = ./.;
         fileset = lib.fileset.difference
-          (lib.fileset.unions ([
-            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
-          ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib))
+          (lib.fileset.unions [
+            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets ./contrib
+          ])
           (lib.fileset.maybeMissing ./lets/contrib);
       };
 

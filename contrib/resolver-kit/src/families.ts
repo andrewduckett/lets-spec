@@ -1,5 +1,5 @@
-// The kit's own. It began as a copy of lets/src/delegate/families.ts,
-// which lets no longer needs, so the two may differ.
+// The command that runs each model family headless, and how gemini model
+// names carry an effort.
 
 import type { Effort, Family } from './protocol.ts';
 

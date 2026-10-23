@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 import type { Deps, Io } from '../io.ts';
 import { schemaOf } from './config.ts';
-import { UsageError } from './main.ts';
+import { UsageError } from './errors.ts';
 
 export const SKILLS_DST = '.agents/skills';
 export const SCHEMAS_DST = 'openspec/schemas';

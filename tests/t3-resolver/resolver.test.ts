@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { parentPid, type Db } from '../../contrib/resolver-kit/src/io.ts';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
+import { handle } from '../resolver-kit/fixtures/handle.ts';
 import { createAdapter } from '../../contrib/t3-resolver/src/t3.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
@@ -21,9 +21,15 @@ const io = (parents: Record<number, number>) => fakeIo({
 });
 const insideT3 = () => io({ 100: 50, 50: 7, 7: 1 });
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
+// What probe answers inside T3 Code when T3 has no model manifest.
+const noManifest = {
+  code: 0,
+  stdout: '{"resolver":"t3","options":[]}\n',
+  stderr: 'lets-delegate-t3: T3 has no model manifest at /home/u/.t3/userdata/model-manifest.json, so it lists no models\n',
+};
 
-test('probe inside T3 Code with no model manifest answers t3 with no options', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3())), { code: 0, stdout: '{"resolver":"t3","options":[]}\n', stderr: '' });
+test('probe inside T3 Code with no model manifest lists no options, and warns with the manifest\'s path', async () => {
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(insideT3())), noManifest);
 });
 
 test('probe inside T3 Code on a system with no /proc finds the T3 server with ps', async () => {
@@ -37,7 +43,7 @@ test('probe inside T3 Code on a system with no /proc finds the T3 server with ps
     spawnSync: (_cmd: string, args: string[]) => ({ stdout: parents[args.at(-1)!] ?? '' }),
   };
   const noProc = { ...insideT3(), parentPid: (pid: number) => parentPid(pid, sys) };
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(noProc)), { code: 0, stdout: '{"resolver":"t3","options":[]}\n', stderr: '' });
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(noProc)), noManifest);
 });
 
 test('probe declines when the running T3 server is not an ancestor', async () => {

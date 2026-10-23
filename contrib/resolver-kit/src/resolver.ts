@@ -9,14 +9,8 @@ import type { Adapter } from './adapter.ts';
 import { exitCodeOf, Refused, SessionFailed, SpawnError } from './errors.ts';
 import { parseModel } from './protocol.ts';
 import type { Model, Request, Requests, Response, SessionVerb, Verb } from './protocol.ts';
-import { Declined, respond } from './verbs.ts';
-import type { Answer, AnswerFn } from './verbs.ts';
-
-export type { Answer };
-
-export async function handle(verb: string, input: string, adapter: Adapter): Promise<Answer> {
-  return respond(adapter.program, verb, input, adapterAnswer(adapter));
-}
+import { Declined } from './verbs.ts';
+import type { AnswerFn } from './verbs.ts';
 
 // The answer function for a program with one adapter.
 export function adapterAnswer(adapter: Adapter): AnswerFn {

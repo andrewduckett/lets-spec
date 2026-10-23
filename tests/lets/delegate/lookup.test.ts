@@ -64,7 +64,7 @@ test('an empty chain has no candidates', () => {
 });
 
 test('a resolver on PATH is never a candidate', () => {
-  const io = fakeIo({ executables: ['/usr/bin/lets-delegate-resolver'] });
+  const io = fakeIo({ executables: ['/usr/bin/some-tool'] });
   const env = { PATH: '/usr/bin' };
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: null }).map((c) => c.name), [SUBAGENT]);
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: chain('/a') }).map((c) => c.name), ['/a']);

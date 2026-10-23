@@ -12,12 +12,10 @@ import type { Adapter, Session } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { Refused, SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from 'resolver-kit/families.ts';
+import { SCRATCH } from 'resolver-kit/io.ts';
 import type { Io } from 'resolver-kit/io.ts';
 import { FAMILIES, normalizeName } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, ModelString } from 'resolver-kit/protocol.ts';
-
-// Relative to the request's folder. codex writes its last message here.
-const SCRATCH = '.workspace/lets-delegate';
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
 

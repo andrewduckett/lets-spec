@@ -4,7 +4,7 @@ import type { Adapter, SpawnRequest } from '../../contrib/resolver-kit/src/adapt
 import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
+import { handle } from './fixtures/handle.ts';
 
 type Options = { verbs?: readonly ('run' | 'start')[]; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
 

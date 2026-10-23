@@ -353,9 +353,13 @@ export function createAdapter(io: Io): Adapter {
       return runtime !== null && io.processAlive(runtime.pid) && isAncestor(io, runtime.pid);
     },
 
-    async options() {
+    async options(warn) {
       const manifest = readManifest();
-      return manifest === null ? [] : optionsFromT3Manifest(manifest);
+      if (manifest === null) {
+        warn(`T3 has no model manifest at ${manifestPath()}, so it lists no models`);
+        return [];
+      }
+      return optionsFromT3Manifest(manifest);
     },
 
     async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
@@ -378,6 +382,8 @@ export function createAdapter(io: Io): Adapter {
         interactionMode: readOnly ? 'plan' : 'default',
         branch,
       }));
+      // origin is for people to read: finish sends the token only to the
+      // running server, never to the origin a handle names.
       return { handle: { kind: 'thread', id: threadId, origin } };
     },
 

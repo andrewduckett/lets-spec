@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
+import { handle } from '../resolver-kit/fixtures/handle.ts';
 import { createAdapter } from '../../contrib/cli-resolver/src/cli.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
@@ -42,7 +42,7 @@ test('probe for run answers cli', async () => {
 });
 
 test('probe declines with no family CLI on PATH', async () => {
-  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['herdr'] }))), NO_CLI);
+  assert.deepEqual(await handle('probe', probeRequest, createAdapter(fakeIo({ commands: ['some-tool'] }))), NO_CLI);
 });
 
 test('run declines with no family CLI on PATH, starting nothing', async () => {

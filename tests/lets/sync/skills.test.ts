@@ -27,7 +27,7 @@ function release(extra = {}) {
 
 function sync(io: FakeIo, mode: 'committed' | 'ignored' = 'committed') {
   const out: string[] = [];
-  const result = syncSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', mode, io, stdout: (t) => out.push(t) });
+  const result = syncSkills({ release: '/rel', root: '/p', mode, io, stdout: (t) => out.push(t) });
   return { result, out: out.join('') };
 }
 
@@ -71,7 +71,7 @@ test('a mode that differs only in its write or group bits is left alone', () => 
   sync(io);
   io.modes.set('/p/.agents/skills/lets-build/SKILL.md', 0o664);
   io.modes.set('/p/.agents/skills/lets-build/scripts/backlog.sh', 0o775);
-  assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), []);
+  assert.deepEqual(checkSkills({ release: '/rel', root: '/p', io }), []);
   const { result } = sync(io);
   assert.equal(result.written, 0);
 });
@@ -137,17 +137,17 @@ test('a managed path the release does not ship but is not ours by name is kept',
 
 test('checkSkills names each stale, missing or extra file', () => {
   const io = release();
-  assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
+  assert.deepEqual(checkSkills({ release: '/rel', root: '/p', io }), [
     'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
     'lets-spec: .agents/skills/lets-build/scripts/backlog.sh is out of date. Run lets sync, then commit it.',
     `lets-spec: openspec/schemas/${SCHEMA}/schema.yaml is out of date. Run lets sync, then commit it.`,
   ]);
   sync(io);
-  assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), []);
+  assert.deepEqual(checkSkills({ release: '/rel', root: '/p', io }), []);
   io.writeFile('/p/.agents/skills/lets-build/SKILL.md', 'edited');
   io.writeFile('/p/.agents/skills/lets-build/extra.md', 'x');
   io.writeFile('/p/.agents/skills/lets-old/SKILL.md', 'x');
-  assert.deepEqual(checkSkills({ release: '/rel', schemaName: SCHEMA, root: '/p', io }), [
+  assert.deepEqual(checkSkills({ release: '/rel', root: '/p', io }), [
     'lets-spec: .agents/skills/lets-build/SKILL.md is out of date. Run lets sync, then commit it.',
     'lets-spec: .agents/skills/lets-build/extra.md is out of date. Run lets sync, then commit it.',
     'lets-spec: .agents/skills/lets-old is out of date. Run lets sync, then commit it.',
@@ -169,7 +169,7 @@ test('on disk, a read-only script is copied 755 and runs, a read-only file 644, 
     chmodSync(doc, 0o444);
     const root = join(dir, 'proj');
     mkdirSync(root);
-    const args = { release: join(dir, 'rel'), schemaName: SCHEMA, root, io: realIo(), stdout: () => {} };
+    const args = { release: join(dir, 'rel'), root, io: realIo(), stdout: () => {} };
     syncSkills(args);
     const copy = join(root, '.agents/skills/lets-build/scripts/backlog.sh');
     assert.equal(statSync(copy).mode & 0o777, 0o755);
@@ -197,7 +197,7 @@ function onDisk(dir: string) {
   chmodSync(join(src, 'scripts/backlog.sh'), 0o755);
   const root = join(dir, 'proj');
   mkdirSync(join(root, '.agents/skills/lets-build'), { recursive: true });
-  return { root, args: { release: join(dir, 'rel'), schemaName: SCHEMA, root, io: realIo(), stdout: () => {} } };
+  return { root, args: { release: join(dir, 'rel'), root, io: realIo(), stdout: () => {} } };
 }
 
 test('on disk, a folder link inside a managed path is replaced, and its target is left alone', () => {

@@ -2,7 +2,7 @@
 // project paths with the same names. It touches nothing else.
 import { join } from 'node:path';
 import type { Io } from '../io.ts';
-import { UsageError } from './main.ts';
+import { UsageError } from './errors.ts';
 import { releaseSchemas, SCHEMAS_DST, SKILLS_DST } from './release.ts';
 
 const MANAGED = [

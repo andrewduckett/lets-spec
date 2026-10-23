@@ -6,6 +6,10 @@ import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+// Where a resolver writes its working files, relative to the request's
+// folder: the repo root, whose .workspace/ git ignores.
+export const SCRATCH = '.workspace/lets-delegate';
+
 // timedOut: the command ran past timeoutMs, and was stopped.
 export type ExecResult = { stdout: string; stderr: string; code: number; timedOut?: boolean };
 // input goes to the command's stdin. timeoutMs stops the command when it

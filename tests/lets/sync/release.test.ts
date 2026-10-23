@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { UsageError } from '../../../lets/src/sync/main.ts';
+import { UsageError } from '../../../lets/src/sync/errors.ts';
 import { findRelease, openspecVersionWarning } from '../../../lets/src/sync/release.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
