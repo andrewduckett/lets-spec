@@ -52,24 +52,12 @@ These rules come from lets-spec, and apply to every agent.
 
 ### Domain language
 
-Read the installed shared reference at
-`.agents/skills/lets-shape/references/domain-language.md` when shaping,
-planning, implementing or reviewing. Resolve project vocabulary from the
-planning root: `planningHome.root` for artifacts, `root.path` for apply.
-The shared glossary defaults to `openspec/glossary.md`. Existing free-text
-project context can replace it explicitly:
-
-```yaml
-context: |
-  Shared glossary: docs/requirements/00-glossary.md
-  This replaces the default openspec/glossary.md.
-```
-
-Paths are relative to the planning root. Also load existing ancestor and
-local glossaries under `openspec/specs/<capability-path>/`; nested scopes
-are optional and never silently override shared meanings. Report a missing
-declared target. Confirm meaning and scope before writing agreed terms,
-and preserve domain meaning across code naming and representation choices.
+Read `.agents/skills/lets-shape/references/domain-language.md` before
+shaping, planning, implementing or reviewing. The shared glossary is
+`openspec/glossary.md`, unless the `context` in `openspec/config.yaml`
+names another file. A spec folder may hold its own `glossary.md` for
+narrower meanings. Agree a term's meaning and scope with the user before
+you write it down. Keep that meaning in code names and reviews.
 
 ### Writing
 
