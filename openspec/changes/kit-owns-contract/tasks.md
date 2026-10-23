@@ -8,7 +8,7 @@
 
 ## 2. The whole build [depends-on: 1]
 
-- [ ] 2.1 [medium] Every check passes, and the Nix `lets-cli` output holds one `libexec/lets` file with no `node_modules`, with the pnpm hash in `flake.nix` unchanged (verify: `pnpm test && nix flake check && ! find "$(nix build .#lets-cli --no-link --print-out-paths)" -name node_modules | grep -q .`)
+- [x] 2.1 [medium] Every check passes, and the Nix `lets-cli` output holds one `libexec/lets` file with no `node_modules`, with the pnpm hash in `flake.nix` unchanged (verify: `pnpm test && nix flake check && ! find "$(nix build .#lets-cli --no-link --print-out-paths)" -name node_modules | grep -q .`) (✓ `pnpm test` and `nix flake check` passed; `lets-cli` holds `libexec/lets` and no `node_modules`; this change does not touch `flake.nix`)
 
 ## Deviations Ledger
 
