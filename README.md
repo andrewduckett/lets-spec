@@ -152,72 +152,16 @@ root. Group the specs by application, service or feature, and say in
 `openspec/config.yaml` which code each group describes.
 [Specs in a monorepo](docs/monorepo.md) shows the layout.
 
-## Shared domain language
+## ⚙️ Usage
 
-Agents use agreed domain meanings from shaping through specs, implementation
-and reviews in both flows. The shared rules live in
-[`skills/lets-shape/references/domain-language.md`](skills/lets-shape/references/domain-language.md),
-which both releases ship inside the installed shaping skill. Each step
-loads vocabulary afresh; a review receives the actual glossary paths.
-The minimal flow keeps its existing stages.
+This section is for you once it is set up, and you want to know what to run.
 
-Project vocabulary is yours. The default shared glossary is
-`openspec/glossary.md`. To use an existing glossary instead, declare it in
-OpenSpec's free-text project context:
-
-```yaml
-context: |
-  Shared glossary: docs/requirements/00-glossary.md
-  This replaces the default openspec/glossary.md.
-```
-
-This is a convention for agents, with no new config parser. Resolve paths
-from the planning root, including a selected planning store. A declared
-missing file is reported rather than silently replaced. Nested glossaries
-still supplement the selected shared source: `backend/checkout` reads any
-existing `openspec/specs/backend/glossary.md` and
-`openspec/specs/backend/checkout/glossary.md`. No scope silently overrides
-another, and flat projects need no folders or empty glossary files.
-
-Shaping and brainstorming confirm each new meaning and its narrowest useful
-scope with you, then write it immediately. Unresolved candidates stay
-explicitly tentative in the issue or brainstorm ledger. When a concept
-becomes shared, its definition moves to the common scope with updated
-references. Code can use its language's naming conventions or a different
-representation while preserving the agreed meaning. A contradiction needs
-investigation and discussion before dependent work proceeds.
-
-Shaping checkpoints owned glossary edits on a branch and publishes that
-branch without a PR so another session can recover it. If shaping changed
-vocabulary, you choose which single story PR carries it, or a documentation
-PR when stopping; definitions shared by stories still have one owner.
-The documentation route has its own assigned, In Progress Chore issue and
-creates no OpenSpec implementation change. It follows normal checks and
-your merge decision. Dependent stories retain an explicit prerequisite
-until the owner's definitions are available, including if you decline
-blocker links. Build verifies the recorded checkpoint before claiming and
-imports only its glossary commits.
-
-`lets sync` neither creates nor overwrites these project-owned glossaries.
-Capability retirement reviews and moves still-used definitions or removes
-obsolete entries explicitly; deleting a spec alone leaves its glossary.
-See [the domain-language guide](docs/domain-language.md) for lookup and
-handoff details.
-
-## 📋 The backlog
+### The backlog
 
 The backlog is the GitHub Project linked to your repository. Every piece
-of work is an issue on that Project, and its Kind, Priority, Size and
-Status are Project fields. Three skills work with it.
-
-```mermaid
-%%{init: {"flowchart": {"htmlLabels": false}}}%%
-flowchart LR
-    idea(["A big idea, PRD,<br/>bug or chore"]) --> shape[lets-shape]
-    shape --> issues[("Issues on the<br/>repository's Project")]
-    issues --> build[lets-build]
-    build --> pr(["One pull request<br/>per issue"])
-```
+of work is an issue on it, with its Kind, Priority, Size and Status as
+Project fields. An issue's **packet** is its body, filled in from its
+Kind's template: `lets-shape` writes it, and `lets-build` checks it.
 
 | You want to | Run |
 |---|---|
@@ -228,50 +172,19 @@ flowchart LR
 
 ### `lets-setup-backlog`: create or check the Project
 
-Run it once in a new repository. It looks for the open Project linked to
-the repository:
-
-- **None:** it creates one named after the repository, adds the Kind,
-  Priority and Size fields, and links it.
-- **One:** it checks the Project against
-  [the Project fields](#the-project-fields), and names each gap and its
-  fix. It runs a fix only when you say so.
-- **More than one:** it stops and asks you to unlink the extras. Every
-  backlog skill needs exactly one.
-
-The `gh project` commands need the `project` scope. If `gh` asks for it,
-run `gh auth refresh -s project`.
-
-New issues join the Project when a skill creates them, with
-`gh issue create --project`. Turn on auto-add in the Project's workflows
-only if you also want issues created by hand to join it.
+Run it once in a new repository. It creates and links a Project with
+[the fields below](#the-project-fields), or checks the one that is linked
+and offers to fix each gap. If `gh` asks for the `project` scope, run
+`gh auth refresh -s project`.
 
 ### `lets-shape`: turn an idea into stories
 
-`lets-shape` takes a product requirements document (PRD), a vision, an
-issue or just a conversation, and turns it into a release plan. It never
-writes code and never creates OpenSpec changes. It works in phases, and
-asks you to confirm each one before moving on:
-
-| Phase | What happens | Where the result goes |
-|---|---|---|
-| 1. Ingest | Restates the scope, goals and non-goals | A new parent issue, titled `Epic: <capability>` |
-| 2. Personas | Names the people the work serves | `openspec/discovery.md` |
-| 3. Journey map | Draws each person's path and marks each stage as `supported`, `partial` or `gap`, checked against the code | `openspec/discovery.md` |
-| 4. MoSCoW | Sorts the work into Must, Should, Could and Won't | The parent issue |
-| 5. Stories | Cuts the Must and Should work into thin, end-to-end stories, sized XS to XL, each small enough for one change | Sub-issues of the parent, with "blocked by" links, and their fields on the Project |
-| 6. Finalize | Links the journey to the stories, and hands off to `lets-build` | The parent issue and `openspec/discovery.md` |
-
-`openspec/discovery.md` is a living map that every run updates. Each phase
-is saved as soon as you confirm it, so you can stop and resume later. Run
-`lets-shape` again to revise the plan when priorities change or stories
-ship.
-
-`lets-shape` also shapes one issue on its own. Bring it a bug, a chore or
-a small story, or name an issue that has no packet. It reads the code,
-asks you for each line its Kind's template needs, writes the issue body
-and sets its fields. A chore needs only a one-line outcome. This pass
-never touches `discovery.md`.
+`lets-shape` turns a product requirements document (PRD), a vision, an
+issue or a conversation into a release plan, and never writes code. It
+works in phases: scope, personas, journey map, MoSCoW priorities, then
+thin stories filed as sub-issues with "blocked by" links. It asks you to
+confirm each phase and saves it, so you can stop and resume. Bring it one
+bug, chore or small story, and it shapes just that issue.
 
 ### `lets-build`: build one issue
 
@@ -279,44 +192,20 @@ never touches `discovery.md`.
 
 | You are on | It does |
 |---|---|
-| The default branch, such as `main` | Finds the issue, confirms its packet is complete, routes it to a schema, assigns it to you and sets it In Progress. Then it creates a branch and an OpenSpec change named after the issue, and starts planning. It stops when the plan is ready. |
+| The default branch, such as `main` | Finds the next issue, or the one you name, and checks its packet. Assigns it to you, sets it In Progress, creates a branch and an OpenSpec change named after it, and plans it. It stops when the plan is ready. |
 | A change's branch, plan unfinished | Carries on planning. |
-| A change's branch, plan finished | Builds the tasks, then reviews, verifies and archives the change. It marks the pull request ready for review. |
+| A change's branch, plan finished | Builds the tasks, then reviews, verifies and archives the change, and marks the pull request ready for review. |
 | A branch whose change is archived | Tells you the pull request is ready for review. |
 
-**Finding the issue.** You can name an issue, or describe the work and let
-`lets-build` search for it. Otherwise it takes the next issue: the Todo,
-prioritized, unassigned, unblocked one with the highest priority. Must
-comes first, then Should, then Could. Within a priority, the lowest issue
-number wins. Epics, Won't and issues with no priority are skipped.
-
-**Confirming the packet.** `lets-build` checks that the issue body has
-every line its Kind needs. If one is missing, it stops and asks you to run
-`lets-shape` on the issue. It never writes a packet.
-
-**Routing.** A one-hour change should not walk through seven planning
-steps. So `lets-build` picks a schema for each issue. Top down, the first
-match wins:
-
-| The issue | Schema |
-|---|---|
-| Kind Chore | `lets-minimal` |
-| Size XS or S, and the packet's **Relevant code** says `new` | the flow's schema |
-| Size XS or S, and the parent epic's **Shared decisions** names one this story relies on or creates | the flow's schema |
-| Size XS or S | `lets-minimal` |
-| anything else, including Size unset | the flow's schema |
-
-The flow's schema is the one `openspec/config.yaml` names. Every release
-ships `lets-minimal` too, so the route works in both flows. `lets-build`
-states the route and its reason in one line, and that line goes in the
-proposal's commit message.
-
-You merge the pull request. Agents never merge unless you ask.
+The next issue is the unassigned, unblocked Todo with the highest
+priority. Chores and most XS or S stories use the `lets-minimal` schema;
+[the skill](skills/lets-build/SKILL.md#route) says the exact rule. You
+merge the pull request: agents never merge unless you ask.
 
 ### The Project fields
 
-A Project is a backlog when it has these fields. Extra fields and extra
-options are fine; the skills ignore them.
+A Project is a backlog when it has these fields. Extra fields and options
+are fine; the skills ignore them.
 
 | Field | Type | Options the skills use |
 |---|---|---|
@@ -325,33 +214,19 @@ options are fine; the skills ignore them.
 | Size | single select | XS, S, M, L, XL |
 | Status | single select | Todo, In Progress, Done. These are a new Project's defaults. |
 
-Option names must match exactly, including case. An issue is shaped when
-its Kind, Priority and Size are set. Status Todo says nobody has taken it.
-
-| What happens | Status becomes | Who sets it |
-|---|---|---|
-| A skill creates an issue | Todo, or whatever the Project's item-added workflow sets | `gh issue create --project` |
-| `lets-shape` writes the packet, Kind, Priority and Size | Todo | `lets-shape`, once |
-| A blocker is open, or closes | unchanged | Nobody. While the blocker is open, the "blocked by" link keeps `lets-build` from picking the issue. |
-| `lets-build` claims the issue | In Progress | `lets-build` |
-| The pull request merges, or the issue is closed | Done | The Project's default workflows |
-
-Only `lets-shape` and `lets-build` set Project fields. Agents never set
-one with `gh` by hand. A Project may add options such as Backlog or
-Blocked for its own board; `lets-build` picks only Todo.
+Option names must match exactly, including case. `lets-shape` sets a new
+issue to Todo. `lets-build` sets it In Progress when it claims it. The
+Project's default workflows set it Done when the pull request merges.
 
 > [!IMPORTANT]
 > Put each blocker on the story it blocks, not on the epic. GitHub search
 > cannot see a blocker on a parent issue, so `lets-build` would pick a
 > story that is not ready.
 
-## 🔀 The flows
+### The flows
 
 A flow is an OpenSpec schema and the skills it calls. Each project uses
-one. Both flows start the same way: `lets-build` claims an issue, and the
-agent questions you about it until you agree on what to build. Every
-release also ships the `lets-minimal` schema, so a `standard` project
-routes chores and small stories through it.
+one, and also gets `lets-minimal` for chores and small stories.
 
 | | `standard` | `minimal` |
 |---|---|---|
@@ -359,55 +234,46 @@ routes chores and small stories through it.
 | Planning steps | brainstorm → proposal → specs → design → ADR → review → tasks | brainstorm → specs → tasks |
 | Independent plan review | Yes | No |
 | Building | One commit per task, test-first | One commit per task, test-first |
-| Independent code review | Yes, turned on in `openspec/config.yaml` ([how](#turning-the-code-review-off-or-changing-it)) | No |
+| Independent code review | Yes, a rule in `openspec/config.yaml` ([how](#turning-the-code-review-off)) | No |
 | Skills it adds | `lets-brainstorm`, `lets-write-specs`, `lets-write-adrs`, `lets-write-tasks`, `lets-test-first`, `lets-review-plan`, `lets-review-code` | `lets-brainstorm`, `lets-write-specs`, `lets-write-tasks`, `lets-test-first` |
 
-### `standard`
+The `standard` flow, step by step:
 
 | # | Step | What the agent does | Output |
 |---|---|---|---|
-| 1. | brainstorm | Questions you one at a time about scope, behavior and acceptance, and records each answer and where it came from | `brainstorm.md` |
+| 1. | brainstorm | Questions you one at a time about scope, behavior and acceptance, and records each answer and its source | `brainstorm.md` |
 | 2. | proposal | States why the change is needed and what it changes | `proposal.md` |
 | 3. | specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
 | 4. | design | Explains how to build it, when the change needs that | `design.md` |
-| 5. | ADR | Writes an architecture decision record (ADR) in your project's `docs/decisions/`, only for a choice that is costly to reverse | `adr.md`, plus any new ADRs |
-| 6. | review | A fresh session, from another model family when one is available, reviews the whole plan with `lets-review-plan` | `review.md` |
+| 5. | ADR | Writes an architecture decision record (ADR) in `docs/decisions/`, only for a choice that is costly to reverse | `adr.md`, plus any new ADRs |
+| 6. | review | A fresh session reviews the whole plan with `lets-review-plan` | `review.md` |
 | 7. | tasks | Breaks the work into a checklist | `tasks.md` |
-| 8. | apply | Builds each task test-first: a failing test, then the code. One commit per task. | Commits |
-| 9. | code review | The project's finishing rules ask for a review, so a fresh session, from another model family when one is available, reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
-| 10. | verify, archive | Checks the code matches the plan, then archives the change and its specs | An archive commit |
+| 8. | apply | Builds each task test-first. One commit per task. | Commits |
+| 9. | code review | A fresh session reviews the branch with `lets-review-code` | A **Code review** section in the pull request |
+| 10. | verify, archive | Checks the code matches the plan, then archives the change | An archive commit |
 
-### `minimal`
+A `minimal` change has no `proposal.md`, so `openspec show` fails on it.
+Nothing in the workflow calls `show`.
 
-| # | Step | What the agent does | Output |
-|---|---|---|---|
-| 1. | brainstorm | Writes one line on why the change is needed, then questions you as in `standard` | `brainstorm.md` |
-| 2. | specs | Writes the requirements, each with testable scenarios | `specs/**/spec.md` |
-| 3. | tasks | Breaks the work into a checklist | `tasks.md` |
-| 4. | apply | Builds the tasks in order with test-driven development (TDD): a failing test first, then the code. One commit per task. | Commits |
-| 5. | verify, archive | Checks the code matches the plan, then archives the change | An archive commit |
+#### Turning the code review off
 
-A minimal change has no `proposal.md`, so `openspec show <change>` fails
-on it. Status, validate, list and archive all work, and nothing in the
-workflow calls `show`.
+The code review is the `operations.archive` entry in your project's
+`openspec/config.yaml`, which `lets sync` writes once and never changes.
+Delete the entry to stop code reviews, or edit it to change when they run.
 
-### Turning the code review off or changing it
+### Your project's vocabulary
 
-In the standard flow, the code review is a rule your project owns. It is
-the `operations.archive` entry in `openspec/config.yaml`: OpenSpec's slot
-for a project's rules for finishing a change. `lets-build` follows those
-rules once every task is done, before it verifies and archives the
-change.
+A glossary keeps words meaning the same thing in plans, specs and code.
+The shared one is `openspec/glossary.md`, unless `context` names another:
 
-`lets sync` writes the entry when it creates the file, and never changes
-the file after that. A later Let's Spec release does not update the entry
-in an existing project.
+```yaml
+context: |
+  Shared glossary: docs/requirements/00-glossary.md
+  This replaces the default openspec/glossary.md.
+```
 
-- To stop code reviews, delete the `operations.archive` entry.
-- To change when reviews run, edit the entry's text.
-
-The entry runs the `lets-review-code` skill, so that skill must stay
-installed. It ships with the standard flow only.
+Agents ask you what a new term means, and write it down once you agree;
+`lets sync` never touches a glossary. [Domain language in a project](docs/domain-language.md) says more.
 
 ## 🧵 Fresh sessions
 
