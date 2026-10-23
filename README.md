@@ -153,6 +153,9 @@ enter = "lets sync"
 until `mise upgrade`. To pin an exact release, replace `latest` with
 its number.
 
+Then run `mise lock` and commit `mise.lock`, so every clone and CI get
+the same release.
+
 Pin the OpenSpec CLI to the version the release was generated from. Each
 release names it in its GitHub release notes, and in the `openspec` field
 of its `release.json`. The `openspec-*` skills are generated from that
