@@ -13,7 +13,7 @@
 
 ## 3. The project owner's page [depends-on: 2]
 
-- [ ] 3.1 [medium] Rewrite `docs/domain-language.md` for the project owner, in about 40 lines under the four headings in design.md Decision 4, with a working link to the reference. (verify: `test -f skills/lets-shape/references/domain-language.md && grep -q '](../skills/lets-shape/references/domain-language.md)' docs/domain-language.md`)
+- [x] 3.1 [medium] Rewrite `docs/domain-language.md` for the project owner, in about 40 lines under the four headings in design.md Decision 4, with a working link to the reference. (verify: `test -f skills/lets-shape/references/domain-language.md && grep -q '](../skills/lets-shape/references/domain-language.md)' docs/domain-language.md`) (✓ verify command passed; 48 lines with blanks)
 
 ## 4. Checks [depends-on: 3]
 
