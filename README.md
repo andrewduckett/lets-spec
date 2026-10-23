@@ -931,9 +931,9 @@ git ignore the links. The first run of this version:
 
 That first commit is large. Later updates change only what changed.
 
-`openspec/config.yaml` must now say `schema: lets-standard` or
-`schema: lets-minimal`. If it does not, `lets sync` warns with the value
-to set.
+`openspec/config.yaml` must name your flow's schema, the one the release
+you installed ships as its default. If it does not, `lets sync` warns with
+the value to set.
 
 ## 🛠️ Development
 
