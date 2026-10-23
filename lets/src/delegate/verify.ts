@@ -2,12 +2,11 @@
 // shape part sends requests that start nothing. The live part, with --live,
 // runs a real session and starts another, so it spends tokens and may open
 // a thread. No process access here; everything comes through deps.
-import type { Child, Deps } from '../io.ts';
+import type { Deps } from '../io.ts';
 import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { buildRequest, DECLINE, parseResponse, PROTOCOL } from 'resolver-kit/protocol.ts';
 import type { Responses, Verb } from 'resolver-kit/protocol.ts';
-import { withTimeout } from './wait.ts';
 
 export type VerifyOptions = { command: string[]; live: boolean };
 
@@ -34,11 +33,8 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
   // Runs the resolver with a verb and stdin. code is null when it cannot
   // start, or when it ran past timeoutMs and was stopped.
   async function call(verb: string, input: string, timeoutMs = SHAPE_TIMEOUT_MS): Promise<Call> {
-    const started: { child?: Child } = {};
-    const finished = deps.io.execFile(cmd, [...args, verb], { cwd, input, started: (child) => { started.child = child; } });
-    const result = await withTimeout(deps.io, finished, timeoutMs);
-    if (result !== null) return result;
-    started.child?.kill();
+    const result = await deps.io.execFile(cmd, [...args, verb], { cwd, input, timeoutMs });
+    if (!result.timedOut) return result;
     return { code: null, stdout: '', stderr: `no answer in ${Math.round(timeoutMs / 1000)} seconds, so it was stopped` };
   }
 
