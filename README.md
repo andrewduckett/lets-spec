@@ -746,7 +746,7 @@ nix develop --override-input lets-spec path:/path/to/your/lets-spec/clone
 2. Set the OpenSpec CLI in `mise.toml` to the version named in the new
    release's notes, and run `mise install`.
 3. Run `lets sync`.
-4. Commit `mise.lock` with what `lets sync` wrote.
+4. Commit `mise.toml` and `mise.lock` with what `lets sync` wrote.
 
 ## 🛠️ Development
 
