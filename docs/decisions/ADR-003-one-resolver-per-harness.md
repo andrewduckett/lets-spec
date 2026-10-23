@@ -8,7 +8,7 @@ description: Architecture decision record (ADR) for shipping one resolver progra
 
 # ADR-003: One resolver program per harness, and each answers only inside its own
 
-> One resolver is not tied to a harness. `lets-delegate-cli` opens no harness window, so it answers wherever `codex`, `claude` or `agy` is on `PATH`.
+> One resolver is not tied to a harness. `lets-delegate-cli` opens no harness window, so it answers a review wherever `codex`, `claude` or `agy` is on `PATH`. It declines every handoff.
 
 ## Context
 
