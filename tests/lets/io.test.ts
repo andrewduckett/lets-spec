@@ -19,6 +19,24 @@ test('the real execFile reports the child so a caller can kill it', async () => 
   assert.notEqual((await result).code, 0);
 });
 
+test('the real execFile stops a command that runs past its deadline', async () => {
+  const began = Date.now();
+  const result = await realIo().execFile('sleep', ['30'], { timeoutMs: 200 });
+  assert.equal(result.timedOut, true);
+  assert.ok(Date.now() - began < 10000);
+});
+
+test('the real execFile returns at its deadline when a child of the command keeps its output open', async () => {
+  const began = Date.now();
+  const result = await realIo().execFile('sh', ['-c', '(sleep 30) & sleep 30'], { timeoutMs: 200 });
+  assert.equal(result.timedOut, true);
+  assert.ok(Date.now() - began < 10000);
+});
+
+test('the real execFile reports no timeout for a command that finishes in time', async () => {
+  assert.deepEqual(await realIo().execFile('echo', ['hi'], { timeoutMs: 10000 }), { stdout: 'hi\n', stderr: '', code: 0 });
+});
+
 test('the real execFile runs in the env it is given', async () => {
   const { stdout } = await realIo().execFile('sh', ['-c', 'echo "$ONLY"'], { env: { ONLY: 'this', PATH: process.env.PATH } });
   assert.equal(stdout, 'this\n');
