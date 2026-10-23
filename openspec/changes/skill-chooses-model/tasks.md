@@ -2,7 +2,7 @@
 
 - [x] 1.1 [medium] A `probe` request may carry `verb`, `run` or `start`. `buildRequest('probe', { cwd, verb })` sets it, `parseRequest` rejects any other value with a usage error that names `verb`, the kit's copy of the protocol matches, and `lets delegate verify` sends `verb: 'run'` on its probe (design D-8) (verify: node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts tests/subagent-resolver/subagent.test.ts tests/lets/delegate/verify.test.ts) (✓ node --test tests/lets/delegate/protocol.test.ts tests/resolver-kit/copies.test.ts tests/subagent-resolver/subagent.test.ts tests/lets/delegate/verify.test.ts passed)
 - [x] 1.2 [medium] `guidanceFor(config, intent, path)` returns the string at `delegations.<intent>.guidance`, or `null` when any level is missing. It throws a usage error that names the file and the bad key when `delegations`, the intent's entry or its `guidance` has the wrong type, and it ignores other intents' entries. `parseConfig` keeps `delegations` unchecked (design D-6) (verify: node --test tests/lets/delegate/config.test.ts) (✓ node --test tests/lets/delegate/config.test.ts passed)
-- [ ] 1.3 [easy] `STRATEGIES` in `lets/src/delegate/strategies.ts` maps `review` to the intents `plan` and `code` and the verb `run`, and `handoff` to the intent `apply` and the verb `start` (design D-7) (verify: node --test tests/lets/delegate/strategies.test.ts)
+- [x] 1.3 [easy] `STRATEGIES` in `lets/src/delegate/strategies.ts` maps `review` to the intents `plan` and `code` and the verb `run`, and `handoff` to the intent `apply` and the verb `start` (design D-7) (verify: node --test tests/lets/delegate/strategies.test.ts) (✓ node --test tests/lets/delegate/strategies.test.ts passed)
 
 ## 2. Resolvers [depends-on: 1]
 
