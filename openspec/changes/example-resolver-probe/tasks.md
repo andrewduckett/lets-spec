@@ -8,7 +8,7 @@
 
 - [x] 2.1 [medium] `lets delegate verify` sends a second probe, with `"verb":"start"`, and reports it on its own line: `ok` when it exits 75 with nothing on stdout, or exits 0 with a `resolver` and valid `options`; `FAIL` naming `options` for `{"resolver":"x"}`, and `FAIL` for a 75 that prints. The fake resolver fixture gains a setting keyed on the probe's `verb`, such as `FAKE_RESOLVER_EXIT_PROBE_START`, so a test can answer the two probes differently (verify: node --test tests/lets/delegate/verify.test.ts) (✓ node --test tests/lets/delegate/verify.test.ts passed)
 - [x] 2.2 [medium] With `--live`, the line `a resolver that declines start also declines its probe` fails when `start` exits 75 and the probe for `start` exited 0, and passes when both decline or both answer; without `--live` the line does not print. The existing test of a declined live `start` also declines the probe for `start`, and still exits 0 (verify: node --test tests/lets/delegate/verify.test.ts) (✓ node --test tests/lets/delegate/verify.test.ts passed)
-- [ ] 2.3 [easy] With `--live`, the `start` request names the first option from the probe for `start`, and `claude` when that probe was declined, failed its check or listed none (verify: node --test tests/lets/delegate/verify.test.ts)
+- [x] 2.3 [easy] With `--live`, the `start` request names the first option from the probe for `start`, and `claude` when that probe was declined, failed its check or listed none (verify: node --test tests/lets/delegate/verify.test.ts) (✓ node --test tests/lets/delegate/verify.test.ts passed)
 
 ## 3. Contract and integration
 

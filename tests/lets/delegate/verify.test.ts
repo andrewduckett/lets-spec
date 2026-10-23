@@ -207,6 +207,32 @@ test('the probe match is part of the live check only', async () => {
   assert.doesNotMatch(t.output(), /a resolver that declines start also declines its probe/);
 });
 
+// The model of the live start request, with the probes answering as settings say.
+async function liveStartModel(settings: Record<string, string>) {
+  const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');
+  const t = setup({ FAKE_RESOLVER_LOG: log, FAKE_RESOLVER_STDOUT_PROBE_RUN: JSON.stringify({ resolver: 'fake', options: ['gpt/gpt-6-luna'] }), ...settings });
+  await run({ command: [fixture('fake-resolver')], live: true }, t.deps);
+  const start = readFileSync(log, 'utf8').split('\n').find((line) => line.startsWith('start\t'))!;
+  return JSON.parse(start.split('\t')[1]).model;
+}
+
+test('the live start names the first option from the probe for start', async () => {
+  const options = JSON.stringify({ resolver: 'fake', options: ['gemini/gemini-3.8-flash', 'claude'] });
+  assert.equal(await liveStartModel({ FAKE_RESOLVER_STDOUT_PROBE_START: options }), 'gemini/gemini-3.8-flash');
+});
+
+test('the live start names claude when the probe for start was declined', async () => {
+  assert.equal(await liveStartModel({ FAKE_RESOLVER_EXIT_PROBE_START: '75', FAKE_RESOLVER_STDOUT_PROBE_START: '' }), 'claude');
+});
+
+test('the live start names claude when the probe for start failed its check', async () => {
+  assert.equal(await liveStartModel({ FAKE_RESOLVER_STDOUT_PROBE_START: '{"resolver":"x"}' }), 'claude');
+});
+
+test('the live start names claude when the probe for start listed none', async () => {
+  assert.equal(await liveStartModel({ FAKE_RESOLVER_STDOUT_PROBE_START: '{"resolver":"fake","options":[]}' }), 'claude');
+});
+
 test('arguments after the command go before the verb', async () => {
   const t = setup();
   assert.equal(await run({ command: [process.execPath, SUBAGENT], live: false }, t.deps), 0, t.output());

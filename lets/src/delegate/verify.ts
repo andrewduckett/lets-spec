@@ -17,7 +17,7 @@ const LIVE_RUN_MINUTES = 5;
 const LIVE_TIMEOUT_MS = (LIVE_RUN_MINUTES + 1) * 60000;
 const NAME = 'lets-verify';
 const NEVER_ISSUED = { kind: 'lets-verify', id: 'never-issued' };
-// The model a live start runs when the resolver lists none.
+// The model a live start runs when the probe for start lists none.
 const START_MODEL = 'claude';
 
 type Call = { code: number | null; stdout: string; stderr: string };
@@ -108,7 +108,10 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
     // A resolver that only runs headless declines start, and the next
     // resolver in the chain answers the handoff.
-    const startRequest = buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.', model: options[0] ?? START_MODEL });
+    // It names a model the probe for start listed, as a handoff would.
+    const startListed = parsed('probe', probedStart);
+    const startModel = (typeof startListed === 'string' ? undefined : startListed.options[0]) ?? START_MODEL;
+    const startRequest = buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.', model: startModel });
     const started = await call('start', JSON.stringify(startRequest));
     const declined = started.code === DECLINE;
     const answer = declined ? silent(started) : parsed('start', started);
