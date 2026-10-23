@@ -36,7 +36,7 @@ the planning rules drifts. Let's Spec keeps one copy for all. It aims to:
 
 - **Plan before code.** Every change starts with a brainstorm with you.
 - **Keep work small.** One story is one change, branch and pull request.
-- **Get a second opinion.** Another model family reviews plans and code.
+- **Get a second opinion.** In `standard`, another family reviews the work.
 - **Share one backlog.** Sessions claim a story, so none builds it twice.
 - **Update every project at once.** One pin moves skills, schema and rules.
 
