@@ -1,7 +1,7 @@
 ## 1. The rules block
 
 - [x] 1.1 [easy] Add a test to `tests/sync-rules.bats`: the synced rules block has no "readiness", no `planningHome.root`, no `root.path` and no "narrow exception", and it names "Kind, Priority, Size and Status" and `.agents/skills/lets-shape/references/domain-language.md`. It fails against today's block. (verify: `! bats tests/sync-rules.bats --filter 'plain'`) (✓ `! bats tests/sync-rules.bats --filter 'plain'` passed: the test fails on "readiness")
-- [ ] 1.2 [easy] In `overlays/AGENTS.md`, cut the glossary documentation exception from the OpenSpec rule and the backlog rule, and name the fields Kind, Priority, Size and Status, as design.md Decision 1 says. (verify: `bats tests/sync-rules.bats`)
+- [x] 1.2 [easy] In `overlays/AGENTS.md`, cut the glossary documentation exception from the OpenSpec rule and the backlog rule, and name the fields Kind, Priority, Size and Status, as design.md Decision 1 says. (verify: `bats tests/sync-rules.bats`) (✓ `bats tests/sync-rules.bats`: 16 of 17 passed; the plain test fails only on `planningHome.root`, which 1.3 removes. See the ledger.)
 - [ ] 1.3 [easy] In `overlays/AGENTS.md`, replace "Domain language" with the five sentences in design.md Decision 1. The test from 1.1 passes. (verify: `bats tests/sync-rules.bats --filter 'plain'`)
 
 ## 2. The skills [depends-on: 1]
@@ -20,3 +20,5 @@
 - [ ] 4.1 [medium] Run the project's full checks, and fix what they report. (verify: `pnpm test && nix flake check`)
 
 ## Deviations Ledger
+
+- 1.2: its verify command runs the whole of `tests/sync-rules.bats`, which includes the test from 1.1. That test can only pass after 1.3, so 1.2 was ticked with 16 of 17 passing, and the one failure on a 1.3 term.
