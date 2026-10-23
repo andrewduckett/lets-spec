@@ -194,7 +194,7 @@ bug, chore or small story, and it shapes just that issue.
 |---|---|
 | The default branch, such as `main` | Finds the next issue, or the one you name, and checks its packet. Assigns it to you, sets it In Progress, creates a branch and an OpenSpec change named after it, and plans it. It stops when the plan is ready. |
 | A change's branch, plan unfinished | Carries on planning. |
-| A change's branch, plan finished | Builds the tasks, then reviews, verifies and archives the change, and marks the pull request ready for review. |
+| A change's branch, plan finished | Builds the tasks. In `standard`, it then has the code reviewed. It verifies and archives the change, and marks the pull request ready for review. |
 | A branch whose change is archived | Tells you the pull request is ready for review. |
 
 The next issue is the unassigned, unblocked Todo with the highest
