@@ -8,6 +8,8 @@ description: Architecture decision record (ADR) for shipping one resolver progra
 
 # ADR-003: One resolver program per harness, and each answers only inside its own
 
+> One resolver is not tied to a harness. `lets-delegate-cli` opens no harness window, so it answers wherever `codex`, `claude` or `agy` is on `PATH`.
+
 ## Context
 
 `lets delegate` hands a review or a handoff to a resolver: a program that turns a request into a real session in the harness the user works in, such as T3 Code or herdr. Resolvers speak a small JSON protocol, and a resolver can decline a request with exit 75 so that `lets` asks the next one. This repository used to ship one resolver for both harnesses. It looked at the process it ran in and picked T3 Code, then herdr, at run time. So everyone installed code for both harnesses, and a reader had to follow two adapters behind one switch to understand either. Adding a harness meant editing a program that every user of the other harnesses also runs.
