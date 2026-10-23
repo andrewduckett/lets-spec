@@ -160,8 +160,8 @@ To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
 Here is a complete one in `sh`,
 [`contrib/headless-resolver`](../contrib/headless-resolver). It runs `claude`
-headless and read-only. It declines `start`, so the default,
-`lets-delegate-subagent`, handles handoffs.
+headless and read-only. It declines `start`, and it declines a probe
+for `start`, so the default, `lets-delegate-subagent`, handles handoffs.
 
 ```sh
 #!/bin/sh
@@ -178,7 +178,11 @@ fi
 field() { printf '%s' "$request" | jq -r ".$1"; }
 
 case "$1" in
-  probe) echo '{"resolver":"headless-sh","options":["claude"]}' ;;
+  probe)
+    # It declines start, so it declines a probe for start too, and the
+    # handoff probes the next resolver in the chain.
+    [ "$(field verb)" = start ] && { echo "headless-resolver: this resolver only runs headless" >&2; exit 75; }
+    echo '{"resolver":"headless-sh","options":["claude"]}' ;;
   run)
     model=$(field model)
     case "$model" in
@@ -216,8 +220,11 @@ Run the verify check against yours until it passes:
 lets delegate verify <your resolver>
 ```
 
-It sends requests that start nothing. Add `--live` to also run a short
-session and start another. That spends tokens, and may open a thread. A
-resolver that only runs headless may decline `start` with exit 75 and
-nothing on stdout: the check passes it, and says the next resolver in the
-chain answers handoffs.
+It sends requests that start nothing. It probes for `start` as well as
+`run`, and checks each answer on its own line. Add `--live` to also run a
+short session and start another. That spends tokens, and may open a
+thread. A resolver that only runs headless may decline `start` with exit
+75 and nothing on stdout: the check passes it, and says the next resolver
+in the chain answers handoffs. A resolver that declines `start` but
+answers its probe for `start` fails, because a handoff would pick it and
+get no session.

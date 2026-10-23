@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // A resolver for tests, driven by environment variables. Each may end in
 // _<VERB>, such as FAKE_RESOLVER_EXIT_FINISH, to apply to one verb only.
+// For a probe, _PROBE_<VERB>, such as FAKE_RESOLVER_EXIT_PROBE_START, applies
+// to the probe for that verb only, ahead of _PROBE.
 //
 //   FAKE_RESOLVER_STDOUT    what to print; default, a valid response for the verb
 //   FAKE_RESOLVER_STDERR    what to print on stderr
@@ -11,10 +13,21 @@
 //                           refuses with exit 3 and "refused <model>" on stderr
 //   FAKE_RESOLVER_LOG       a file to append one line per call to: the
 //                           verb, a tab, and the request as read
+//   FAKE_RESOLVER_STRICT    when set, a request that is not protocol 2 JSON
+//                           exits 2, and finish prints nothing, so the fake
+//                           keeps the shape of the contract
 const { appendFileSync } = await import('node:fs');
 
 const verb = process.argv[2] ?? '';
-const setting = (name) => process.env[`FAKE_RESOLVER_${name}_${verb.toUpperCase()}`] ?? process.env[`FAKE_RESOLVER_${name}`];
+let input = '';
+for await (const chunk of process.stdin) input += chunk;
+// The verb a probe is for, when its request says.
+const probeFor = (() => {
+  if (verb !== 'probe') return '';
+  try { return String(JSON.parse(input).verb ?? ''); } catch { return ''; }
+})();
+const setting = (name) => (probeFor ? process.env[`FAKE_RESOLVER_${name}_PROBE_${probeFor.toUpperCase()}`] : undefined)
+  ?? process.env[`FAKE_RESOLVER_${name}_${verb.toUpperCase()}`] ?? process.env[`FAKE_RESOLVER_${name}`];
 
 const RESPONSES = {
   probe: { resolver: 'fake', options: ['gpt/fake-model'] },
@@ -23,11 +36,16 @@ const RESPONSES = {
   finish: {},
 };
 
-let input = '';
-for await (const chunk of process.stdin) input += chunk;
 if (process.env.FAKE_RESOLVER_LOG) appendFileSync(process.env.FAKE_RESOLVER_LOG, `${verb}\t${input.replace(/\n/g, ' ')}\n`);
 const sleepMs = Number(setting('SLEEP_MS') ?? 0);
 if (sleepMs > 0) await new Promise((resolve) => setTimeout(resolve, sleepMs));
+
+if (process.env.FAKE_RESOLVER_STRICT) {
+  let request;
+  try { request = JSON.parse(input); } catch { process.exit(2); }
+  if (request.protocol !== 2) process.exit(2);
+  if (verb === 'finish') process.exit(0);
+}
 
 if ((verb === 'run' || verb === 'start') && (setting('REFUSE') ?? '').split(',').includes(JSON.parse(input).model)) {
   process.stderr.write(`refused ${JSON.parse(input).model}\n`);

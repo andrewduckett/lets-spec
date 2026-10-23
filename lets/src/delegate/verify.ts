@@ -17,7 +17,7 @@ const LIVE_RUN_MINUTES = 5;
 const LIVE_TIMEOUT_MS = (LIVE_RUN_MINUTES + 1) * 60000;
 const NAME = 'lets-verify';
 const NEVER_ISSUED = { kind: 'lets-verify', id: 'never-issued' };
-// The model a live start runs when the resolver lists none.
+// The model a live start runs when the probe for start lists none.
 const START_MODEL = 'claude';
 
 type Call = { code: number | null; stdout: string; stderr: string };
@@ -63,6 +63,9 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
   const probed = await call('probe', probe());
   report('probe answers { resolver, options } or declines with 75', checkProbe(probed));
+  // A probe for start, as a handoff sends it.
+  const probedStart = await call('probe', probe({ verb: 'start' }));
+  report('probe for start answers { resolver, options } or declines with 75', checkProbe(probedStart));
   report('an unknown verb exits 2', exits(await call('lets-verify-verb', probe()), [2]));
   report('a request that is not JSON exits 2', exits(await call('probe', 'not json'), [2]));
   report(`protocol 99 exits 2 (this is protocol ${PROTOCOL})`, exits(await call('probe', probe({ protocol: 99 })), [2]));
@@ -105,11 +108,18 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
 
     // A resolver that only runs headless declines start, and the next
     // resolver in the chain answers the handoff.
-    const startRequest = buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.', model: options[0] ?? START_MODEL });
+    // It names a model the probe for start listed, as a handoff would.
+    const startListed = parsed('probe', probedStart);
+    const startModel = (typeof startListed === 'string' ? undefined : startListed.options[0]) ?? START_MODEL;
+    const startRequest = buildRequest('start', { cwd, name: NAME, prompt: 'Say hello and stop.', model: startModel });
     const started = await call('start', JSON.stringify(startRequest));
     const declined = started.code === DECLINE;
     const answer = declined ? silent(started) : parsed('start', started);
     report('start answers with a handle or instructions, or declines', typeof answer === 'string' ? answer : null);
+    // A handoff takes the first resolver whose probe for start answers, so
+    // one that answers the probe and then declines start leaves it with none.
+    report('a resolver that declines start also declines its probe', declined && probedStart.code === 0
+      ? 'its probe for start answered, so a handoff picks it and then gets no session' : null);
     if (declined && answer === null) {
       deps.stdout('      it declined start; the next resolver in the chain answers handoffs\n');
     } else if (answer !== null && typeof answer !== 'string') {

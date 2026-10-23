@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -193,6 +193,18 @@ test('review instructions --for plan prints one JSON line', async () => {
   const { code, stdout } = await letsIn(r, 'delegate', 'review', 'instructions', '--for', 'plan');
   assert.equal(code, 0);
   assert.deepEqual(JSON.parse(stdout), { strategy: 'review', for: 'plan', resolver: 'fake', options: ['gpt/fake-model'], guidance: null });
+});
+
+test('handoff instructions pass over the sh example to subagent', async () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'lets-cli-'));
+  execFileSync('git', ['init', '--quiet'], { cwd });
+  const config = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
+  const example = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+  mkdirSync(join(config, 'lets-delegate'));
+  writeFileSync(join(config, 'lets-delegate', 'config.yaml'), `version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
+  const { code, stdout } = await letsIn({ cwd, env: { XDG_CONFIG_HOME: config, LETS_SPEC_RESOLVER: '' } }, 'delegate', 'handoff', 'instructions', '--for', 'apply');
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(stdout).resolver, 'subagent');
 });
 
 test('each strategy\'s --help names its intents', async () => {
