@@ -105,14 +105,7 @@ export function realIo(): Io {
     homedir: () => homedir(),
 
     pid: process.pid,
-    parentPid(pid) {
-      try {
-        const match = readFileSync(`/proc/${pid}/status`, 'utf8').match(/^PPid:\s+(\d+)$/m);
-        return match ? Number(match[1]) : null;
-      } catch {
-        return null;
-      }
-    },
+    parentPid: (pid) => parentPid(pid),
     processAlive(pid) {
       try {
         process.kill(pid, 0);

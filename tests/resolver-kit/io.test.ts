@@ -58,3 +58,7 @@ test('with /proc, parentPid gives null for a process that has exited, and runs n
 test('parentPid gives null when ps prints nothing, or something that is not a number', () => {
   for (const ps of ['', '\n', 'ppid\n', '7 8\n', '-1\n']) assert.equal(parentPid(42, fakeSys({ ps })), null, JSON.stringify(ps));
 });
+
+test('realIo finds this process\'s parent', () => {
+  assert.equal(realIo().parentPid(process.pid), process.ppid);
+});
