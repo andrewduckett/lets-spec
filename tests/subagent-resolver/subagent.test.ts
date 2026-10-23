@@ -17,6 +17,18 @@ test('probe outside any harness answers subagent with no options', async () => {
   assert.deepEqual(await ask(io, 'probe', buildRequest('probe', { cwd: '/r' })), { code: 0, stdout: '{"resolver":"subagent","options":[]}\n', stderr: '' });
 });
 
+test('probe for start answers subagent with no options', async () => {
+  const io = fakeIo({ env: {} });
+  assert.deepEqual(await ask(io, 'probe', buildRequest('probe', { cwd: '/r', verb: 'start' })), { code: 0, stdout: '{"resolver":"subagent","options":[]}\n', stderr: '' });
+});
+
+test('probe for an unknown verb exits 2 with nothing on stdout, naming verb', async () => {
+  const answer = await ask(fakeIo({ env: {} }), 'probe', { protocol: 2, cwd: '/r', verb: 'finish' });
+  assert.equal(answer.code, 2);
+  assert.equal(answer.stdout, '');
+  assert.match(answer.stderr, /verb/);
+});
+
 test('run exits 3 with nothing on stdout', async () => {
   const answer = await ask(fakeIo(), 'run', runRequest());
   assert.equal(answer.code, 3);

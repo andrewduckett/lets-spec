@@ -43,7 +43,13 @@ export function parseModel(text: string): Model | null {
   return model !== '' && !/\s/.test(model) ? { family: family as Family, model } : null;
 }
 
-export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string };
+// The session verbs a probe may ask about.
+export const SESSION_VERBS = ['run', 'start'] as const;
+export type SessionVerb = (typeof SESSION_VERBS)[number];
+
+// verb: the session verb the probe is for. A resolver may decline a probe
+// for a verb it would decline. With no verb, it answers for either.
+export type ProbeRequest = { protocol: typeof PROTOCOL; cwd: string; verb?: SessionVerb };
 export type RunRequest = {
   protocol: typeof PROTOCOL; cwd: string; name: string; prompt: string; sourceFamily: Family;
   readOnly: true; interactive: false; effort: Effort; timeoutMinutes: number; model: ModelString;
@@ -65,14 +71,14 @@ export type Response = Responses[Verb];
 
 // What a caller gives buildRequest: the request without what the verb sets.
 export type Fields = {
-  probe: { cwd: string };
+  probe: { cwd: string; verb?: SessionVerb };
   run: { cwd: string; name: string; prompt: string; sourceFamily: Family; effort: Effort; timeoutMinutes?: number; model: ModelString };
   start: { cwd: string; name: string; prompt: string; model: ModelString };
   finish: { cwd: string; handle: Handle; ok: boolean };
 };
 
 const builders: { [V in Verb]: (fields: Fields[V]) => Requests[V] } = {
-  probe: ({ cwd }) => ({ protocol: PROTOCOL, cwd }),
+  probe: ({ cwd, verb }) => (verb === undefined ? { protocol: PROTOCOL, cwd } : { protocol: PROTOCOL, cwd, verb }),
   run: ({ cwd, name, prompt, sourceFamily, effort, timeoutMinutes, model }) => ({
     protocol: PROTOCOL, cwd, name, prompt, sourceFamily, readOnly: true, interactive: false, effort,
     timeoutMinutes: timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES[effort], model,
@@ -97,6 +103,7 @@ export function parseRequest(verb: string, text: string): Request {
   }
   const check = checker(request, 'the request', (message) => new UsageError(message));
   check.absolutePath('cwd');
+  if (verb === 'probe' && request.verb !== undefined) check.oneOf('verb', SESSION_VERBS);
   if (verb === 'run' || verb === 'start') {
     check.name('name');
     check.text('prompt');

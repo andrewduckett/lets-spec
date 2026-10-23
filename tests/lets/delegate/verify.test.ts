@@ -60,6 +60,14 @@ test('a probe answer without options fails the probe check, naming options', asy
   assert.match(t.output(), /^FAIL {2}probe answers.*options/m);
 });
 
+test('the probe asks for run', async () => {
+  const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');
+  const t = setup({ FAKE_RESOLVER_LOG: log });
+  await run({ command: [fixture('fake-resolver')], live: false }, t.deps);
+  const first = readFileSync(log, 'utf8').split('\n').find((line) => line.startsWith('probe\t'))!;
+  assert.equal(JSON.parse(first.split('\t')[1]).verb, 'run');
+});
+
 // The models of the live run requests, in order, with the probe answering options.
 async function liveRuns(options: string[], settings: Record<string, string> = {}) {
   const log = join(mkdtempSync(join(tmpdir(), 'lets-verify-log-')), 'calls');

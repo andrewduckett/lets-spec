@@ -57,7 +57,9 @@ export async function run({ command, live }: VerifyOptions, deps: Deps): Promise
       return EXIT.usage;
     }
   }
-  const probe = (fields = {}) => JSON.stringify({ ...buildRequest('probe', { cwd }), ...fields });
+  // A probe for run, as a review sends it, so the live run sees the options
+  // a review would.
+  const probe = (fields = {}) => JSON.stringify({ ...buildRequest('probe', { cwd, verb: 'run' }), ...fields });
 
   const probed = await call('probe', probe());
   report('probe answers { resolver, options } or declines with 75', checkProbe(probed));

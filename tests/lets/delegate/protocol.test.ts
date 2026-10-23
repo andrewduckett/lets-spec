@@ -68,6 +68,23 @@ test('parseRequest accepts what buildRequest builds', () => {
   }
 });
 
+test('buildRequest sets a probe\'s verb when given', () => {
+  assert.deepEqual(buildRequest('probe', { cwd: '/r', verb: 'start' }), { protocol: 2, cwd: '/r', verb: 'start' });
+});
+
+test('parseRequest accepts a probe for run or start', () => {
+  for (const verb of ['run', 'start']) {
+    const request = { protocol: 2, cwd: '/r', verb };
+    assert.deepEqual(parseRequest('probe', JSON.stringify(request)), request);
+  }
+});
+
+test('parseRequest rejects a probe for any other verb, naming verb', () => {
+  for (const verb of ['finish', 'probe', '', 7, null]) {
+    throwsWith(() => parseRequest('probe', JSON.stringify({ protocol: 2, cwd: '/r', verb })), UsageError, /verb/);
+  }
+});
+
 test('parseRequest rejects text that is not one JSON object', () => {
   throwsWith(() => parseRequest('probe', 'not json'), UsageError, /not JSON/);
   throwsWith(() => parseRequest('probe', '[1]'), UsageError, /not a JSON object/);
