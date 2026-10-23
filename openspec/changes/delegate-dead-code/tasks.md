@@ -12,7 +12,7 @@
 
 ## 3. C9: no unreachable guards
 
-- [ ] 3.1 [easy] `verify.ts` has no check for a missing resolver command, and `resolveWithModels` in `lookup.ts` has no check for an empty model list. Commander rejects both first. Add no tests (D5) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check)
+- [x] 3.1 [easy] `verify.ts` has no check for a missing resolver command, and `resolveWithModels` in `lookup.ts` has no check for an empty model list. Commander rejects both first. Add no tests (D5) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check) (✓ node --test and pnpm check passed)
 
 ## 4. C10: the default resolver is checked once
 

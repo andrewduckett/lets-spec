@@ -131,7 +131,6 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
 export async function resolveWithModels<V extends 'run' | 'start'>(
   verb: V, requestFor: (model: string) => Requests[V], models: string[], deps: LookupDeps,
 ) {
-  if (models.length === 0) throw new UsageError('give at least one model');
   const refusals: string[] = [];
   const refused = (model: string, stderr: string) => refusals.push(`${model}: ${stderr.trim().split('\n').at(-1) || 'refused'}`);
   let [model] = models;

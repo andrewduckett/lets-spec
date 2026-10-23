@@ -25,10 +25,6 @@ type Call = { code: number | null; stdout: string; stderr: string };
 // The exit code: 0 when every check passes, 1 when one fails, 2 usage.
 export async function run({ command, live }: VerifyOptions, deps: Deps): Promise<number> {
   const [cmd, ...args] = command;
-  if (cmd === undefined) {
-    deps.stderr('lets delegate: verify needs a resolver command\n');
-    return EXIT.usage;
-  }
   let failures = 0;
   const report = (name: string, failure: string | null) => {
     if (failure !== null) failures++;
