@@ -4,13 +4,12 @@
 // stands in for the chain. The first that does not decline answers. Nothing
 // is looked up on PATH. No process access here; everything comes through io.
 import { join, resolve as resolvePath } from 'node:path';
-import type { Child, Deps, Io } from '../io.ts';
+import type { Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
 import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
 import { DECLINE, exitFor, parseResponse } from 'resolver-kit/protocol.ts';
 import type { Requests, Responses, Verb } from 'resolver-kit/protocol.ts';
-import { withTimeout } from './wait.ts';
 
 // The default resolver, relative to the folder lets runs from.
 export const DEFAULT_RESOLVER = 'contrib/lets-delegate-subagent';
@@ -61,13 +60,8 @@ export async function callResolver<V extends Verb>(
   // name, not command, in messages: the default's command is Node.
   const { name, command, args = [] } = candidate;
   const failed = (code: number, stderr: string) => ({ code, response: null, stderr });
-  const started: { child?: Child } = {};
-  const finished = io.execFile(command, [...args, verb], {
-    cwd: request.cwd, input: JSON.stringify(request), started: (child) => { started.child = child; },
-  });
-  const result = await withTimeout(io, finished, timeoutMs);
-  if (result === null) {
-    started.child?.kill();
+  const result = await io.execFile(command, [...args, verb], { cwd: request.cwd, input: JSON.stringify(request), timeoutMs });
+  if (result.timedOut) {
     const wait = timeoutMs >= 60000 ? `${Math.round(timeoutMs / 60000)} minutes` : `${Math.round(timeoutMs / 1000)} seconds`;
     return failed(EXIT.timeout, `${name} did not answer ${verb} in ${wait}, so it was stopped.`);
   }

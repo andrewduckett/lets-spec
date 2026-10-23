@@ -235,11 +235,11 @@ test('a resolver past the timeout is killed and reported as exit 6', async () =>
 });
 
 test('the backstop for run is the session timeout plus one minute', async () => {
-  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [new Promise(() => {})] });
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '', stderr: '', code: 1, timedOut: true }] });
   const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
+  assert.equal(io.calls[0][2].timeoutMs, 16 * 60000);
   assert.equal(outcome.code, 6);
-  assert.deepEqual(io.sleeps, [16 * 60000]);
-  assert.deepEqual(io.killed, [4242]);
+  assert.match(outcome.stderr, /did not answer run in 16 minutes, so it was stopped/);
 });
 
 test('a default that fails puts the install message before its own stderr', async () => {
