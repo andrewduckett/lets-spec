@@ -48,3 +48,9 @@ test('with no /proc, parentPid asks ps, and trims what it prints', () => {
   assert.equal(parentPid(42, sys), 7);
   assert.deepEqual(sys.calls, [['ps', '-o', 'ppid=', '-p', '42']]);
 });
+
+test('with /proc, parentPid gives null for a process that has exited, and runs no ps', () => {
+  const sys = fakeSys({ files: { '/proc/self': '' }, ps: '7\n' });
+  assert.equal(parentPid(42, sys), null);
+  assert.deepEqual(sys.calls, []);
+});
