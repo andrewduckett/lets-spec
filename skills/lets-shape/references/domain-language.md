@@ -65,10 +65,11 @@ Reconcile distinct meanings before promotion; a similar word is not proof
 of a shared concept. Never put glossary deltas under a change's `specs/`
 folder: they can count as artifact output but archive does not merge them.
 
-Shaping follows its checkpoint and glossary handoff procedure to preserve
-owned edits and select exactly one PR owner. Brainstorming commits agreed
-glossary changes on the current change branch as their own `docs:` unit
-(in the planning repository when separate). Protect preexisting user edits.
+The `lets-shape` skill owns the handoff of glossary edits made while
+shaping, and picks the one pull request that carries them. A brainstorm
+commits an agreed definition on the current change branch as its own
+`docs:` commit, in the planning store when it is separate. Keep any
+glossary edits the user made before you started.
 
 ## Preserve meaning through implementation and review
 
