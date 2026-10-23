@@ -640,10 +640,7 @@ The default starts no session, and picks no model family. For a review,
 it runs nothing: `lets delegate review run` exits 3, and the review skill
 runs a subagent. For a handoff, it writes the prompt to
 `.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
-and that path for you to start any agent in the repository with. The
-JSON line that `lets delegate handoff run` prints has `"resolver":"subagent"`.
-Before this release it said `"default"`, so update any script that
-matches on it.
+and that path for you to start any agent in the repository with.
 
 If that file is missing or Node cannot run it, `lets delegate` exits 4
 and says the `lets` install is incomplete. Reinstall `lets`.
@@ -673,21 +670,6 @@ first, then `lets-delegate-cli`, then `subagent`.
 declines when none of its CLIs is on your `PATH`. So the first one that
 fits where you work answers. A handoff outside T3 Code falls through to
 `subagent`, which gives you the prompt to start any agent with.
-
-#### Switching from lets-delegate-resolver
-
-`lets-delegate-resolver`, which served both harnesses, is gone, and `lets`
-no longer looks on your `PATH` for it. Install the resolver for your
-harness in its place, then list its path in your
-[delegate config](#set-up-delegation). Until you do, reviews fall to the
-default, `lets-delegate-subagent`.
-
-| You installed it with | Do this |
-|---|---|
-| home-manager | Change `lets-delegate-resolver` to `lets-delegate-t3` or `lets-delegate-cli` in `home.packages` |
-| A Nix profile | Run `nix profile remove lets-delegate-resolver`, then `nix profile add github:sidereal-io/lets-spec#lets-delegate-t3`, or `#lets-delegate-cli` |
-| mise | Remove the `lets-delegate-resolver` link from `~/.local/bin`, and link `contrib/lets-delegate-t3` or `contrib/lets-delegate-cli` from the release folder |
-| A checkout of this repo | Link `contrib/t3-resolver/bin/lets-delegate-t3` or `contrib/cli-resolver/bin/lets-delegate-cli` instead |
 
 ### Write your own resolver
 
@@ -754,6 +736,10 @@ environment and its exit codes.
 Commit what `lets sync` writes in the same pull request as the new pin.
 That pull request then holds the pin, the rules and the skills together.
 
+If you are moving up from an older release, read
+[`docs/upgrading.md`](docs/upgrading.md) first: some releases need a step
+of your own.
+
 ### With Nix
 
 Dependabot's `nix` entry opens a pull request when `main` moves here. To
@@ -787,40 +773,6 @@ together:
 - the OpenSpec CLI, to the version named in the new release's notes
 
 Then run `mise install`, run `lets sync`, and commit what it wrote.
-
-### From 0.1: `lets-sync` is now `lets sync`
-
-Version 0.1 had a command named `lets-sync`. It is now `lets sync`, and it
-needs Node 26.
-
-With mise, change these two lines in your project's `mise.toml` when you
-move the pin:
-
-```toml
-node = "26"           # was "24"
-enter = "lets sync"   # was "lets-sync"
-```
-
-Until you change the hook, entering the project fails with "command not
-found", and nothing is synced.
-
-With Nix and the flake module, change nothing but the pin. If your own
-shell hook or CI runs `lets-sync`, change it to `lets sync`.
-
-### From a version that linked the skills
-
-Older versions of Let's Spec linked the skills into the project, and had
-git ignore the links. The first run of this version:
-
-- replaces each link with a copy of the files
-- removes the section the old version kept in git's local exclude file
-- asks you to commit
-
-That first commit is large. Later updates change only what changed.
-
-`openspec/config.yaml` must name your flow's schema, the one the release
-you installed ships as its default. If it does not, `lets sync` warns with
-the value to set.
 
 ## 🛠️ Development
 
