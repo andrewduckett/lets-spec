@@ -236,6 +236,9 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      resolver-kit:
+        specifier: workspace:*
+        version: link:../contrib/resolver-kit
 
 packages:
 
