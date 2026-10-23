@@ -95,12 +95,8 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
       }
       return { stdout: '', stderr: 'fatal: not a git repository', code: 128 };
     },
-    commandExists: () => false,
     isExecutable: () => false,
     homedir: () => '/home/u',
-    pid: 4242,
-    parentPid: () => null,
-    processAlive: () => false,
     now: () => 0,
     sleep: async () => {},
   };

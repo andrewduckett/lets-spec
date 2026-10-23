@@ -22,12 +22,11 @@ const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sour
 const probeRequest = buildRequest('probe', { cwd: '/r' });
 
 // The real io, with the fake resolver's settings added to the env of each
-// command it runs, and the commands it finds on PATH.
-function ioWith(settings: Record<string, string>, onPath: string[] = []): Io {
+// command it runs.
+function ioWith(settings: Record<string, string>): Io {
   const io = realIo();
   return {
     ...io,
-    commandExists: (cmd) => onPath.includes(cmd),
     execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, ...settings } }),
   };
 }
@@ -65,7 +64,7 @@ test('an empty chain has no candidates', () => {
 });
 
 test('a resolver on PATH is never a candidate', () => {
-  const io = fakeIo({ executables: ['/usr/bin/lets-delegate-resolver'], commands: ['lets-delegate-resolver'] });
+  const io = fakeIo({ executables: ['/usr/bin/lets-delegate-resolver'] });
   const env = { PATH: '/usr/bin' };
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: null }).map((c) => c.name), [SUBAGENT]);
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: chain('/a') }).map((c) => c.name), ['/a']);

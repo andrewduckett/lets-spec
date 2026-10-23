@@ -14,7 +14,7 @@ test('the real execFile reports the child so a caller can kill it', async () => 
   const io = realIo();
   const started: { child?: Child } = {};
   const result = io.execFile('sleep', ['30'], { started: (child) => { started.child = child; } });
-  assert.equal(typeof started.child?.pid, 'number');
+  assert.ok(started.child);
   started.child!.kill();
   assert.notEqual((await result).code, 0);
 });

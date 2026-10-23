@@ -199,7 +199,7 @@ test('LETS_SPEC_RESOLVER naming a missing file is exit 2, naming it', async () =
 });
 
 test('with no resolver, the review is exit 3, prints nothing, and runs only the default', async () => {
-  const t = commandDeps({ resolver: false, commands: ['codex', 'claude', 'agy'] });
+  const t = commandDeps({ resolver: false });
   assert.equal(await run(options(), t.deps), 3);
   assert.equal(t.stdout(), '');
   assert.deepEqual(t.io.calls.filter(([cmd]) => cmd !== 'git').map(([cmd, args]) => [cmd, args]), [[NODE, [SUBAGENT, 'run']]]);

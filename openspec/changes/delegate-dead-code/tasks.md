@@ -3,8 +3,8 @@
 
 ## 1. C2: lets's Io has no process-probing members
 
-- [ ] 1.1 [medium] `Io` in `lets/src/io.ts` has no `commandExists`, `pid`, `parentPid` or `processAlive`, and `Child` has no `pid`. Remove them from the type, from `realIo()`, and from the fakes in `tests/lets/delegate/fixtures/fake-io.ts`, `tests/lets/sync/fixtures/fake-io.ts` and the `ioWith` helper in `tests/lets/delegate/lookup.test.ts`. Drop the `child.pid` assertion in `tests/lets/io.test.ts`. Keep `ExecOptions.env`: tests use it (D3). Drop imports that become unused (verify: pnpm check)
-- [ ] 1.2 [easy] The delegate fixtures take no `commands` option. Remove it from `fake-io.ts` and `command-deps.ts` and their header comments, and from each test that passes it. Delete the handoff test "the default's handoff instructions are the same whichever CLIs are on PATH, and name none" (D4) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check)
+- [x] 1.1 [medium] `Io` in `lets/src/io.ts` has no `commandExists`, `pid`, `parentPid` or `processAlive`, and `Child` has no `pid`. Remove them from the type, from `realIo()`, and from the fakes in `tests/lets/delegate/fixtures/fake-io.ts`, `tests/lets/sync/fixtures/fake-io.ts` and the `ioWith` helper in `tests/lets/delegate/lookup.test.ts`. Drop the `child.pid` assertion in `tests/lets/io.test.ts`. Keep `ExecOptions.env`: tests use it (D3). Drop imports that become unused (verify: pnpm check) (✓ pnpm check passed)
+- [x] 1.2 [easy] The delegate fixtures take no `commands` option. Remove it from `fake-io.ts` and `command-deps.ts` and their header comments, and from each test that passes it. Delete the handoff test "the default's handoff instructions are the same whichever CLIs are on PATH, and name none" (D4) (verify: node --test "tests/lets/**/*.test.ts" && pnpm check) (✓ node --test and pnpm check passed)
 
 ## 2. C3: one list of session markers
 
