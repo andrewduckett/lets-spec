@@ -151,7 +151,8 @@ The live part runs "Reply with the single word ready and stop" read-only
 on each model probe lists, in order, until one is not refused (exit 3).
 It checks the answer and the tree, and sends finish. A resolver that lists
 no model gets no run. Then it starts a session with "Say hello and stop"
-on the first model listed, and leaves it for you to close.`;
+on the first model the probe for start lists, or on claude when it lists
+none, and leaves it for you to close.`;
 
 // --timeout-minutes: a whole number of minutes.
 function wholeMinutes(value: string): number {

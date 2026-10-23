@@ -17,7 +17,7 @@
 - [x] 3.1 [easy] The contract says that `lets delegate verify` gives each shape check 60 seconds, next to the five minutes for other verbs (verify: `grep -q '60 seconds' docs/resolver-contract.md`) (✓ verify passed)
 - [x] 3.2 [easy] The contract's exit 5 and 6 rows say that `review run` exits 5 or 6, and that `handoff run` exits 4 for both (verify: `grep -E '^\| (5|6) \|' docs/resolver-contract.md | grep -c 'handoff run' | grep -qx 2`) (✓ verify passed)
 - [x] 3.3 [easy] The contract says that when `finish` fails, `lets` reports it on stderr and the review's result and exit code stay the same (verify: `grep -i 'finish' docs/resolver-contract.md | grep -qi 'stderr'`) (✓ verify passed)
-- [ ] 3.4 [easy] `lets delegate verify --help` says the live `start` runs on the first model `probe` lists, or on `claude` when it lists none (verify: `node lets/bin/lets delegate verify --help | grep -q 'claude'`)
+- [x] 3.4 [easy] `lets delegate verify --help` says the live `start` runs on the first model `probe` lists, or on `claude` when it lists none (verify: `node lets/bin/lets delegate verify --help | grep -q 'claude'`) (✓ verify passed)
 
 ## 4. Checks
 
