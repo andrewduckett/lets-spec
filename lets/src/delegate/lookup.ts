@@ -7,9 +7,9 @@ import { join, resolve as resolvePath } from 'node:path';
 import type { Child, Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
-import { ContractError, EXIT, UsageError } from './errors.ts';
-import { DECLINE, exitFor, parseResponse } from './protocol.ts';
-import type { Requests, Responses, Verb } from './protocol.ts';
+import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
+import { DECLINE, exitFor, parseResponse } from 'resolver-kit/protocol.ts';
+import type { Requests, Responses, Verb } from 'resolver-kit/protocol.ts';
 import { withTimeout } from './wait.ts';
 
 // The default resolver, relative to the folder lets runs from.

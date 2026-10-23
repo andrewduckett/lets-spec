@@ -4,11 +4,11 @@
 // comes through deps.
 import type { Deps } from '../io.ts';
 import { readConfig } from './config.ts';
-import { EXIT, exitCodeOf } from './errors.ts';
+import { EXIT, exitCodeOf } from 'resolver-kit/errors.ts';
 import { repoRoot } from './git.ts';
 import { resolveWithModels } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { buildRequest, normalizeName } from './protocol.ts';
+import { buildRequest, normalizeName } from 'resolver-kit/protocol.ts';
 
 // models: each <family> or <family>/<model>, best first, sent to the
 // resolver unchanged, one at a time until one is not refused.

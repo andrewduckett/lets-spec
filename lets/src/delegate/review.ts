@@ -4,13 +4,13 @@
 // everything comes through deps.
 import type { Deps } from '../io.ts';
 import { readConfig } from './config.ts';
-import { EXIT, exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
+import { EXIT, exitCodeOf, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { callResolver, resolveWithModels, timeoutFor } from './lookup.ts';
 import type { Candidate } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { buildRequest, normalizeName } from './protocol.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
+import { buildRequest, normalizeName } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
 
 // models: each <family> or <family>/<model>, best first, sent to the
 // resolver unchanged, one at a time until one is not refused.

@@ -4,10 +4,10 @@
 // starts no session. No process access here; everything comes through deps.
 import type { Deps } from '../io.ts';
 import { configPath, guidanceFor, readConfig } from './config.ts';
-import { EXIT, exitCodeOf } from './errors.ts';
+import { EXIT, exitCodeOf } from 'resolver-kit/errors.ts';
 import { repoRoot } from './git.ts';
 import { resolve } from './lookup.ts';
-import { buildRequest } from './protocol.ts';
+import { buildRequest } from 'resolver-kit/protocol.ts';
 import { STRATEGIES } from './strategies.ts';
 import type { Intent, Strategy } from './strategies.ts';
 
