@@ -113,8 +113,8 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 | 2 | The request is malformed, or its protocol or verb is unknown | Exits 4 and shows the resolver's stderr |
 | 3 | A refusal: the harness or the account said no before the model gave any output. The harness is not running or not set up, there are no tokens left, or it cannot run the model. stderr says why. | Sends the next model the caller gave to the same resolver. Exits 3, naming each model, when none is left. Asks no later resolver. |
 | 4 | A bug, a broken contract, or an outcome the resolver cannot know, such as no reply from the harness | Exits 4 |
-| 5 | The session failed: an error, a stop to ask a question, or an empty message | Exits 5 |
-| 6 | The session did not finish within `timeoutMinutes` | Exits 6 |
+| 5 | The session failed: an error, a stop to ask a question, or an empty message | `review run` exits 5. `handoff run` exits 4. |
+| 6 | The session did not finish within `timeoutMinutes` | `review run` exits 6. `handoff run` exits 4. |
 | 75 | Decline: this resolver does not handle this request here | Asks the next resolver |
 | Any other | A bug in the resolver | Exits 4 and shows the resolver's stderr |
 
