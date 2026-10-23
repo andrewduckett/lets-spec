@@ -6,7 +6,7 @@
 
 ## 2. Resolvers [depends-on: 1]
 
-- [ ] 2.1 [parallel] [medium] An adapter may declare the session verbs it takes. `adapterAnswer` declines a `probe` whose `verb` the adapter does not take, and declines that `run` or `start` the same way. `lets-delegate-cli` takes only `run`, so it declines a probe for `start` without running a listing command, and still declines `start` with `this resolver only runs headless` (design D-9) (verify: node --test tests/resolver-kit/resolver.test.ts tests/cli-resolver/resolver.test.ts tests/cli-resolver/cli.test.ts)
+- [x] 2.1 [parallel] [medium] An adapter may declare the session verbs it takes. `adapterAnswer` declines a `probe` whose `verb` the adapter does not take, and declines that `run` or `start` the same way. `lets-delegate-cli` takes only `run`, so it declines a probe for `start` without running a listing command, and still declines `start` with `this resolver only runs headless` (design D-9) (verify: node --test tests/resolver-kit/resolver.test.ts tests/cli-resolver/resolver.test.ts tests/cli-resolver/cli.test.ts) (✓ node --test tests/resolver-kit/resolver.test.ts tests/cli-resolver/resolver.test.ts tests/cli-resolver/cli.test.ts passed)
 
 ## 3. lets delegate [depends-on: 1]
 

@@ -1,13 +1,14 @@
 // The adapter layer: the verb layer's answer for a resolver that starts
 // sessions in one harness. probe, run and start go to the adapter when this
 // process is inside its harness, and decline when it is not, with the
-// adapter's own reason when it gives one. finish goes to
+// adapter's own reason when it gives one. A run or start the adapter does
+// not take declines, and so does a probe for it. finish goes to
 // the adapter when the handle is of the kind it makes. No process access
 // here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
 import { exitCodeOf, Refused, SessionFailed, SpawnError } from './errors.ts';
 import { parseModel } from './protocol.ts';
-import type { Model, Request, Requests, Response, Verb } from './protocol.ts';
+import type { Model, Request, Requests, Response, SessionVerb, Verb } from './protocol.ts';
 import { Declined, respond } from './verbs.ts';
 import type { Answer, AnswerFn } from './verbs.ts';
 
@@ -21,6 +22,8 @@ export async function handle(verb: string, input: string, adapter: Adapter): Pro
 export function adapterAnswer(adapter: Adapter): AnswerFn {
   return async (verb: Verb, request: Request, warn: (message: string) => void): Promise<Response> => {
     if (verb === 'finish') return finish(request as Requests['finish'], adapter, warn);
+    const wanted = verb === 'probe' ? (request as Requests['probe']).verb : verb;
+    if (wanted !== undefined && !takes(adapter, wanted)) throw new Declined(wanted === 'start' ? 'this resolver only runs headless' : 'this resolver only starts interactive sessions');
     if (!adapter.detect()) throw new Declined(adapter.whyDeclined?.() ?? `not inside ${adapter.harness}`);
     if (verb === 'probe') return { resolver: adapter.name, options: await adapter.options(warn) };
     if (verb === 'start') {
@@ -31,6 +34,8 @@ export function adapterAnswer(adapter: Adapter): AnswerFn {
     return run(adapter, request as Requests['run'], warn);
   };
 }
+
+const takes = (adapter: Adapter, verb: SessionVerb) => (adapter.verbs ?? ['run', 'start']).includes(verb);
 
 // The request's model, which parseRequest has already checked.
 const modelOf = (text: string): Model => parseModel(text)!;
