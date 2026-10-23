@@ -16,4 +16,4 @@
 
 ## 4. Integration
 
-- [ ] 4.1 [easy] Every project check passes (verify: pnpm test && nix flake check)
+- [x] 4.1 [easy] Every project check passes (verify: pnpm test && nix flake check) (✓ pnpm test and nix flake check passed)
