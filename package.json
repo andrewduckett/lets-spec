@@ -10,7 +10,7 @@
     "test": "node --test \"tests/**/*.test.ts\" && tsc --noEmit && pnpm verify && bats tests",
     "verify": "node lets/bin/lets delegate verify lets/resolvers/lets-delegate-subagent && node lets/bin/lets delegate verify lets/resolvers/lets-delegate-t3 && node lets/bin/lets delegate verify lets/resolvers/lets-delegate-cli && node lets/bin/lets delegate verify lets/resolvers/headless-resolver",
     "check": "tsc --noEmit",
-    "build": "pnpm --recursive build"
+    "build": "pnpm --filter lets build"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
