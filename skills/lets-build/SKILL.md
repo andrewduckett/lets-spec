@@ -307,7 +307,7 @@ builds. When it stops, read `state` once more with
 
      It prints one JSON line. `options` lists the models the resolver
      can run now, and `guidance` is the user's prose for building, from
-     `delegations.apply.guidance` in the delegate config, or `null`. If
+     `delegate.handoff.apply.guidance` in the `lets` config, or `null`. If
      it exits non-zero, show the user its stderr, and stop.
   3. Rank the options: the guidance first, then the order the options
      came in. Leave out a model the guidance rules out. The guidance
