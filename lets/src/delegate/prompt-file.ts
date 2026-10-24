@@ -2,7 +2,7 @@
 // is hostile, so it never travels as a flag's value.
 import { resolve } from 'node:path';
 import type { Deps } from '../io.ts';
-import { UsageError } from 'resolver-kit/errors.ts';
+import { UsageError } from '../resolvers/kit/errors.ts';
 
 // The text of promptFile, taken from the working directory.
 export function readPromptFile(promptFile: string, { cwd, io }: Pick<Deps, 'cwd' | 'io'>): string {

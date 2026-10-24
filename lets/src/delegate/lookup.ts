@@ -7,12 +7,12 @@ import { join, resolve as resolvePath } from 'node:path';
 import type { Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
-import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
-import { DECLINE, exitFor, parseResponse } from 'resolver-kit/protocol.ts';
-import type { Requests, Responses, Verb } from 'resolver-kit/protocol.ts';
+import { ContractError, EXIT, UsageError } from '../resolvers/kit/errors.ts';
+import { DECLINE, exitFor, parseResponse } from '../resolvers/kit/protocol.ts';
+import type { Requests, Responses, Verb } from '../resolvers/kit/protocol.ts';
 
 // The default resolver, relative to the folder lets runs from.
-export const DEFAULT_RESOLVER = 'contrib/lets-delegate-subagent';
+export const DEFAULT_RESOLVER = 'resolvers/lets-delegate-subagent';
 // How long lets waits past a run's own timeout before it stops the resolver.
 export const BACKSTOP_MINUTES = 1;
 // How long lets waits on any verb but run. None of them waits on a session.

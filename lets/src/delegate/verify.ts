@@ -3,10 +3,10 @@
 // runs a real session and starts another, so it spends tokens and may open
 // a thread. No process access here; everything comes through deps.
 import type { Deps } from '../io.ts';
-import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
+import { ContractError, EXIT, UsageError } from '../resolvers/kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
-import { buildRequest, DECLINE, parseResponse, PROTOCOL } from 'resolver-kit/protocol.ts';
-import type { Responses, Verb } from 'resolver-kit/protocol.ts';
+import { buildRequest, DECLINE, parseResponse, PROTOCOL } from '../resolvers/kit/protocol.ts';
+import type { Responses, Verb } from '../resolvers/kit/protocol.ts';
 
 export type VerifyOptions = { command: string[]; live: boolean };
 

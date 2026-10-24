@@ -117,13 +117,22 @@ build_from() {
   [[ "$output" == *"lets-test-first has the same name as a generated OpenSpec skill"* ]]
 }
 
+# build_bundles: build every bundle, as lets/build.mjs does for the release,
+# into $BATS_TEST_TMPDIR/build.
+build_bundles() {
+  (cd "$repo/lets" && node build.mjs "$BATS_TEST_TMPDIR/build")
+}
+
 # The tarball's bin/lets is this bundle. A mise project runs it with its own
 # node, from anywhere, with no node_modules beside it.
 @test "the lets bundle is one executable script that runs with no node_modules" {
   local bin="$BATS_TEST_TMPDIR/bin/lets"
-  (cd "$repo/lets" && node node_modules/resolver-kit/build.mjs "$bin")
+  build_bundles
+  mkdir "$BATS_TEST_TMPDIR/bin"
+  cp -p "$BATS_TEST_TMPDIR/build/lets" "$bin"
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
+  grep -q 'lets: needs Node 26' "$bin"
   [ "$(ls -A "$BATS_TEST_TMPDIR/bin")" = lets ]
   mkdir "$BATS_TEST_TMPDIR/empty"
   cd "$BATS_TEST_TMPDIR/empty"
@@ -132,23 +141,27 @@ build_from() {
   [ "$output" = 0.0.0-dev ]
 }
 
-# The tarball ships each harness's resolver as contrib/<program>. A mise user
+# The tarball ships each harness's resolver as resolvers/<program>. A mise user
 # links one onto PATH and runs it with the system node, with no node_modules
 # beside it. Outside its harness it declines.
-# bundle_alone <package> <program>: build the program into an empty folder,
-# check it is the one executable script there, and cd to an empty folder.
+# bundle_alone <program>: build every bundle, copy the program into an empty
+# folder, check it is the one executable script there, and cd to an empty
+# folder.
 bundle_alone() {
-  bin="$BATS_TEST_TMPDIR/contrib/$2"
-  (cd "$repo/contrib/$1" && node node_modules/resolver-kit/build.mjs "$bin")
+  bin="$BATS_TEST_TMPDIR/resolvers/$1"
+  build_bundles
+  mkdir "$BATS_TEST_TMPDIR/resolvers"
+  cp -p "$BATS_TEST_TMPDIR/build/$1" "$bin"
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
-  [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = "$2" ]
+  grep -q "$1: needs Node 26" "$bin"
+  [ "$(ls -A "$BATS_TEST_TMPDIR/resolvers")" = "$1" ]
   mkdir "$BATS_TEST_TMPDIR/empty"
   cd "$BATS_TEST_TMPDIR/empty"
 }
 
 @test "the T3 resolver bundle declines outside T3 Code with no node_modules beside it" {
-  bundle_alone t3-resolver lets-delegate-t3
+  bundle_alone lets-delegate-t3
   # No T3 server runtime file.
   run env T3CODE_HOME="$BATS_TEST_TMPDIR/no-t3" node "$bin" probe <<<"{\"protocol\":2,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 75 ]
@@ -156,7 +169,7 @@ bundle_alone() {
 }
 
 @test "the cli resolver bundle declines with no family CLI on PATH and no node_modules beside it" {
-  bundle_alone cli-resolver lets-delegate-cli
+  bundle_alone lets-delegate-cli
   # A PATH with node on it, and none of codex, claude or agy.
   mkdir "$BATS_TEST_TMPDIR/node-only"
   ln -s "$(command -v node)" "$BATS_TEST_TMPDIR/node-only/node"
@@ -166,7 +179,7 @@ bundle_alone() {
 }
 
 @test "the subagent resolver bundle answers subagent with no node_modules beside it" {
-  bundle_alone subagent-resolver lets-delegate-subagent
+  bundle_alone lets-delegate-subagent
   run node "$bin" probe <<<"{\"protocol\":2,\"cwd\":\"$PWD\"}"
   [ "$status" -eq 0 ]
   [ "$output" = '{"resolver":"subagent","options":[]}' ]

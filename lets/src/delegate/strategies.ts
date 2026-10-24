@@ -1,7 +1,7 @@
 // The strategies of lets delegate. A strategy fixes how a session runs: its
 // options, its output, its exit codes, and the protocol verb it sends. Each
 // takes the intents it serves, and the intent picks the user's guidance.
-import type { SessionVerb } from 'resolver-kit/protocol.ts';
+import type { SessionVerb } from '../resolvers/kit/protocol.ts';
 
 export type Strategy = 'review' | 'handoff';
 export type Intent = 'plan' | 'code' | 'apply';

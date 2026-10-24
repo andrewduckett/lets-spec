@@ -4,14 +4,14 @@
 // everything comes through deps.
 import type { Deps } from '../io.ts';
 import { readConfig } from './config.ts';
-import { EXIT, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { EXIT, SessionFailed, SpawnError } from '../resolvers/kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { guarded } from './guarded.ts';
 import { callResolver, resolveWithModels, timeoutFor } from './lookup.ts';
 import type { Candidate } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { buildRequest, normalizeName } from 'resolver-kit/protocol.ts';
-import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
+import { buildRequest, normalizeName } from '../resolvers/kit/protocol.ts';
+import type { Effort, Family, Handle } from '../resolvers/kit/protocol.ts';
 import type { Intent } from './strategies.ts';
 
 // for: what the review is for, recorded in the metadata line. models: each

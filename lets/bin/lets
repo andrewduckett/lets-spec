@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The dev entry: Node runs the TypeScript source with type stripping. The
-// release runs dist/lets, which resolver-kit's build.mjs makes with the same
+// release runs dist/lets, which lets/build.mjs makes with the same
 // check on top.
 if (Number(process.versions.node.split('.')[0]) < 26) {
   process.stderr.write(`lets: needs Node 26 or later, and this is Node ${process.versions.node}.\n`);

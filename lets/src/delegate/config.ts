@@ -5,7 +5,7 @@
 import { dirname, isAbsolute, join } from 'node:path';
 import { parse } from 'yaml';
 import type { Deps, Io } from '../io.ts';
-import { UsageError } from 'resolver-kit/errors.ts';
+import { UsageError } from '../resolvers/kit/errors.ts';
 
 export const CONFIG_VERSION = 2;
 // The entry in the chain that names the default, lets-delegate-subagent,

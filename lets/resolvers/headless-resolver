@@ -1,0 +1,45 @@
+#!/bin/sh
+# A complete lets delegate resolver: run sends the prompt to claude, headless
+# and read-only. It needs jq, and claude for run. It issues no handles, and
+# leaves the timeout to lets, which stops it a minute after timeoutMinutes.
+# The contract: docs/resolver-contract.md
+# Check it with: lets delegate verify lets/resolvers/headless-resolver
+
+request=$(cat)
+if ! printf '%s' "$request" | jq -e '.protocol == 2' >/dev/null 2>&1; then
+  echo "headless-resolver: not a protocol 2 request" >&2; exit 2
+fi
+field() { printf '%s' "$request" | jq -r ".$1"; }
+
+case "$1" in
+  probe)
+    # It declines start, so it declines a probe for start too, and the
+    # handoff probes the next resolver in the chain.
+    [ "$(field verb)" = start ] && { echo "headless-resolver: this resolver only runs headless" >&2; exit 75; }
+    echo '{"resolver":"headless-sh","options":["claude"]}' ;;
+  run)
+    model=$(field model)
+    case "$model" in
+      claude) id='' ;;
+      claude/?*) id=${model#claude/} ;;
+      gpt | gpt/?* | gemini | gemini/?*) echo "headless-resolver: this resolver runs only claude, not $model" >&2; exit 3 ;;
+      *) echo "headless-resolver: the request's model must be <family> or <family>/<model>, got $model" >&2; exit 2 ;;
+    esac
+    command -v claude >/dev/null || { echo "headless-resolver: claude is not on PATH" >&2; exit 3; }
+    cd "$(field cwd)" || exit 2
+    # The new session must not think it is a child of the one that called lets.
+    unset CLAUDECODE CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_SESSION_ID CLAUDE_CODE_BRIDGE_SESSION_ID \
+      CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_ENTRYPOINT CLAUDE_PID CLAUDE_EFFORT
+    # A bare family passes no --model, so claude runs its default.
+    if ! text=$(field prompt | claude -p --permission-mode plan --effort "$(field effort)" ${id:+--model "$id"}); then
+      # Nothing printed: claude said no before the model answered.
+      [ -n "$text" ] || { echo "headless-resolver: claude refused $model" >&2; exit 3; }
+      exit 5
+    fi
+    [ -n "$text" ] || { echo "headless-resolver: claude gave an empty answer" >&2; exit 5; }
+    jq -cn --arg text "$text" --arg model "$id" \
+      '{resolver: "headless-sh", family: "claude", model: (if $model == "" then null else $model end), text: $text}' ;;
+  start) echo "headless-resolver: this resolver only runs headless" >&2; exit 75 ;;
+  finish) ;; # It issues no handles, so it has nothing to finish.
+  *) echo "headless-resolver: unknown verb $1" >&2; exit 2 ;;
+esac

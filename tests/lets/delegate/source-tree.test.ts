@@ -1,6 +1,6 @@
-// The source tree's lets, run as a process, finds its default through the
-// committed lets/contrib/ symlink. The fakes in the other tests cannot see a
-// missing or dangling link.
+// The source tree's lets, run as a process, finds its default at the dev entry
+// lets/resolvers/lets-delegate-subagent, with no link. The fakes in the other
+// tests cannot see a missing default.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';

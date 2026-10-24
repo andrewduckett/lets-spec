@@ -173,57 +173,6 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  contrib/cli-resolver:
-    dependencies:
-      resolver-kit:
-        specifier: workspace:*
-        version: link:../resolver-kit
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.5
-        version: 26.6.5
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-
-  contrib/resolver-kit:
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.5
-        version: 26.6.5
-      esbuild:
-        specifier: ^0.28.2
-        version: 0.28.2
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-
-  contrib/subagent-resolver:
-    dependencies:
-      resolver-kit:
-        specifier: workspace:*
-        version: link:../resolver-kit
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.5
-        version: 26.6.5
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-
-  contrib/t3-resolver:
-    dependencies:
-      resolver-kit:
-        specifier: workspace:*
-        version: link:../resolver-kit
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.5
-        version: 26.6.5
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-
   lets:
     dependencies:
       commander:
@@ -233,9 +182,9 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
     devDependencies:
-      resolver-kit:
-        specifier: workspace:*
-        version: link:../contrib/resolver-kit
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
 
 packages:
 

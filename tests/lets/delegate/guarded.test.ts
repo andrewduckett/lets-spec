@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { guarded } from '../../../lets/src/delegate/guarded.ts';
-import { SessionFailed } from '../../../contrib/resolver-kit/src/errors.ts';
+import { SessionFailed } from '../../../lets/src/resolvers/kit/errors.ts';
 
 // Deps that keep what the command printed on stderr.
 function setup() {

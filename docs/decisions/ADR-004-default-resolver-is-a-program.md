@@ -14,7 +14,7 @@ description: Architecture decision record (ADR) for making the default resolver 
 
 ## Decision
 
-The default is a resolver program, `lets-delegate-subagent`, built on the same kit as the others. Every `lets` carries it in a `contrib/` folder beside itself: the release tarball, the Nix package and the source tree. `lets` runs it as a process with its own Node, like any other resolver. If the file is missing, `lets delegate` fails with exit 4 rather than falling back to code of its own.
+The default is a resolver program, `lets-delegate-subagent`, built on the same kit as the others. Every `lets` carries it in a `resolvers/` folder beside itself: the release tarball and the Nix package. In the source tree, the default's dev entry sits at that path, so no link is needed. `lets` runs it as a process with its own Node, like any other resolver. If the file is missing, `lets delegate` fails with exit 4 rather than falling back to code of its own.
 
 ## Consequences
 
@@ -35,3 +35,7 @@ The default is a resolver program, `lets-delegate-subagent`, built on the same k
 - **Pros**: reviews keep working on a broken install.
 - **Cons**: the same behaviour lives in two places, and the copy inside `lets` is never checked by conformance.
 - **Why not**: it keeps the special case this decision removes, and it hides a broken install that the user should fix.
+
+## Amendments
+
+- 2026-10-23: the folder beside `lets` is now `resolvers/`, not `contrib/` (#105). In a checkout, `lets/resolvers/lets-delegate-subagent` is the dev entry itself, so the `lets/contrib/` link is gone. The decision is unchanged: the default is still a program that every `lets` carries and runs as a process.

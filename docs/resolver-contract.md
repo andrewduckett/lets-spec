@@ -16,8 +16,9 @@ This page covers:
 - [Write your own](#write-your-own)
 
 The code that checks the contract is
-[`contrib/resolver-kit/src/protocol.ts`](../contrib/resolver-kit/src/protocol.ts).
-The resolver kit owns it, and `lets` imports it from there.
+[`lets/src/resolvers/kit/protocol.ts`](../lets/src/resolvers/kit/protocol.ts).
+The resolver kit, a folder in `lets`, owns it, and the rest of `lets`
+imports it from there.
 
 ## How `lets` finds a resolver
 
@@ -34,7 +35,7 @@ The resolver kit owns it, and `lets` imports it from there.
 
 With no config, the default takes the place of the chain. The default,
 `lets-delegate-subagent`, never declines. It ships with `lets`, which runs
-it from `contrib/lets-delegate-subagent` beside itself with its own Node,
+it from `resolvers/lets-delegate-subagent` beside itself with its own Node,
 and it answers as `subagent`. When that file is missing or Node cannot run
 it, `lets` exits 4 and says its install is incomplete.
 
@@ -94,7 +95,7 @@ verb.
 
 A request without a valid `model` is malformed: the resolver exits 2.
 
-The resolvers in `contrib/` run exactly the `model` they are given, even
+The resolvers that ship with `lets` run exactly the `model` they are given, even
 one they did not list in `options`. When the harness cannot run it, they
 exit 3. For `gemini`, `run` adds the effort to the model, as
 `gemini-3.8-flash-high`. `start` has no effort, so the T3 resolver adds
@@ -151,7 +152,7 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in
-  [`contrib/resolver-kit/src/env.ts`](../contrib/resolver-kit/src/env.ts).
+  [`lets/src/resolvers/kit/env.ts`](../lets/src/resolvers/kit/env.ts).
 
 ## Write your own
 
@@ -168,7 +169,7 @@ resolvers:
 
 To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
-[`contrib/headless-resolver`](../contrib/headless-resolver) is a complete
+[`lets/resolvers/headless-resolver`](../lets/resolvers/headless-resolver) is a complete
 one in `sh`, to copy from. It runs `claude`
 headless and read-only. It declines `start`, and it declines a probe
 for `start`, so the default, `lets-delegate-subagent`, handles handoffs.

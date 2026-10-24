@@ -32,15 +32,11 @@
 
       # Only the pnpm workspace, so a skill edit does not rebuild the CLI.
       # Every workspace package must be here, or the lockfile does not match.
-      # lets/contrib/ holds only the source tree's link to the default
-      # resolver, which points outside lets/. The build never reads it.
       workspaceSource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.difference
-          (lib.fileset.unions [
-            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets ./contrib
-          ])
-          (lib.fileset.maybeMissing ./lets/contrib);
+        fileset = lib.fileset.unions [
+          ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
+        ];
       };
 
       # The workspace's dependencies from pnpm-lock.yaml. When the lockfile
@@ -94,34 +90,40 @@
               ${lib.escapeShellArgs recipe.skills}
           '';
 
-        # One program: the bundle esbuild makes, in libexec, and a
-        # bin/<name> that runs it with Node 26. The bundle keeps its
-        # #!/usr/bin/env node, because the tarball ships it as it is. dir is
-        # the program's package folder.
-        program = name: dir: pkgs.stdenv.mkDerivation {
-          pname = name;
+        # Every bundle esbuild makes, lets and each resolver, in libexec.
+        # Each keeps its #!/usr/bin/env node, because the tarball ships it as
+        # it is. They are built once for each change to the workspace.
+        bundles = pkgs.stdenv.mkDerivation {
+          pname = "lets-bundles";
           version = "0.0.0";
           src = workspaceSource;
-          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
+          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook ];
           inherit pnpmDeps;
           dontPatchShebangs = true;
           buildPhase = ''
             runHook preBuild
-            pnpm --filter ${name} build
+            pnpm --filter lets build
             runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
-            install -Dm755 ${dir}/dist/${name} $out/libexec/${name}
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${name} \
-              --add-flags $out/libexec/${name}
+            install -Dm755 -t $out/libexec lets/dist/*
             runHook postInstall
           '';
-          meta.mainProgram = name;
         };
 
-        # The lets bundle, built once for each change to the workspace.
-        lets-bundle = program "lets" "lets";
+        # One program: its bundle, in libexec, and a bin/<name> that runs it
+        # with Node 26.
+        program = name: pkgs.runCommand name
+          { nativeBuildInputs = [ pkgs.makeWrapper ]; meta.mainProgram = name; }
+          ''
+            install -Dm755 ${bundles}/libexec/${name} $out/libexec/${name}
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${name} \
+              --add-flags $out/libexec/${name}
+          '';
+
+        # The lets bundle.
+        lets-bundle = program "lets";
 
         # The release's version, the OpenSpec CLI that generated its
         # openspec-* skills, and the commit it was built from.
@@ -132,7 +134,7 @@
         });
 
         # The lets command. It reads release.json, and runs its default
-        # resolver from contrib/, both beside libexec/. The bundle is copied,
+        # resolver from resolvers/, both beside libexec/. The bundle is copied,
         # not linked, because Node finds release.json from the bundle's real
         # path. A new commit changes only release.json, so it never rebuilds
         # the bundle.
@@ -140,7 +142,7 @@
           { nativeBuildInputs = [ pkgs.makeWrapper ]; meta.mainProgram = "lets"; }
           ''
             install -Dm755 ${lets-bundle}/libexec/lets $out/libexec/lets
-            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/resolvers/lets-delegate-subagent
             install -Dm644 ${releaseJson} $out/release.json
             makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets \
               --add-flags $out/libexec/lets
@@ -150,11 +152,11 @@
         # a resolver answers for the machine, not the project. It runs its
         # harness's commands, such as git and t3, from PATH, because they are
         # the user's own install.
-        lets-delegate-t3 = program "lets-delegate-t3" "contrib/t3-resolver";
-        lets-delegate-cli = program "lets-delegate-cli" "contrib/cli-resolver";
+        lets-delegate-t3 = program "lets-delegate-t3";
+        lets-delegate-cli = program "lets-delegate-cli";
         # The default resolver, for lets-cli and dist only. lets runs it from
         # beside itself, so it is not exported, and no one puts it on PATH.
-        lets-delegate-subagent = program "lets-delegate-subagent" "contrib/subagent-resolver";
+        lets-delegate-subagent = program "lets-delegate-subagent";
 
         # lets, bound to one release.
         lets = flow:
@@ -167,16 +169,16 @@
             '';
 
         # The folder the release tarball is made from: the lets bundle, one
-        # release for every flow, and the contrib resolvers outside bin/, so
+        # release for every flow, and the resolvers outside bin/, so
         # mise never puts them on a project's PATH. Its release.json is the
         # one lets-cli carries.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
-          mkdir -p $out/bin $out/releases $out/contrib
+          mkdir -p $out/bin $out/releases $out/resolvers
           cp ${lets-cli}/libexec/lets $out/bin/lets
-          cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
-          cp ${lets-delegate-cli}/libexec/lets-delegate-cli $out/contrib/lets-delegate-cli
-          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
-          install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
+          cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/resolvers/lets-delegate-t3
+          cp ${lets-delegate-cli}/libexec/lets-delegate-cli $out/resolvers/lets-delegate-cli
+          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/resolvers/lets-delegate-subagent
+          install -m755 ${./lets/resolvers/headless-resolver} $out/resolvers/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${lets-cli}/release.json $out/release.json
         '';
@@ -297,13 +299,14 @@
             [ -x ${dist}/bin/lets ]
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
+            [ ! -e ${dist}/contrib ]
             # The resolvers are per user, so they are never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-cli lets-delegate-subagent lets-delegate-t3 " ]
-            [ -x ${dist}/contrib/headless-resolver ]
-            [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
+            [ "$(ls ${dist}/resolvers | tr '\n' ' ')" = "headless-resolver lets-delegate-cli lets-delegate-subagent lets-delegate-t3 " ]
+            [ -x ${dist}/resolvers/headless-resolver ]
+            [ "$(head -n 1 ${dist}/resolvers/headless-resolver)" = '#!/bin/sh' ]
             for program in lets-delegate-cli lets-delegate-subagent lets-delegate-t3; do
-              [ -x ${dist}/contrib/$program ]
-              [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
+              [ -x ${dist}/resolvers/$program ]
+              [ "$(head -n 1 ${dist}/resolvers/$program)" = '#!/usr/bin/env node' ]
             done
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
@@ -322,7 +325,7 @@
             # the sandbox is not T3 Code, and has none of codex, claude or agy.
             declines() {
               status=0
-              echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
+              echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ${dist}/resolvers/$1 probe 2>stderr || status=$?
               [ "$status" -eq 75 ]
               [ "$(cat stderr)" = "$2" ]
             }
@@ -330,7 +333,7 @@
             declines lets-delegate-cli 'lets-delegate-cli: none of codex, claude or agy is on PATH'
             # The default never declines. A copy alone answers for itself.
             mkdir ../alone
-            cp ${dist}/contrib/lets-delegate-subagent ../alone/
+            cp ${dist}/resolvers/lets-delegate-subagent ../alone/
             [ "$(echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent","options":[]}' ]
             # With nothing else installed or configured, the tarball's lets
             # finds the default beside it.
@@ -339,7 +342,7 @@
             touch "$out"
           '';
 
-        # The unit tests for the lets package and the contrib resolvers, and
+        # The unit tests for the lets package and its resolvers, and
         # the type check. They use fakes, so no harness and no real gh
         # run here.
         node-tests = pkgs.runCommand "node-tests"
@@ -356,11 +359,11 @@
             pnpmConfigHook
             # The test fixtures and the resolvers run as programs, and the
             # sandbox has no /usr/bin/env or /bin/sh.
-            patchShebangs tests contrib/t3-resolver/bin contrib/cli-resolver/bin contrib/subagent-resolver/bin contrib/headless-resolver
+            patchShebangs tests lets/resolvers
             # Node's runner expands the glob itself. It does not take a folder.
-            node --test "tests/lets/**/*.test.ts" "tests/resolver-kit/*.test.ts" "tests/t3-resolver/*.test.ts" "tests/cli-resolver/*.test.ts" "tests/subagent-resolver/*.test.ts"
+            node --test "tests/**/*.test.ts"
             pnpm check
-            # The default, lets-delegate-subagent, the contrib resolvers and the shell example
+            # The default, lets-delegate-subagent, the resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
             pnpm verify
             touch "$out"

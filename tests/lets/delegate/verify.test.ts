@@ -10,8 +10,8 @@ import { realIo } from '../../../lets/src/io.ts';
 import type { Deps } from '../../../lets/src/io.ts';
 
 const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
-const SUBAGENT = fileURLToPath(new URL('../../../contrib/subagent-resolver/bin/lets-delegate-subagent', import.meta.url));
-const EXAMPLE = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+const SUBAGENT = fileURLToPath(new URL('../../../lets/resolvers/lets-delegate-subagent', import.meta.url));
+const EXAMPLE = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
 
 // Real deps in a fresh git repo. settings go into the env of each command
 // the check runs, for the fake resolver.

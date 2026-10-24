@@ -8,6 +8,19 @@ made the change.
 The steps to move the pin itself are in
 [Updating](../README.md#-updating).
 
+## 0.6: the resolvers moved to resolvers/
+
+The release folder now ships the resolvers in `resolvers/`, not
+`contrib/`, and in a checkout the resolvers' dev entries moved into the
+`lets` package. Nix profile and home-manager users need nothing. If you
+linked a resolver onto your `PATH` by hand, link it again from its new
+place.
+
+| You installed it with | Do this |
+|---|---|
+| mise | Remove the old link from `~/.local/bin`, then link `resolvers/lets-delegate-t3` or `resolvers/lets-delegate-cli` from the release folder |
+| A checkout of this repo | Link `lets/resolvers/lets-delegate-t3` or `lets/resolvers/lets-delegate-cli` instead |
+
 ## 0.5: the default resolver answers as `subagent`
 
 The JSON line that `lets delegate handoff run` prints has `"resolver":"subagent"`.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SpawnError, UsageError } from '../../../contrib/resolver-kit/src/errors.ts';
+import { SpawnError, UsageError } from '../../../lets/src/resolvers/kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from '../../../lets/src/delegate/git.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
