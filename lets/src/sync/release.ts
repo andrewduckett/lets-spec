@@ -26,9 +26,10 @@ export function findRelease(env: Deps['env'], packageRoot: string, io: Io) {
 const VERSION = /\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/;
 
 // A warning when the OpenSpec CLI on PATH differs from the one that generated
-// the release's openspec-* skills. Null when either version is unknown.
-export async function openspecVersionWarning({ release, io }: { release: string; io: Io }) {
-  const text = io.readFile(join(release, '..', '..', 'release.json'));
+// the release's openspec-* skills, as the package's release.json records it.
+// Null when either version is unknown.
+export async function openspecVersionWarning({ packageRoot, release, io }: { packageRoot: string; release: string; io: Io }) {
+  const text = io.readFile(join(packageRoot, 'release.json'));
   if (text === null) return null;
   let pinned;
   try {

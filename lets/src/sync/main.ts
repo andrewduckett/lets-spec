@@ -126,7 +126,7 @@ async function steps(check: boolean, deps: Deps) {
 
   warnings.push(...checkClaude({ root, io }));
   warnings.push(...checkConfig({ io, configPath: join(root, CONFIG), schemaName }).map((line) => line.replace(join(root, CONFIG), CONFIG)));
-  const versionWarning = await openspecVersionWarning({ release, io });
+  const versionWarning = await openspecVersionWarning({ packageRoot: deps.packageRoot, release, io });
   if (versionWarning !== null) warnings.push(versionWarning);
 
   if (warnings.length > 0) {

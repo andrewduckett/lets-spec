@@ -35,31 +35,38 @@ test('a missing flow names the variable', () => {
 
 test('no release.json means no version warning', async () => {
   const io = fakeIo({ openspec: '1.2.3\n' });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }), null);
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }), null);
 });
 
 test('a missing openspec command means no version warning', async () => {
   const io = fakeIo({ files: { [RELEASE_JSON]: info('1.2.3') } });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }), null);
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }), null);
 });
 
 test('output that is not a version means no version warning', async () => {
   const io = fakeIo({ files: { [RELEASE_JSON]: info('1.2.3') }, openspec: 'command not found: openspec\n' });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }), null);
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }), null);
 });
 
 test('a release.json that is not JSON means no version warning', async () => {
   const io = fakeIo({ files: { [RELEASE_JSON]: 'oops' }, openspec: '1.2.3\n' });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }), null);
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }), null);
 });
 
 test('the same version means no version warning', async () => {
   const io = fakeIo({ files: { [RELEASE_JSON]: info('1.2.3') }, openspec: '1.2.3\n' });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }), null);
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }), null);
 });
 
 test('a different version is warned about', async () => {
   const io = fakeIo({ files: { [RELEASE_JSON]: info('1.2.3') }, openspec: 'openspec 1.4.0\n' });
-  assert.equal(await openspecVersionWarning({ release: RELEASE, io }),
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release: RELEASE, io }),
+    "the OpenSpec CLI on PATH is 1.4.0, but this release's openspec-* skills were generated from 1.2.3. Pin the CLI to 1.2.3.");
+});
+
+test('the warning reads the package release.json when the release lives elsewhere', async () => {
+  const release = '/nix/store/abc-lets-spec-release-standard';
+  const io = fakeIo({ files: { [RELEASE_JSON]: info('1.2.3') }, openspec: '1.4.0\n' });
+  assert.equal(await openspecVersionWarning({ packageRoot: '/pkg', release, io }),
     "the OpenSpec CLI on PATH is 1.4.0, but this release's openspec-* skills were generated from 1.2.3. Pin the CLI to 1.2.3.");
 });
