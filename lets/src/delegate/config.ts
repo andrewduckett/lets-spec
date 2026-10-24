@@ -2,7 +2,7 @@
 // and the user's guidance for each kind of delegation.
 // The user writes it by hand, and lets is the only reader. Keys this lets
 // does not know are ignored, so a later lets can add one beside them.
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { parse } from 'yaml';
 import { configDir } from '../config-dir.ts';
 import type { Deps, Io } from '../io.ts';
@@ -27,17 +27,11 @@ export function configPath({ env, io }: ConfigDeps): string {
 }
 
 // The config, or null when there is no file. Throws a UsageError that names
-// the file and the bad value when the file is not a valid config, and one
-// that names both files when only the old config.json is there.
+// the file and the bad value when the file is not a valid config.
 export function readConfig(deps: ConfigDeps): Config | null {
   const path = configPath(deps);
   const text = deps.io.readFile(path);
-  if (text !== null) return parseConfig(text, path);
-  const old = join(dirname(path), 'config.json');
-  if (deps.io.exists(old)) {
-    throw new UsageError(`${old} is no longer read: the delegate config is now config.yaml. Write ${path} instead, then remove ${old}.`);
-  }
-  return null;
+  return text === null ? null : parseConfig(text, path);
 }
 
 // The config in text, read from path. Throws as readConfig does.

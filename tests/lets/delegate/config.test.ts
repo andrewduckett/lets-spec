@@ -121,17 +121,9 @@ test('an invalid config is a usage error that names the file and the bad value',
   }
 });
 
-const HOME_JSON = '/home/u/.config/lets/config.json';
-
-test('a leftover config.json with no config.yaml is a usage error that names both files', () => {
-  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: '{"version":1}' } }) };
-  assert.throws(() => readConfig(deps), (error) => error instanceof UsageError
-    && error.message.includes(HOME_JSON) && error.message.includes(HOME_CONFIG) && error.message.includes('now config.yaml'));
-});
-
-test('a config.json beside a config.yaml is ignored', () => {
-  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: 'not json', [HOME_CONFIG]: 'version: 3\ndelegate: { resolvers: [subagent] }\n' } }) };
-  assert.deepEqual(readConfig(deps), { version: 3, delegate: { resolvers: ['subagent'] } });
+test('a config.json with no config.yaml is not read', () => {
+  const deps = { env: {}, io: fakeIo({ files: { '/home/u/.config/lets/config.json': '{"version":1}' } }) };
+  assert.equal(readConfig(deps), null);
 });
 
 test('a config that is not YAML says where the parser stopped, in one sentence', () => {

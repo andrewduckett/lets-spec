@@ -90,10 +90,10 @@ test('a bad entry after one that would answer is exit 2, and saves no prompt', a
   assert.deepEqual(t.adapterCalls(), []);
 });
 
-test('a leftover config.json is exit 2, naming both files', async () => {
+test('a config.json with no config.yaml is not read, and the default answers', async () => {
   const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets/config.json': '{}' } });
-  assert.equal(await run(options, t.deps), 2);
-  assert.match(t.stderr(), /config\.json.*config\.yaml/);
+  assert.equal(await run(options, t.deps), 0);
+  assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
 });
 
 test('with no config, the default hands back the prompt and where it is saved', async () => {
