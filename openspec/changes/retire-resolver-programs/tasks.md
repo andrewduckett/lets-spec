@@ -6,7 +6,7 @@
 
 - [x] 2.1 [easy] `lets delegate verify` exits 2 as an unknown command: `verify.ts`, the command, `VERIFY_HELP`, `verify.test.ts`, `fixtures/fake-resolver` and the verify case go, and `pnpm test` no longer runs `pnpm verify` (verify: `node --test tests/lets/delegate/cli.test.ts`) (✓ the old-command test failed first on `verify`; then pnpm check passed and node --test tests/lets/delegate/cli.test.ts: 24 passed)
 - [x] 2.2 [medium] Only `lets` is built and installed: `lets/resolvers/`, each program's `main.ts`, `kit/main.ts`, `verbs.ts`, `resolver.ts`, `protocol.ts`, `ContractError`, `createAnswer`, `PROGRAM` and the `Adapter` fields `program`, `harness` and `whyDeclined` go, `build.mjs` bundles only `lets`, and `package.json` lists only its bin, with the tests design D8 lists (verify: `pnpm check && node --test "tests/**/*.test.ts"`) (✓ pnpm check passed; node --test: 324 passed; bats tests: 120 passed)
-- [ ] 2.3 [easy] With no config, `lets delegate review instructions --for code` answers `subagent` with no options, and no command test names a retired program in a path entry (verify: `node --test tests/lets/delegate/*.test.ts`)
+- [x] 2.3 [easy] With no config, `lets delegate review instructions --for code` answers `subagent` with no options, and no command test names a retired program in a path entry (verify: `node --test tests/lets/delegate/*.test.ts`) (✓ the new case failed with its expectation broken, then passed; node --test tests/lets/delegate/*.test.ts: 127 passed; git grep finds no retired name under tests/ or lets/)
 
 ## 3. Packaging [depends-on: 2]
 
@@ -29,3 +29,4 @@
 - 2026-10-24: `Adapter` also loses `handleKind`, beside D4's three fields. Only `resolver.ts` read it. The two #112 tests that asserted it go; the handle kind a review prints is still checked through `review run`.
 - 2026-10-24: `node-tests` drops `patchShebangs tests` too, not only `lets/resolvers` (design D6). With `fake-resolver` gone, no file under `tests/` runs as a program.
 - 2026-10-24: `main.ts`'s `instructions` help no longer says "decline a probe", and the `UsageError` and `SpawnError` comments no longer name requests or the contract. No output a skill reads changes.
+- 2026-10-24: Task 2.3's new case tests behaviour that already exists, so its red step broke the expectation once and watched it fail.

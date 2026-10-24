@@ -23,6 +23,12 @@ test('with no config, the default answers with no options', async () => {
   assert.deepEqual(JSON.parse(t.stdout()), { strategy: 'handoff', for: 'apply', resolver: 'subagent', options: [], guidance: null });
 });
 
+test('with no config, outside any harness, a review answers as the default with no options', async () => {
+  const t = commandDeps();
+  assert.equal(await run(review, t.deps), 0);
+  assert.deepEqual(JSON.parse(t.stdout()), { strategy: 'review', for: 'code', resolver: 'subagent', options: [], guidance: null });
+});
+
 test('instructions starts, runs and finishes nothing', async () => {
   for (const options of [review, handoff, { strategy: 'review', for: 'plan' } as const]) {
     const t = withT3();
@@ -92,9 +98,9 @@ test('a chain where every resolver declines is exit 2, naming the config file', 
 });
 
 test('a path from an older lets is exit 2, naming it and the config file', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [/gone/lets-delegate-t3]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [/gone/old-resolver]\n' });
   assert.equal(await run(review, t.deps), 2);
-  assert.match(t.stderr(), new RegExp(`${CONFIG}.*/gone/lets-delegate-t3`));
+  assert.match(t.stderr(), new RegExp(`${CONFIG}.*/gone/old-resolver`));
   assert.deepEqual(t.adapterCalls(), []);
 });
 

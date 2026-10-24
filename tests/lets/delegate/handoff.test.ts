@@ -84,7 +84,7 @@ test('a name lets does not know is exit 2, naming it and the config file', async
 });
 
 test('a bad entry after one that would answer is exit 2, and saves no prompt', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [subagent, /opt/r/lets-delegate-t3]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [subagent, /opt/r/old-resolver]\n' });
   assert.equal(await run(options, t.deps), 2);
   assert.equal(t.savedFile('.workspace/lets-delegate/fix-login.prompt.md'), null);
   assert.deepEqual(t.adapterCalls(), []);

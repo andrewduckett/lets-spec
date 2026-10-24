@@ -197,8 +197,8 @@ test('an intent from the other strategy is a usage error that names --for', asyn
   assert.match(stderr, /--for/);
 });
 
-test('a resolver listed by path, such as the sh example, is exit 2, naming it and the config file, and is not run', async () => {
-  const example = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
+test('a resolver listed by path is exit 2, naming it and the config file', async () => {
+  const example = '/opt/r/old-resolver';
   const r = repo(`version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
   const { code, stdout, stderr } = await letsIn(r, 'delegate', 'handoff', 'instructions', '--for', 'apply');
   assert.equal(code, 2);

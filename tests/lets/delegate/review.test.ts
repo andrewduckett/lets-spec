@@ -72,16 +72,16 @@ test('a bad --model is exit 2, naming it, and no resolver is asked', async () =>
 });
 
 test('an invalid config is exit 2, naming the file and the bad value', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers:\n  - bin/lets-delegate-t3\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers:\n  - bin/old-resolver\n' });
   assert.equal(await run(options(), t.deps), 2);
-  assert.match(t.stderr(), new RegExp(`${CONFIG}.*bin/lets-delegate-t3`));
+  assert.match(t.stderr(), new RegExp(`${CONFIG}.*bin/old-resolver`));
 });
 
 test('a path from an older lets is exit 2, naming the file, the path and the three names', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [/opt/r/lets-delegate-t3]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [/opt/r/old-resolver]\n' });
   assert.equal(await run(options(), t.deps), 2);
   assert.equal(t.stdout(), '');
-  for (const named of [CONFIG, '/opt/r/lets-delegate-t3', 't3', 'cli', 'subagent']) assert.ok(t.stderr().includes(named), named);
+  for (const named of [CONFIG, '/opt/r/old-resolver', 't3', 'cli', 'subagent']) assert.ok(t.stderr().includes(named), named);
   assert.deepEqual(t.adapterCalls(), []);
 });
 
