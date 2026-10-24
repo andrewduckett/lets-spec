@@ -35,7 +35,7 @@ imports it from there.
 
 With no config, the default takes the place of the chain. The default,
 `lets-delegate-subagent`, never declines. It ships with `lets`, which runs
-it from `contrib/lets-delegate-subagent` beside itself with its own Node,
+it from `resolvers/lets-delegate-subagent` beside itself with its own Node,
 and it answers as `subagent`. When that file is missing or Node cannot run
 it, `lets` exits 4 and says its install is incomplete.
 
@@ -95,7 +95,7 @@ verb.
 
 A request without a valid `model` is malformed: the resolver exits 2.
 
-The resolvers in `contrib/` run exactly the `model` they are given, even
+The resolvers that ship with `lets` run exactly the `model` they are given, even
 one they did not list in `options`. When the harness cannot run it, they
 exit 3. For `gemini`, `run` adds the effort to the model, as
 `gemini-3.8-flash-high`. `start` has no effort, so the T3 resolver adds

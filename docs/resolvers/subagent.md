@@ -21,7 +21,7 @@ list it in your delegate config before `subagent`. Every resolver keeps
 
 ## Where lets finds it
 
-`lets` runs it from `contrib/lets-delegate-subagent` beside itself, with
+`lets` runs it from `resolvers/lets-delegate-subagent` beside itself, with
 the same Node that runs `lets`: with no config, after the resolver
 `LETS_SPEC_RESOLVER` names, if any; or at the place in the chain where
 your config lists `subagent`. A path to some other copy of the program in
@@ -30,9 +30,9 @@ carries a copy there:
 
 | You run lets from | The copy is |
 |---|---|
-| The release tarball | `contrib/lets-delegate-subagent` in the release folder |
-| The Nix `lets` package | `contrib/lets-delegate-subagent` in the package |
-| A checkout of this repository | `lets/contrib/lets-delegate-subagent`, a link to `lets/resolvers/lets-delegate-subagent` |
+| The release tarball | `resolvers/lets-delegate-subagent` in the release folder |
+| The Nix `lets` package | `resolvers/lets-delegate-subagent` in the package |
+| A checkout of this repository | `lets/resolvers/lets-delegate-subagent`, the dev entry itself, with no link |
 
 If the copy is missing, or Node cannot run it, `lets delegate` exits 4
 and says the `lets` install is incomplete. Reinstall `lets` to fix it.

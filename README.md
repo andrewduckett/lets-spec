@@ -425,7 +425,7 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 | `nix/flake-module.nix` | The flake module that projects import. It puts the OpenSpec CLI, `lets` and `gh` in the dev shell, and runs `lets sync` when the shell starts. |
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
 | `openspec-*` skills | Not committed. The flake generates them from the OpenSpec CLI in its nixpkgs, for the workflows in `build/openspec.json`, so moving nixpkgs can change their text. Each release records the CLI version in its `release.json`. |
-| `lets/` | The `lets` command and its resolvers, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `src/resolvers/kit/` is the code the resolvers share, which owns the contract: `lets` imports the protocol and its errors from it, and nothing under `src/resolvers/` imports from the rest of `lets`. `src/resolvers/t3/`, `cli/` and `subagent/` are the adapters for `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent`, the default that ships with `lets`. `resolvers/` holds their dev entries and `headless-resolver`, a complete resolver in `sh` to copy when you write your own. `lets/contrib/lets-delegate-subagent` links to the default's dev entry, so the source tree's `lets` finds it as an install would. `build.mjs` bundles `lets` and each resolver into one file with esbuild. |
+| `lets/` | The `lets` command and its resolvers, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `src/resolvers/kit/` is the code the resolvers share, which owns the contract: `lets` imports the protocol and its errors from it, and nothing under `src/resolvers/` imports from the rest of `lets`. `src/resolvers/t3/`, `cli/` and `subagent/` are the adapters for `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent`, the default that ships with `lets`. `resolvers/` holds their dev entries and `headless-resolver`, a complete resolver in `sh` to copy when you write your own. `build.mjs` bundles `lets` and each resolver into one file with esbuild. |
 | `docs/` | The pages the README links to, and the decision records in `docs/decisions/` |
 | `package.json`, `pnpm-workspace.yaml`, `tsconfig.json`, `mise.toml` | The pnpm workspace, its scripts, the type check's settings, and the tools for working without Nix |
 | `skills/` | The authored skills, one `lets-*` folder each: the entry points, and the flow skills the schemas call |
@@ -437,7 +437,7 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 ### Releases
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
-a release for every flow, and the four resolvers in `contrib/`, each one
+a release for every flow, and the four resolvers in `resolvers/`, each one
 file with no `node_modules`. `nix build .#lets-delegate-t3` and
 `.#lets-delegate-cli` build those resolvers for a user's profile. Bump
 `version` in `lets/package.json` in the commit you tag. Pushing a
