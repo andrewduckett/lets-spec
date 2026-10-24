@@ -1,7 +1,12 @@
 ## MODIFIED Requirements
 
 ### Requirement: The config file
-The config SHALL be one YAML document at `$XDG_CONFIG_HOME/lets/config.yaml` when `XDG_CONFIG_HOME` is set and not empty, and at `~/.config/lets/config.yaml` otherwise. It SHALL be a mapping that holds `version` `3`. It MAY hold `delegate`, a mapping of the settings for `lets delegate`. `delegate` MAY hold `resolvers`, the chain: a list of the resolvers to ask, in order. Each entry SHALL be the name of a resolver built into `lets`: `t3`, `cli` or `subagent`. The list MAY be empty. `delegate` MAY hold `review` and `handoff`, which only `instructions` reads. Every `lets delegate review` and `lets delegate handoff` command SHALL ignore any other key, at the top level or under `delegate`. They SHALL exit 2 with a message that names the file and the bad value when the document is not YAML, when it is not a mapping, when `version` is not the number `3`, when `delegate` is present and is not a mapping, or when `delegate.resolvers` is present and is not a list.
+The config SHALL be one YAML document at `$XDG_CONFIG_HOME/lets/config.yaml` when `XDG_CONFIG_HOME` is set and not empty, and at `~/.config/lets/config.yaml` otherwise. It SHALL be a mapping that holds `version` `3`. It MAY hold `delegate`, a mapping of the settings for `lets delegate`. `delegate` MAY hold `resolvers`, the chain: a list of the resolvers to ask, in order. Each entry SHALL be the name of a resolver built into `lets`: `t3`, `cli` or `subagent`. The list MAY be empty. `delegate` MAY hold `review` and `handoff`, which only `instructions` reads. A `delegate` or `delegate.resolvers` that is null SHALL count as absent. Every `lets delegate review` and `lets delegate handoff` command SHALL ignore any other key, at the top level or under `delegate`. They SHALL exit 2 with a message that names the file and the bad value in each of these cases:
+
+- the document is not YAML, or is not a mapping
+- `version` is not the number `3`
+- `delegate` is present and is not a mapping
+- `delegate.resolvers` is present and is not a list
 
 #### Scenario: A valid config
 - **WHEN** the file holds `version: 3` and `delegate.resolvers` listing `t3` and `subagent`, and `t3` declines
@@ -26,6 +31,10 @@ The config SHALL be one YAML document at `$XDG_CONFIG_HOME/lets/config.yaml` whe
 #### Scenario: A delegate key that is not a mapping
 - **WHEN** the file holds `version: 3` and `delegate: [t3]`
 - **THEN** `lets delegate review run --for code` exits 2, and stderr names the file and `delegate`
+
+#### Scenario: An empty delegate key
+- **WHEN** the file holds `version: 3` and a line `delegate:` with nothing under it
+- **THEN** `lets delegate handoff run --for apply` reads it without error, and the JSON line has `"resolver":"subagent"`
 
 #### Scenario: Resolvers that are not a list
 - **WHEN** the file holds `version: 3` and `delegate.resolvers: t3`

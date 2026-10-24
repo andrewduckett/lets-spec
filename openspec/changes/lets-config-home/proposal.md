@@ -29,7 +29,7 @@ None.
 ## Impact
 
 - Code: `lets/src/delegate/config.ts` (path, parser, guidance lookup), `lets/src/delegate/lookup.ts` (the chain), `lets/src/delegate/instructions.ts`, `lets/src/main.ts` (help text), and `lets/src/resolvers/t3/t3.ts` (`TOKEN_FILE`) (D12).
-- Tests: `tests/lets/delegate/` and `tests/lets/resolvers/t3/`, including their fixtures, which write the config and token paths.
+- Tests: every file under `tests/lets/delegate/`, and `tests/lets/resolvers/t3/` and `tests/lets/resolvers/cli/`, including their fixtures. They write the config text, the config path or the token path.
 - Docs: `README.md` (*Set up delegation*) and `docs/resolvers.md` (the token path).
 - Skills: `skills/lets-build`, `skills/lets-review-code` and `skills/lets-review-plan` (D13). This repository's own copies change at the next release.
 - Users: the one user moves and reshapes their own file after the change (D6). No dependency changes.

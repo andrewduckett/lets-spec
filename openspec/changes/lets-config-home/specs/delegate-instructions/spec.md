@@ -20,7 +20,13 @@
 - **THEN** `lets delegate handoff instructions --for apply` prints both lines in `guidance`, joined by a newline
 
 ### Requirement: Malformed guidance stops the command
-When the entry for the command's strategy under `delegate`, or its entry for the intent `--for` gives, is present and is not a mapping, or that entry's `guidance` is present and is not a string, `instructions` SHALL exit 2, print nothing on stdout, and name the config file and the bad key on stderr. It SHALL NOT check the entries for other strategies or other intents.
+`instructions` SHALL exit 2, print nothing on stdout, and name the config file and the bad key on stderr in each of these cases:
+
+- the entry for the command's strategy under `delegate` is present and is not a mapping
+- that entry's entry for the intent `--for` gives is present and is not a mapping
+- the intent's `guidance` is present and is not a string
+
+It SHALL NOT check the entries for other strategies or other intents.
 
 #### Scenario: A number for guidance
 - **WHEN** the config holds `delegate.review.code.guidance: 42`, and the user runs `lets delegate review instructions --for code`

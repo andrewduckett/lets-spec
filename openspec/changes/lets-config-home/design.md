@@ -42,7 +42,7 @@ Add `lets/src/config-dir.ts` with `configDir(env, homedir)`. It returns `$XDG_CO
 
 ### The parsed config keeps the file's shape
 
-`Config` becomes `{ version: 3; delegate: { resolvers?: ResolverName[]; review?: unknown; handoff?: unknown } }`. `parseConfig` always fills `delegate`, with `{}` when the key is missing. A `delegate` or `delegate.resolvers` that is YAML null counts as missing, as a null already does for guidance. `review` and `handoff` stay as the user wrote them, unchecked, as `delegations` is today, so a bad guidance never stops `run`. Other keys are dropped.
+`Config` becomes `{ version: 3; delegate: { resolvers?: ResolverName[]; review?: unknown; handoff?: unknown } }`. `parseConfig` always fills `delegate`, with `{}` when the key is missing. A `delegate` or `delegate.resolvers` that is YAML null counts as missing, as the spec says and as a null already does for guidance. So a bare `delegate:` line is valid. `review` and `handoff` stay as the user wrote them, unchecked, as `delegations` is today, so a bad guidance never stops `run`. Other keys are dropped.
 
 - *Alternative:* flatten to an internal shape such as `{ resolvers, guidance }`. That saves a level in `lookup.ts`, but the code then no longer matches the file, and every error message has to rebuild the path. Keeping the shape means the key in an error is the key in the code.
 
@@ -64,7 +64,7 @@ The `config.json` branch is deleted. `readConfig` returns `parseConfig(text, pat
 
 ### Tests change their text, not their structure
 
-Each inline `version: 2\nresolvers: [x]\n` becomes `version: 3\ndelegate: { resolvers: [x] }\n`, a one-line edit that keeps every test readable on its own. Block-form lists are re-indented under `delegate:`. The `CONFIG` and `HOME_CONFIG` fixtures move to `.../lets/config.yaml`. Tests of the `config.json` refusal are deleted with the requirement.
+The files that hold config text are `config.test.ts`, `cli.test.ts`, `handoff.test.ts`, `instructions.test.ts`, `review.test.ts` and `lookup.test.ts` in `tests/lets/delegate/`, and `delegate.test.ts` in both `tests/lets/resolvers/t3/` and `tests/lets/resolvers/cli/`. The token path is also in `tests/lets/resolvers/t3/t3.test.ts` and `delegate.test.ts`. Each inline `version: 2\nresolvers: [x]\n` becomes `version: 3\ndelegate: { resolvers: [x] }\n`, a one-line edit that keeps every test readable on its own. Block-form lists are re-indented under `delegate:`. The `CONFIG` and `HOME_CONFIG` fixtures move to `.../lets/config.yaml`. Tests of the `config.json` refusal are deleted with the requirement.
 
 ## Risks / Trade-offs
 

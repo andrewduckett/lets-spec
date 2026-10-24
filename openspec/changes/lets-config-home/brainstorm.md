@@ -20,7 +20,7 @@ https://github.com/sidereal-io/lets-spec/issues/89
 | D11 | Are unknown keys still ignored? | Yes, at the top level and under `delegate:`, so a later setting such as `sync:` can sit beside `delegate:` | Evidence: `lets/src/delegate/config.ts` |
 | D12 | Which files does the story touch? | The packet's paths are stale since #114–116: `contrib/` is gone; the token is in `lets/src/resolvers/t3/t3.ts`, the resolver docs are `docs/resolvers.md`, the token rule is in the `delegate-resolvers` spec, and the help text is in `lets/src/main.ts` | Evidence: `git grep lets-delegate` |
 | D13 | Do the skills change? | Yes: `lets-build`, `lets-review-code` and `lets-review-plan` in `skills/` name the new guidance paths | User |
-| D14 | Do the scratch folder `.workspace/lets-delegate/` and the T3 session label `lets-delegate` change? | No: they belong to delegation, not to the config | Assumption |
+| D14 | Do the scratch folder `.workspace/lets-delegate/` and the T3 session label `lets-delegate` change? | No: they belong to delegation, not to the config | User |
 
 ## Changes from the story
 
