@@ -47,7 +47,7 @@ Alternatives: keep one entry per run, chosen by argument. That keeps a build per
 
 ### The flake builds once, and each program installs one file from that build
 
-A new derivation, `bundles`, runs `pnpm --filter lets build` and installs `lets/dist/*` into `$out/libexec/`. `program name` becomes a small `runCommand` that copies `${bundles}/libexec/${name}` to `$out/libexec/${name}` and writes the same `bin/${name}` wrapper as today, with `meta.mainProgram`. `lets-bundle`, `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent` each call it with a name only, so every output that reads `.../libexec/<name>` from them stays as it is. `dist` installs the example from `./lets/resolvers/headless-resolver`. `workspaceSource` drops `./contrib` and keeps excluding `lets/contrib`. The lockfile changes, so `pnpmDeps`'s hash is reset with `lib.fakeHash` and replaced with the hash Nix prints.
+A new derivation, `bundles`, runs `pnpm --filter lets build` and installs `lets/dist/*` into `$out/libexec/`. `program name` becomes a small `runCommand` that copies `${bundles}/libexec/${name}` to `$out/libexec/${name}` and writes the same `bin/${name}` wrapper as today, with `meta.mainProgram`. `lets-bundle`, `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent` each call it with a name only, so every output that reads `.../libexec/<name>` from them stays as it is. `dist` installs the example from `./lets/resolvers/headless-resolver`. `workspaceSource` drops `./contrib` and keeps excluding `lets/contrib`. Its comment changes too: the link now points inside `lets/`, and the build still never reads it. The lockfile changes, so `pnpmDeps`'s hash is reset with `lib.fakeHash` and replaced with the hash Nix prints.
 
 `node-tests` runs `node --test "tests/**/*.test.ts"` and `patchShebangs tests lets/resolvers`. The `.bats` files sit outside the glob, so the runner never sees them.
 
@@ -63,7 +63,9 @@ A new derivation, `bundles`, runs `pnpm --filter lets build` and installs `lets/
 
 ### One test keeps the folder rule
 
-`tests/lets/resolvers/folder-rule.test.ts` reads every `.ts` file under `lets/src/resolvers/`. For each import or `import()` specifier, it asserts that a relative one resolves inside `lets/src/resolvers/`, and that a bare one starts with `node:` (D5). That covers both halves of the rule: nothing from the command's own files, and no `commander` or `yaml`. It reads files and parses no TypeScript, so it adds no dependency.
+`tests/lets/resolvers/folder-rule.test.ts` reads every `.ts` file under `lets/src/resolvers/`. It collects the specifier of each `import ... from`, `export ... from` and `import(...)`, matching only at the start of a statement, so a comment that names a package is not read as an import. A relative specifier must resolve inside `lets/src/resolvers/`, and a bare one must start with `node:` (D5). That covers both halves of the rule: nothing from the command's own files, and no `commander` or `yaml`.
+
+The test reads text with regular expressions and parses no TypeScript. TypeScript 7, the version the project uses, has no JavaScript compiler API to parse with, and a parser would be a new dependency. The rule runs one way, as #103's Shared decisions state it: the test does not check what `lets/src/delegate/` imports from the kit.
 
 ### The resolver READMEs move to `docs/resolvers/<id>.md`
 
@@ -71,7 +73,9 @@ Each README moves with `git mv` (D4). Its relative links are rewritten for the n
 
 ### The release-build tests copy one bundle into an empty folder
 
-`tests/release-build.bats` builds every bundle once per test into a temporary folder with `node "$repo/lets/build.mjs" <folder>`, run from `lets/`. The `lets` test and `bundle_alone` each copy the one program they check into an empty folder, and keep their assertions: it is the only file there, it is executable, and its first line is `#!/usr/bin/env node`. This matches the spec's "copied into an empty directory".
+`tests/release-build.bats` builds every bundle once per test into `$BATS_TEST_TMPDIR/build`, with `node build.mjs "$BATS_TEST_TMPDIR/build"` run from `lets/`. The `lets` test and `bundle_alone` then copy the one program they check into an empty folder. `bundle_alone` takes the program's name alone, such as `bundle_alone lets-delegate-t3`, since no package folder is left to name.
+
+Each test keeps its assertions on the copied file. It is the only file in its folder, it is executable, and its first line is `#!/usr/bin/env node`. This matches the spec's "copied into an empty directory".
 
 ### The docs and ADR-009
 
