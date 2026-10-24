@@ -6,6 +6,8 @@
 //   adapters:  how each resolver built into lets behaves, by name, as a
 //              FakeResolver; t3 and cli decline by default, and subagent is
 //              the real one
+//   real:      a real adapter to use in place of a fake, by name, such as
+//              the cli adapter on the kit's fake io
 //   gitBefore: what `git status -z` prints before the session
 //   gitAfter:  what it prints after; default gitBefore
 //   gitAfterFails: true when `git status` fails after the session
@@ -117,6 +119,7 @@ function recorded(adapter: Adapter, calls: AdapterCall[]): Adapter {
 
 type Options = {
   adapters?: Partial<Record<ResolverName, FakeResolver>>;
+  real?: Partial<Record<ResolverName, Adapter>>;
   gitBefore?: string;
   gitAfter?: string;
   gitAfterFails?: boolean;
@@ -125,7 +128,7 @@ type Options = {
 };
 
 export function commandDeps({
-  adapters = {}, gitBefore = '', gitAfter = gitBefore, gitAfterFails = false, files = { [PROMPT_FILE]: 'PROMPT TEXT' }, config,
+  adapters = {}, real = {}, gitBefore = '', gitAfter = gitBefore, gitAfterFails = false, files = { [PROMPT_FILE]: 'PROMPT TEXT' }, config,
 }: Options = {}) {
   const io = fakeIo({ files: { ...files, ...(config === undefined ? {} : { [CONFIG]: config }) } });
   let statusCalls = 0;
@@ -143,7 +146,7 @@ export function commandDeps({
   const resolverIo = fakeResolverIo();
   const calls: AdapterCall[] = [];
   const built = (name: ResolverName, fallback: () => Adapter) =>
-    recorded(adapters[name] === undefined ? fallback() : fakeAdapter(name, adapters[name]), calls);
+    recorded(real[name] ?? (adapters[name] === undefined ? fallback() : fakeAdapter(name, adapters[name])), calls);
   const resolvers = {
     t3: built('t3', () => fakeAdapter('t3', { declines: true })),
     cli: built('cli', () => fakeAdapter('cli', { declines: true })),

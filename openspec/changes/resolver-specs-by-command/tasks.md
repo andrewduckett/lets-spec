@@ -1,6 +1,6 @@
 ## 1. The test seam
 
-- [ ] 1.1 [easy] `commandDeps({ real: { cli: adapter } })` gives the delegate commands that real adapter under its name, still recorded in `adapterCalls`, and every existing delegate test passes unchanged (verify: `node --test tests/lets/delegate/*.test.ts`)
+- [x] 1.1 [easy] `commandDeps({ real: { cli: adapter } })` gives the delegate commands that real adapter under its name, still recorded in `adapterCalls`, and every existing delegate test passes unchanged (verify: `node --test tests/lets/delegate/*.test.ts`) (✓ node --test tests/lets/delegate/*.test.ts: 161 passed)
 
 ## 2. The cli twins [depends-on: 1]
 
