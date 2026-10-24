@@ -8,7 +8,7 @@ import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
   optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE,
 } from '../../contrib/t3-resolver/src/t3.ts';
-import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
+import type { RunInput, SpawnRequest, StartInput } from '../../contrib/resolver-kit/src/adapter.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
@@ -531,27 +531,49 @@ test('spawn is refused when t3 is not running', async () => {
   await assert.rejects(createAdapter(fakeIo({ env: {} })).spawn(runRequest), (error) => error instanceof Refused && /not running/.test(error.message));
 });
 
-// Spawn a session with a manifest that has defaults, and answer the model
-// selection t3 was sent. A run is at high effort unless told otherwise.
-async function spawnedSelection(request: Partial<SpawnRequest>, { projectDefault = null as string | null } = {}) {
-  const db = database();
+// An io inside a running T3 with a project for /r, whose state is db, and a
+// manifest that has defaults. t3 answers each request over the WebSocket
+// with LAUNCHED, which names thread T, and logs it.
+function launchingIo(db: DatabaseSync, log: Log, { projectDefault = null as string | null } = {}) {
   addProject(db, { root: '/r', selection: projectDefault });
-  const log: Log = [];
   const manifest = { manifest: { currentModels: {}, providers: {
     codex: { defaults: null }, claudeAgent: { defaults: { chat: 'claude-fable-5-1' } }, antigravity: { defaults: { chat: 'gemini-3.8-flash-high' } },
   } } };
-  const io = fakeIo({
+  return fakeIo({
     env: {},
     files: { ...RUNNING, '/home/u/.t3/userdata/model-manifest.json': JSON.stringify(manifest) },
     results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }, { stdout: 'main\n', stderr: '', code: 0 }],
     openDb: () => shared(db),
-    fetch: fakeFetch([200], []),
+    fetch: fakeFetch([200, 200], []),
     WebSocket: fakeWebSocket(LAUNCHED, log),
   });
-  await createAdapter(io).spawn({ ...runRequest, ...request });
-  return (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload.modelSelection;
 }
-const start = { kind: 'start', effort: null, readOnly: false } as const;
+const launched = (log: Log) => (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload;
+
+// Spawn a session, and answer the model selection t3 was sent. A run is at
+// high effort unless told otherwise.
+async function spawnedSelection(request: Partial<SpawnRequest>, options: { projectDefault?: string | null } = {}) {
+  const log: Log = [];
+  await createAdapter(launchingIo(database(), log, options)).spawn({ ...runRequest, ...request });
+  return launched(log).modelSelection;
+}
+
+const startInput: StartInput = { name: 'fix-login', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6-luna' };
+
+// Start a session, and answer the model selection t3 was sent.
+async function startedSelection(input: Partial<StartInput>, options: { projectDefault?: string | null } = {}) {
+  const log: Log = [];
+  await createAdapter(launchingIo(database(), log, options)).start!({ ...startInput, ...input });
+  return launched(log).modelSelection;
+}
+
+test('start launches a default-mode thread, and returns its handle', async () => {
+  const log: Log = [];
+  const handle = await createAdapter(launchingIo(database(), log)).start!(startInput);
+  assert.deepEqual(handle, { kind: 'thread', id: 'T', origin: ORIGIN });
+  assert.equal(launched(log).interactionMode, 'default');
+  assert.equal(launched(log).title, 'fix-login');
+});
 
 test('a run with a null model spawns the manifest\'s default chat model for the provider', async () => {
   assert.equal((await spawnedSelection({ family: 'claude', model: null })).model, 'claude-fable-5-1');
@@ -566,19 +588,19 @@ test('a gemini run with a null model spawns the default at the review\'s effort'
 });
 
 test('a start runs the request\'s model, not the project default, with no effort option', async () => {
-  const selection = await spawnedSelection({ ...start, family: 'gpt', model: 'gpt-6-luna' },
+  const selection = await startedSelection({ family: 'gpt', model: 'gpt-6-luna' },
     { projectDefault: '{"instanceId":"claudeAgent","model":"claude-opus-5-5","options":[]}' });
   assert.deepEqual(selection, { instanceId: 'codex', model: 'gpt-6-luna', options: [] });
 });
 
 test('a gemini start adds medium effort to the model', async () => {
-  assert.equal((await spawnedSelection({ ...start, family: 'gemini', model: 'gemini-3.8-flash' })).model, 'gemini-3.8-flash-medium');
+  assert.equal((await startedSelection({ family: 'gemini', model: 'gemini-3.8-flash' })).model, 'gemini-3.8-flash-medium');
 });
 
 test('a start with a bare family runs the provider\'s default as the manifest names it', async () => {
-  assert.equal((await spawnedSelection({ ...start, family: 'gemini', model: null })).model, 'gemini-3.8-flash-high');
+  assert.equal((await startedSelection({ family: 'gemini', model: null })).model, 'gemini-3.8-flash-high');
 });
 
-test('a start with a bare family spawns null when the provider has no default', async () => {
-  assert.deepEqual(await spawnedSelection({ ...start, family: 'gpt', model: null }), { instanceId: 'codex', model: null, options: [] });
+test('a start with a bare family launches null when the provider has no default', async () => {
+  assert.deepEqual(await startedSelection({ family: 'gpt', model: null }), { instanceId: 'codex', model: null, options: [] });
 });

@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
+import type { Adapter, Session, SpawnRequest, StartInput } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
@@ -342,6 +342,33 @@ export function createAdapter(io: Io): Adapter {
     return runtime;
   }
 
+  // Launch a thread for the request. A read-only one is in plan mode; a null
+  // effort is a start's, which t3ModelSelection leaves to the model.
+  async function launchThread({ name, prompt, cwd, family, model }: StartInput, { readOnly, effort }: { readOnly: boolean; effort: Effort | null }): Promise<Handle> {
+    const { origin } = runningServer();
+    // The main checkout, even when cwd is a linked worktree.
+    const repoRoot = resolve(await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']), '..');
+    const project = withDb((db) => findProject(db, repoRoot));
+    const branch = (await git(cwd, ['branch', '--show-current'])) || null;
+    // A null model is the provider's default; with none, t3 picks its own.
+    const manifest = model === null ? readManifest() : null;
+    const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: !readOnly }));
+    const modelSelection = t3ModelSelection({ family, model: chosen, effort });
+    const token = await readToken(io);
+    const { threadId } = await launch(io, { origin, token }, buildLaunch({
+      threadId: randomUUID(),
+      projectId: project.project_id,
+      title: name,
+      text: prompt,
+      modelSelection,
+      interactionMode: readOnly ? 'plan' : 'default',
+      branch,
+    }));
+    // origin is for people to read: finish sends the token only to the
+    // running server, never to the origin a handle names.
+    return { kind: 'thread', id: threadId, origin };
+  }
+
   return {
     name: 't3',
     program: 'lets-delegate-t3',
@@ -363,28 +390,11 @@ export function createAdapter(io: Io): Adapter {
     },
 
     async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
-      const { origin } = runningServer();
-      // The main checkout, even when cwd is a linked worktree.
-      const repoRoot = resolve(await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']), '..');
-      const project = withDb((db) => findProject(db, repoRoot));
-      const branch = (await git(cwd, ['branch', '--show-current'])) || null;
-      // A null model is the provider's default; with none, t3 picks its own.
-      const manifest = model === null ? readManifest() : null;
-      const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: kind === 'start' }));
-      const modelSelection = t3ModelSelection({ family, model: chosen, effort });
-      const token = await readToken(io);
-      const { threadId } = await launch(io, { origin, token }, buildLaunch({
-        threadId: randomUUID(),
-        projectId: project.project_id,
-        title: name,
-        text: prompt,
-        modelSelection,
-        interactionMode: readOnly ? 'plan' : 'default',
-        branch,
-      }));
-      // origin is for people to read: finish sends the token only to the
-      // running server, never to the origin a handle names.
-      return { handle: { kind: 'thread', id: threadId, origin } };
+      return { handle: await launchThread({ name, prompt, cwd, family, model }, { readOnly, effort }) };
+    },
+
+    async start(input: StartInput) {
+      return launchThread(input, { readOnly: false, effort: null });
     },
 
     async waitForResult({ handle }, { timeoutMs }) {
