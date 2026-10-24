@@ -130,3 +130,63 @@ test('a model the CLI never listed is still tried', async () => {
   assert.equal(io.calls.length, 1);
   assert.ok(io.calls[0][1].includes('gpt-6-astra'));
 });
+
+test('codex refusing the model is exit 3, with the end of its stderr', async () => {
+  const t = withCli(fakeIo({ commands: ['codex'], results: [{ stdout: '', stderr: 'error: model gpt-6-astra not available', code: 1 }] }));
+  assert.equal(await review(reviewOptions({ models: ['gpt/gpt-6-astra'] }), t.deps), 3);
+  assert.equal(t.stdout(), '');
+  assert.match(t.stderr(), /^lets delegate: gpt\/gpt-6-astra: .*model gpt-6-astra not available/m);
+});
+
+test('a codex refusal after an earlier review with the same name is exit 3, not 5', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { '/repo/.workspace/lets-delegate/x.last-message.md': 'OLD FINDINGS\n' },
+    results: [{ stdout: '', stderr: 'model not available', code: 1 }] });
+  assert.equal(await review(reviewOptions({ models: ['gpt/gpt-6-astra'] }), withCli(io).deps), 3);
+});
+
+// A claude review, from a codex author, with 3 minutes, whose CLI answers
+// with result, on io when given.
+const claudeReview = async (result: NonNullable<Parameters<typeof fakeIo>[0]>['results'], io = fakeIo({ commands: ['claude'], results: result })) => {
+  const t = withCli(io);
+  const code = await review(reviewOptions({ sourceFamily: 'gpt', models: ['claude'], timeoutMinutes: 3 }), t.deps);
+  return { code, stdout: t.stdout(), stderr: t.stderr() };
+};
+
+test('a CLI that prints and then exits non-zero is exit 5, with its exit and stderr', async () => {
+  const answer = await claudeReview([{ stdout: 'half a review', stderr: 'rate limited', code: 2 }]);
+  assert.deepEqual([answer.code, answer.stdout], [5, '']);
+  assert.match(answer.stderr, /claude failed: exit 2: rate limited/);
+});
+
+test('a CLI that exits non-zero having printed nothing is a refusal, exit 3, with the end of its stderr', async () => {
+  const answer = await claudeReview([{ stdout: '', stderr: 'model not found', code: 1 }]);
+  assert.deepEqual([answer.code, answer.stdout], [3, '']);
+  assert.match(answer.stderr, /claude refused: exit 1: model not found/);
+});
+
+test('a CLI that ends with an empty message is exit 5', async () => {
+  const answer = await claudeReview([{ stdout: '\n', stderr: '', code: 0 }]);
+  assert.equal(answer.code, 5);
+  assert.match(answer.stderr, /empty final message/);
+});
+
+test('a codex review that writes no last message is exit 5', async () => {
+  const t = withCli(fakeIo({ commands: ['codex'] }));
+  assert.equal(await review(reviewOptions(), t.deps), 5);
+  assert.match(t.stderr(), /empty final message/);
+});
+
+test('a CLI that cannot start is a refusal, exit 3, naming the CLI', async () => {
+  const io = fakeIo({ commands: ['claude'], execFile: async (cmd) => {
+    throw new Error(`cannot run ${cmd}: spawn ${cmd} EACCES`);
+  } });
+  const answer = await claudeReview([], io);
+  assert.equal(answer.code, 3);
+  assert.match(answer.stderr, /^lets delegate: claude: cannot run claude: /m);
+});
+
+test('a CLI that runs past the timeout is stopped, and is exit 6', async () => {
+  const answer = await claudeReview([{ stdout: '', stderr: '', code: 1, timedOut: true }]);
+  assert.equal(answer.code, 6);
+  assert.match(answer.stderr, /claude did not finish in 3 minutes/);
+});
