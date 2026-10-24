@@ -121,7 +121,7 @@ build_from() {
 # node, from anywhere, with no node_modules beside it.
 @test "the lets bundle is one executable script that runs with no node_modules" {
   local bin="$BATS_TEST_TMPDIR/bin/lets"
-  node "$repo/lets/build.mjs" "$bin"
+  (cd "$repo/lets" && node node_modules/resolver-kit/build.mjs "$bin")
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
   [ "$(ls -A "$BATS_TEST_TMPDIR/bin")" = lets ]
