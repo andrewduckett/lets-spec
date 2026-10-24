@@ -12,7 +12,7 @@
 
 ## 3. The t3 twins [depends-on: 1]
 
-- [ ] 3.1 [parallel] [medium] With `resolvers: [t3]`, `review instructions` answers `t3` with no options and a warning naming the manifest path inside T3 Code, with or without `/proc`, and exits 2 when the T3 server is not an ancestor (verify: `node --test tests/lets/resolvers/t3/delegate.test.ts`)
+- [x] 3.1 [parallel] [medium] With `resolvers: [t3]`, `review instructions` answers `t3` with no options and a warning naming the manifest path inside T3 Code, with or without `/proc`, and exits 2 when the T3 server is not an ancestor (verify: `node --test tests/lets/resolvers/t3/delegate.test.ts`) (✓ node --test tests/lets/resolvers/t3/delegate.test.ts: 3 passed; all 3 failed with the expectations broken)
 - [ ] 3.2 [parallel] [medium] With `resolvers: [t3]`, `review run` exits 3 and archives the thread when T3 fails the run before any message, and exits 3 naming the repository, creating no thread, when T3 has no project for it; `handleKind` is `thread` (verify: `node --test tests/lets/resolvers/t3/delegate.test.ts`)
 
 ## 4. Retire the program-level tests and move the rules [depends-on: 2, 3]
