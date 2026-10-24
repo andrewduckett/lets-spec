@@ -235,6 +235,15 @@
             # Once the project commits the copies, the check passes.
             git add -A
             lets sync --check
+            # The packaged lets prints the version in lets/package.json.
+            [ "$(lets --version)" = ${version} ]
+            # It warns when the OpenSpec CLI on PATH is not the one its
+            # release.json records.
+            mkdir ../fake-openspec
+            printf '#!/bin/sh\necho 0.0.1\n' > ../fake-openspec/openspec
+            chmod +x ../fake-openspec/openspec
+            PATH="$PWD/../fake-openspec:$PATH" lets sync 2>warnings >/dev/null
+            grep -qF "the OpenSpec CLI on PATH is 0.0.1, but this release's openspec-* skills were generated from ${pkgs.openspec.version}." warnings
 
             openspec new change gate </dev/null >/dev/null 2>&1
             openspec instructions brainstorm --change gate </dev/null >instructions 2>stderr
