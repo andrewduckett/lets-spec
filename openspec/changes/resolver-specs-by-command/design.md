@@ -56,7 +56,7 @@ Alternative: `tests/lets/delegate/`. That folder tests the chain with fake adapt
 
 ### The cases with no command-level twin
 
-The packet's rule is "a twin at the chain, or at the adapter itself". Three cases have no twin at the chain (D10):
+The packet's rule is "a twin at the chain, or at the adapter itself". Three cases have no twin at the chain (D10). The two adapter-level tests go in the same `delegate.test.ts` file, under a comment that says they call the adapter itself, so `t3.test.ts` and `cli.test.ts` stay as they are (D9):
 
 - *finish removes nothing for a process handle whose id is not a session name* becomes a call to the cli adapter's `finish` with handle `process ../x`. The test asserts that it throws and removes nothing. The program used to catch this and exit 0. In process, `review run` reports a failed finish as a warning, but it only ever finishes a handle the adapter made, so a test could not reach this case through the command.
 - *finish refuses a handle of another kind* (t3 and cli) becomes an assertion that `createAdapter(io).handleKind` is `thread` for `t3` and `process` for `cli`. `kit/resolver.test.ts` tests the refusal for any adapter. The rule stays in `resolvers` until the deletion story removes it with the programs.

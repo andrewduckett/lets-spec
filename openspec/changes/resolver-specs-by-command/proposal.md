@@ -21,5 +21,5 @@ The `resolvers` spec states every t3 and cli rule as a program's exit code and s
 ## Impact
 
 - Specs: `openspec/specs/resolvers/spec.md` and a new `openspec/specs/delegate-resolvers/spec.md`.
-- Tests: `tests/lets/resolvers/t3/resolver.test.ts` and `tests/lets/resolvers/cli/resolver.test.ts` are replaced by tests that call the delegate commands. `tests/lets/delegate/fixtures/command-deps.ts` may change so that a test can pass a real adapter.
+- Tests: `tests/lets/resolvers/t3/delegate.test.ts` and `tests/lets/resolvers/cli/delegate.test.ts` replace the two `resolver.test.ts` files beside them. `tests/lets/delegate/fixtures/command-deps.ts` may change so that a test can pass a real adapter.
 - Code: none. `lets/src/` is unchanged. The programs, their bundles and `lets delegate verify` still build and pass.
