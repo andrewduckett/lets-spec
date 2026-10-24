@@ -1,7 +1,7 @@
-# contrib-resolvers Specification
+# resolvers Specification
 
 ## Purpose
-Says which resolver programs this repository ships in `contrib/`, when each one answers a request or declines it, and how a user gets them from the release folder or the flake.
+Says which resolver programs this repository ships in `resolvers/`, when each one answers a request or declines it, and how a user gets them from the release folder or the flake.
 
 ## Requirements
 
