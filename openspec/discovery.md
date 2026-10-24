@@ -54,10 +54,10 @@ Stage status checked against the code on 2026-10-24.
 ```
   Change ──► Release ──► Bump the pin here ──► Walk Mo's journey
      │          │               │                     │
- partial    supported        partial               partial
+ supported  supported        partial               partial
 ```
 
-1. **Change** — one issue, one branch, one pull request, planned with Let's Spec — partial: a change to delegation crosses a JSON protocol between `lets` and three resolver programs, each bundled, packaged and checked by `lets delegate verify`, for an extension point nobody outside this repository uses ([#111](https://github.com/sidereal-io/lets-spec/issues/111), [#112](https://github.com/sidereal-io/lets-spec/issues/112), [#113](https://github.com/sidereal-io/lets-spec/issues/113))
+1. **Change** — one issue, one branch, one pull request, planned with Let's Spec — supported
 2. **Release** — push a tag; the workflow builds and publishes the tarball — supported
 3. **Bump the pin here** — a pull request moves `mise.toml` to the release and commits what `lets sync` wrote — partial: done by hand after each release
 4. **Walk Mo's journey** — every change on this repository goes through the skills — partial: see Mo's journey above

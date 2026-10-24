@@ -19,7 +19,9 @@ A config that still lists a path makes every `lets delegate` command exit
    `lets-delegate-cli`, and `subagent` for `lets-delegate-subagent`.
    Keep `version: 2` and the order.
 2. Remove the resolver programs you installed. `lets` no longer runs
-   them.
+   them, the release folder no longer has `resolvers/`, and the flake no
+   longer has their packages. `lets delegate verify`, which checked them,
+   is gone too.
 
 | You installed them with | Do this |
 |---|---|

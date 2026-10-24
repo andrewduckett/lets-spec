@@ -15,7 +15,7 @@
 ## 4. Docs [depends-on: 2]
 
 - [x] 4.1 [parallel] [medium] `docs/resolvers.md` describes the three resolvers in one page, the README's resolver table and *After a T3 Code update* link to it, the README's *Layout*, *Releases* and *Testing* name no resolver bundle or `pnpm verify`, and `docs/resolver-contract.md` is gone with the two bats tests that read it (verify: `bats tests/skill-interfaces.bats`) (✓ the new bats test failed first with no docs/resolvers.md; then bats tests/skill-interfaces.bats: 24 passed)
-- [ ] 4.2 [parallel] [easy] The 0.6 upgrade note says the release folder has no `resolvers/` and `lets delegate verify` is gone; `AGENTS.md`'s *Checks*, `delegate-default`'s Purpose and the journey map in `openspec/discovery.md` stop naming the programs (verify: `bats tests/skill-interfaces.bats`)
+- [x] 4.2 [parallel] [easy] The 0.6 upgrade note says the release folder has no `resolvers/` and `lets delegate verify` is gone; `AGENTS.md`'s *Checks*, `delegate-default`'s Purpose and the journey map in `openspec/discovery.md` stop naming the programs (verify: `bats tests/skill-interfaces.bats`) (✓ bats tests/skill-interfaces.bats: 24 passed; the packet's search now finds only the main specs that archive changes)
 
 ## 5. Acceptance [depends-on: 3, 4]
 
@@ -30,3 +30,4 @@
 - 2026-10-24: `node-tests` drops `patchShebangs tests` too, not only `lets/resolvers` (design D6). With `fake-resolver` gone, no file under `tests/` runs as a program.
 - 2026-10-24: `main.ts`'s `instructions` help no longer says "decline a probe", and the `UsageError` and `SpawnError` comments no longer name requests or the contract. No output a skill reads changes.
 - 2026-10-24: Task 2.3's new case tests behaviour that already exists, so its red step broke the expectation once and watched it fail.
+- 2026-10-24: Task 4.2 is prose with no behaviour, so it has no red step. Its check is the packet's search, which then finds only the main specs that archive rewrites.
