@@ -10,7 +10,7 @@ const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
 
 // commandDeps whose config lists t3, which answers, and more as given.
 const withT3 = (over: Parameters<typeof commandDeps>[0] = {}) =>
-  commandDeps({ resolver: false, config: 'version: 2\nresolvers: [t3]\n', ...over, adapters: { t3: {}, ...over.adapters } });
+  commandDeps({ config: 'version: 2\nresolvers: [t3]\n', ...over, adapters: { t3: {}, ...over.adapters } });
 type Calls = ReturnType<typeof commandDeps>['adapterCalls'];
 const runs = (calls: Calls) => calls('run').map(([name, , call]) => ({ name, ...(call as { input: object; options: object }) }));
 const finishes = (calls: Calls) => calls('finish').map(([name, , call]) => ({ name, ...(call as { handle: object; ok: boolean; options: object }) }));
@@ -71,13 +71,13 @@ test('a bad --model is exit 2, naming it, and no resolver is asked', async () =>
 });
 
 test('an invalid config is exit 2, naming the file and the bad value', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers:\n  - bin/lets-delegate-t3\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers:\n  - bin/lets-delegate-t3\n' });
   assert.equal(await run(options(), t.deps), 2);
   assert.match(t.stderr(), new RegExp(`${CONFIG}.*bin/lets-delegate-t3`));
 });
 
 test('a path from an older lets is exit 2, naming the file, the path and the three names', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [/opt/r/lets-delegate-t3]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [/opt/r/lets-delegate-t3]\n' });
   assert.equal(await run(options(), t.deps), 2);
   assert.equal(t.stdout(), '');
   for (const named of [CONFIG, '/opt/r/lets-delegate-t3', 't3', 'cli', 'subagent']) assert.ok(t.stderr().includes(named), named);
@@ -92,7 +92,7 @@ test('when every listed resolver declines, a review is exit 2 with nothing on st
 });
 
 test('when the first resolver declines, the next one answers', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { declines: true }, cli: {} } });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { declines: true }, cli: {} } });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(JSON.parse(t.stderr()).resolver, 'cli');
 });
@@ -111,7 +111,7 @@ test('the run request has no reviewers, whatever the config holds', async () => 
 });
 
 test('finish goes to the same resolver with the handle, with ok after a clean tree', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [cli, t3]\n', adapters: { t3: {}, cli: {} } });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [cli, t3]\n', adapters: { t3: {}, cli: {} } });
   await run(options(), t.deps);
   assert.deepEqual(finishes(t.adapterCalls), [{ name: 'cli', handle: { kind: 'cli', id: 'cli-1' }, ok: true, options: { cwd: '/repo' } }]);
 });
@@ -138,7 +138,7 @@ test('a review whose every model is refused is exit 3, naming each model', async
 });
 
 test('a refusal never moves down the chain', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { refuse: ['gpt', 'gemini'] }, cli: {} } });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { refuse: ['gpt', 'gemini'] }, cli: {} } });
   assert.equal(await run(options({ models: ['gpt', 'gemini'] }), t.deps), 3);
   assert.equal(t.adapterCalls().some(([name]) => name === 'cli'), false, 'cli was not asked');
 });
@@ -215,11 +215,18 @@ test('a prompt file that cannot be read is exit 2, naming it, and no resolver is
 });
 
 test('with no config, the review is exit 3, prints nothing, and asks only the default', async () => {
-  const t = commandDeps({ resolver: false });
+  const t = commandDeps();
   assert.equal(await run(options(), t.deps), 3);
   assert.equal(t.stdout(), '');
   assert.deepEqual([...new Set(t.adapterCalls().map(([name]) => name))], ['subagent']);
   assert.match(t.stderr(), /no resolver started a session/);
   assert.match(t.stderr(), /subagent/);
   assert.doesNotMatch(t.stderr(), /installed/);
+});
+
+test('a review runs no program but git, whatever the environment holds', async () => {
+  const t = withT3();
+  t.deps.env = { ...process.env };
+  assert.equal(await run(options(), t.deps), 0);
+  assert.deepEqual([...new Set(t.io.calls.map(([cmd]) => cmd))], ['git']);
 });

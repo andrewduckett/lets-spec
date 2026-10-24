@@ -8,7 +8,7 @@ const options = { name: 'Fix Login', promptFile: 'p.md', models: ['claude'] };
 
 // commandDeps whose config lists t3, which answers, and more as given.
 const withT3 = (over: Parameters<typeof commandDeps>[0] = {}) =>
-  commandDeps({ resolver: false, config: 'version: 2\nresolvers: [t3]\n', ...over, adapters: { t3: {}, ...over.adapters } });
+  commandDeps({ config: 'version: 2\nresolvers: [t3]\n', ...over, adapters: { t3: {}, ...over.adapters } });
 type Calls = ReturnType<typeof commandDeps>['adapterCalls'];
 const startModels = (calls: Calls) => calls('start').map(([, , input]) => {
   const { family, model } = input as { family: string; model: string | null };
@@ -55,7 +55,7 @@ test('a listed resolver that declines passes the handoff to the subagent entry',
 });
 
 test('a headless resolver starts nothing, and the next one answers', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [cli, subagent]\n', adapters: { cli: { headless: true } } });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [cli, subagent]\n', adapters: { cli: { headless: true } } });
   assert.equal(await run(options, t.deps), 0);
   assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
   assert.equal(t.adapterCalls().some(([name]) => name === 'cli'), false);
@@ -70,34 +70,34 @@ test('a chain that leaves out the default is exit 2 when its resolver declines, 
 });
 
 test('an empty chain is exit 2 with nothing on stdout', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: []\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: []\n' });
   assert.equal(await run(options, t.deps), 2);
   assert.equal(t.stdout(), '');
   assert.match(t.stderr(), /every resolver declined/);
 });
 
 test('a name lets does not know is exit 2, naming it and the config file', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [codex]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [codex]\n' });
   assert.equal(await run(options, t.deps), 2);
   assert.equal(t.stdout(), '');
   assert.match(t.stderr(), new RegExp(`${CONFIG}.*codex`));
 });
 
 test('a bad entry after one that would answer is exit 2, and saves no prompt', async () => {
-  const t = commandDeps({ resolver: false, config: 'version: 2\nresolvers: [subagent, /opt/r/lets-delegate-t3]\n' });
+  const t = commandDeps({ config: 'version: 2\nresolvers: [subagent, /opt/r/lets-delegate-t3]\n' });
   assert.equal(await run(options, t.deps), 2);
   assert.equal(t.savedFile('.workspace/lets-delegate/fix-login.prompt.md'), null);
   assert.deepEqual(t.adapterCalls(), []);
 });
 
 test('a leftover config.json is exit 2, naming both files', async () => {
-  const t = commandDeps({ resolver: false, files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': '{}' } });
+  const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': '{}' } });
   assert.equal(await run(options, t.deps), 2);
   assert.match(t.stderr(), /config\.json.*config\.yaml/);
 });
 
 test('with no config, the default hands back the prompt and where it is saved', async () => {
-  const t = commandDeps({ resolver: false, files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
+  const t = commandDeps({ files: { '/repo/p.md': 'Run lets-build on branch build-x' } });
   assert.equal(await run({ name: 'build-x', promptFile: 'p.md', models: ['claude'] }, t.deps), 0);
   const { resolver, handle, instructions } = JSON.parse(t.stdout());
   assert.equal(resolver, 'subagent');

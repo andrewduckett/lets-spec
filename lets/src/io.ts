@@ -2,7 +2,7 @@
 // Tests pass a fake with the same methods.
 import { execFile as nodeExecFile } from 'node:child_process';
 import {
-  accessSync, chmodSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
+  chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
   readlinkSync, rmSync, statSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -41,8 +41,6 @@ export type Io = {
   listNames(path: string): string[];
   listFiles(path: string): string[];
   execFile(cmd: string, args: string[], options?: ExecOptions): Promise<ExecResult>;
-  // A file this process may run.
-  isExecutable(path: string): boolean;
   // The user's home folder.
   homedir(): string;
   now(): number;
@@ -134,14 +132,6 @@ export function realIo(): Io {
       });
     },
 
-    isExecutable(path) {
-      try {
-        accessSync(path, constants.X_OK);
-        return statSync(path).isFile();
-      } catch {
-        return false;
-      }
-    },
     homedir: () => homedir(),
     now: () => Date.now(),
   };

@@ -3,14 +3,14 @@ import { test } from 'node:test';
 import type { Config, ResolverName } from '../../../lets/src/delegate/config.ts';
 import { chain, inAdapter, pick, withModels } from '../../../lets/src/delegate/lookup.ts';
 import { Refused, SessionFailed, SpawnError, TimeoutError, UsageError } from '../../../lets/src/resolvers/kit/errors.ts';
-import { commandDeps, CONFIG, FAKE_RESOLVER } from './fixtures/command-deps.ts';
+import { commandDeps, CONFIG } from './fixtures/command-deps.ts';
 import type { FakeResolver } from './fixtures/command-deps.ts';
 
 // A config whose chain is resolvers.
 const listing = (...resolvers: ResolverName[]): Config => ({ version: 2, resolvers });
 // Lookup deps with these fake adapters, and this config.
 function lookup(adapters: Partial<Record<ResolverName, FakeResolver>>, config: Config | null) {
-  const t = commandDeps({ resolver: false, adapters });
+  const t = commandDeps({ adapters });
   return { t, deps: { ...t.deps, config } };
 }
 const asked = (t: ReturnType<typeof commandDeps>) => t.adapterCalls('detect').map(([name]) => name);
@@ -51,9 +51,9 @@ test('when every resolver declines, it is a usage error naming the config file',
   }
 });
 
-test('LETS_SPEC_RESOLVER is not read', async () => {
+test('the chain runs no program, from the environment or PATH', async () => {
   const { t, deps } = lookup({ t3: {} }, listing('t3'));
-  assert.equal((await pick('run', { ...deps, env: { LETS_SPEC_RESOLVER: FAKE_RESOLVER } })).name, 't3');
+  assert.equal((await pick('run', { ...deps, env: { ...process.env } })).name, 't3');
   assert.deepEqual(t.io.calls, [], 'no program was run');
 });
 

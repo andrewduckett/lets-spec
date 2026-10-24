@@ -6,7 +6,6 @@
 //                function (cmd, args, opts) returning one, or a promise of
 //                one. When the queue is empty, execFile answers code 0.
 //   files:       initial files, { path: text }
-//   executables: the paths isExecutable finds
 //   any Io method replaces the default.
 import type { ExecOptions, ExecResult, Io } from '../../../../lets/src/io.ts';
 
@@ -19,13 +18,13 @@ export type FakeIo = Io & {
   removed: string[];
 };
 
-type Options = { results?: Result[]; files?: Record<string, string>; executables?: string[] } & Partial<Io>;
+type Options = { results?: Result[]; files?: Record<string, string> } & Partial<Io>;
 
 const notInFake = (name: string) => () => {
   throw new Error(`${name} is not in this fake`);
 };
 
-export function fakeIo({ results = [], files = {}, executables = [], ...overrides }: Options = {}): FakeIo {
+export function fakeIo({ results = [], files = {}, ...overrides }: Options = {}): FakeIo {
   const io: FakeIo = {
     calls: [],
     files: new Map(Object.entries(files)),
@@ -37,7 +36,6 @@ export function fakeIo({ results = [], files = {}, executables = [], ...override
       const next = results.shift() ?? { stdout: '', stderr: '', code: 0 };
       return typeof next === 'function' ? next(cmd, args, opts) : next;
     },
-    isExecutable: (path) => executables.includes(path),
     homedir: () => '/home/u',
     now: () => 0,
 
