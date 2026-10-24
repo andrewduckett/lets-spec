@@ -6,7 +6,7 @@
 // the adapter when the handle is of the kind it makes. No process access
 // here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
-import { exitCodeOf, Refused, SessionFailed, SpawnError } from './errors.ts';
+import { exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
 import { parseModel } from './protocol.ts';
 import type { Model, Request, Requests, Response, SessionVerb, Verb } from './protocol.ts';
 import { Declined } from './verbs.ts';
@@ -22,10 +22,9 @@ export function adapterAnswer(adapter: Adapter): AnswerFn {
     if (verb === 'probe') return { resolver: adapter.name, options: await adapter.options(warn) };
     if (verb === 'start') {
       const { cwd, name, prompt, model } = request as Requests['start'];
-      const { handle } = await adapter.spawn({ kind: 'start', name, prompt, cwd, ...modelOf(model), effort: null, readOnly: false });
-      return { resolver: adapter.name, handle };
+      return { resolver: adapter.name, handle: await adapter.start!({ name, prompt, cwd, ...modelOf(model) }) };
     }
-    return run(adapter, request as Requests['run'], warn);
+    return run(adapter, request as Requests['run']);
   };
 }
 
@@ -34,22 +33,14 @@ const takes = (adapter: Adapter, verb: SessionVerb) => (adapter.verbs ?? ['run',
 // The request's model, which parseRequest has already checked.
 const modelOf = (text: string): Model => parseModel(text)!;
 
-// Start a read-only session on the request's model, and wait for its final
-// message. A failure leaves the session in place, so a person can read it,
-// except a refusal: nothing ran, so the session is finished as ok.
-async function run(adapter: Adapter, { cwd, name, prompt, effort, timeoutMinutes, model: text }: Requests['run'], warn: (message: string) => void): Promise<Response> {
+// Run a read-only session on the request's model, and wait for its final
+// message. The adapter cleans up after a refusal, and names the session in an
+// error it throws after the session exists.
+async function run(adapter: Adapter, { cwd, name, prompt, effort, timeoutMinutes, model: text }: Requests['run']): Promise<Response> {
   const { family, model } = modelOf(text);
-  const session = await adapter.spawn({ kind: 'run', name, prompt, cwd, family, model, effort, readOnly: true });
-  const where = `(${session.handle.kind} ${session.handle.id})`;
-  try {
-    const { text } = await adapter.waitForResult(session, { timeoutMs: timeoutMinutes * 60000 });
-    if (text.trim() === '') throw new SessionFailed('empty final message');
-    return { resolver: adapter.name, text, family, model, handle: session.handle };
-  } catch (error) {
-    if (error instanceof Refused) await finish({ cwd, handle: session.handle, ok: true }, adapter, warn);
-    if (error instanceof Error && exitCodeOf(error) !== null) error.message = `${error.message} ${where}`;
-    throw error;
-  }
+  const { handle, text: final } = await adapter.run({ name, prompt, cwd, family, model, effort }, { timeoutMs: timeoutMinutes * 60000 });
+  if (final.trim() === '') throw new SessionFailed(`empty final message (${handle.kind} ${handle.id})`);
+  return { resolver: adapter.name, text: final, family, model, handle };
 }
 
 // Clean up after a session, from anywhere: finish does not check detect().

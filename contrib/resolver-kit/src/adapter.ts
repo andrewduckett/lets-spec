@@ -3,23 +3,11 @@
 // these calls.
 import type { Effort, Family, Handle, ModelString, SessionVerb } from './protocol.ts';
 
-// run: read-only, and the resolver waits for the final message.
-// start: interactive, and the resolver returns at once.
-// A null model is the harness's default for the family.
-export type SpawnRequest = {
-  kind: 'run' | 'start';
-  name: string;
-  prompt: string;
-  cwd: string;
-  family: Family;
-  model: string | null;
-  effort: Effort | null;
-  readOnly: boolean;
-};
-
-// A session this process made. handle is what goes back to lets; the rest
-// is what waitForResult needs in this process.
-export type Session = { handle: Handle; [field: string]: unknown };
+// The request for a read-only session, whose final message the resolver
+// waits for. A null model is the harness's default for the family.
+export type RunInput = { name: string; prompt: string; cwd: string; family: Family; model: string | null; effort: Effort };
+// The request for an interactive session, which the resolver returns at once.
+export type StartInput = Omit<RunInput, 'effort'>;
 
 export type Adapter = {
   // What probe answers, such as t3.
@@ -41,11 +29,13 @@ export type Adapter = {
   // The models this harness can run now, in its own order. It never
   // chooses one: the caller does. warn adds a line to stderr.
   options(warn: (message: string) => void): Promise<ModelString[]>;
-  // Throws Refused when the harness says no before the model gives output.
-  spawn(request: SpawnRequest): Promise<Session>;
-  // Throws Refused when the harness says no before the model gives output;
-  // the kit then finishes the session as ok.
-  waitForResult(session: Session, options: { timeoutMs: number }): Promise<{ text: string }>;
+  // Runs a read-only session and waits for its final message. Throws
+  // Refused when the harness says no before the model gives output, after
+  // cleaning up what it made. An error after the session exists names it.
+  run(input: RunInput, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
+  // Starts an interactive session and returns its handle. Throws Refused when
+  // the harness says no.
+  start?(input: StartInput): Promise<Handle>;
   // Cleans up after a session on ok. cwd is the finish request's folder.
   // Throws when it cannot.
   finish(handle: Handle, ok: boolean, options: { cwd: string }): Promise<void>;
