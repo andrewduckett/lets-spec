@@ -1,0 +1,24 @@
+## 1. Shared contracts
+
+- [ ] 1.1 [medium] `parseConfig` accepts only `t3`, `cli` and `subagent` as `resolvers` entries, typed as resolver names; a path or any other value throws a `UsageError` that names the config file, the entry and the three names; with no config the chain is `['subagent']`, and `SUBAGENT_ENTRY` goes (verify: node --test tests/lets/delegate/config.test.ts)
+- [ ] 1.2 [easy] `Adapter.start` may return `{ instructions }` in place of a `Handle`, and `adapterAnswer` answers such a result as `{ resolver, handle: null, instructions }`, while a `Handle` still answers as `{ resolver, handle }` (verify: node --test tests/lets/resolvers/kit/*.test.ts && pnpm check)
+- [ ] 1.3 [medium] `subagent`'s `createAdapter(io)` always detects, lists no models, refuses `run` with today's message, saves a handoff's prompt under `.workspace/lets-delegate/` and returns today's instructions text, and finishes nothing; `createAnswer` keeps working on the same shared texts (verify: node --test tests/lets/resolvers/subagent/subagent.test.ts)
+- [ ] 1.4 [medium] `Deps` carries `resolvers`, the three adapters by name, and loses `nodePath`; `realDeps()` builds them with one kit `realIo()`; `fixtures/command-deps.ts` builds fake adapters by name, each set to decline, list models, answer, refuse given models, or throw a known or plain error from `run`, `start` or `finish`, and records each call with its input (verify: pnpm check)
+
+## 2. The chain in process [depends-on: 1]
+
+- [ ] 2.1 [complex] The chain in `lookup.ts` asks the configured adapters in order: `detect()` false, or a missing `start` for a handoff, declines; when all decline it throws the "every resolver declined" `UsageError` naming the config file; a refusal tries the next model on the same adapter and, when all are refused, one `Refused` holds a `<model>: <reason>` line per model; an error `exitCodeOf` does not know, thrown inside an adapter, becomes a `SpawnError` with its message; `LETS_SPEC_RESOLVER` is not read; the process call, `DEFAULT_RESOLVER`, `BACKSTOP_MINUTES`, `OTHER_VERB_TIMEOUT_MS` and the "incomplete" and "declined after it answered" messages are gone (verify: node --test tests/lets/delegate/lookup.test.ts)
+- [ ] 2.2 [complex] `lets delegate review run` checks every `--model` before it asks an adapter (exit 2 naming a bad one), runs the picked adapter with the family, model, effort and timeout, prints the final message and today's JSON line, exits 5 on an empty final message, exits 4 on an adapter's unexpected error, and finishes the session on the same adapter with ok only when the tree is clean, a failed finish being a warning (verify: node --test tests/lets/delegate/review.test.ts)
+- [ ] 2.3 [medium] `lets delegate handoff run` checks every `--model` first, starts the session on the picked adapter, prints `{ resolver, handle }` or `{ resolver, handle: null, instructions }`, exits 3 when every model is refused, and exits 4 with the message on any other adapter error, never 5 or 6 (verify: node --test tests/lets/delegate/handoff.test.ts)
+- [ ] 2.4 [medium] `lets delegate <strategy> instructions` picks the first adapter that does not decline the strategy's kind of session, prints its name and `options(warn)`, writes each warning to stderr as `lets delegate: <message>`, and fails as `run` does on an unknown name or when all decline (verify: node --test tests/lets/delegate/instructions.test.ts)
+
+## 3. The words [depends-on: 2]
+
+- [ ] 3.1 [medium] The help texts describe names, not paths or `LETS_SPEC_RESOLVER`, and exit 4 says "the outcome is unknown"; `cli.test.ts` drives the real program only for the help texts, the no-config `subagent` answer and an unknown name's exit 2, and its fake-resolver tests move to the command seam; `source-tree.test.ts` sets no `LETS_SPEC_RESOLVER` (verify: node --test tests/lets/delegate/cli.test.ts tests/lets/delegate/source-tree.test.ts)
+- [ ] 3.2 [parallel] [easy] The README's *Resolver* definition, *Set up delegation* example and *Install a resolver* table use names and link no contract document; `docs/resolvers/` drops its install and config-path sections; `docs/upgrading.md` has the one 0.6 note; `skills/lets-build/SKILL.md` names the default `subagent` (verify: ! grep -rn -e LETS_SPEC_RESOLVER -e resolver-contract.md -e /absolute/path README.md docs/resolvers docs/upgrading.md skills/lets-build/SKILL.md)
+
+## 4. Integration [depends-on: 3]
+
+- [ ] 4.1 [medium] Every check passes, including the flake checks that expect `subagent` from `handoff run` with no config, and no test but `verify.test.ts` sets `LETS_SPEC_RESOLVER` or runs `fixtures/fake-resolver` (verify: pnpm test && nix flake check && ! grep -rln -e LETS_SPEC_RESOLVER -e fake-resolver tests/lets/delegate --exclude=verify.test.ts --exclude=fake-resolver)
+
+## Deviations Ledger
