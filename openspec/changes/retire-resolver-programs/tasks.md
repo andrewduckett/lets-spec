@@ -14,7 +14,7 @@
 
 ## 4. Docs [depends-on: 2]
 
-- [ ] 4.1 [parallel] [medium] `docs/resolvers.md` describes the three resolvers in one page, the README's resolver table and *After a T3 Code update* link to it, the README's *Layout*, *Releases* and *Testing* name no resolver bundle or `pnpm verify`, and `docs/resolver-contract.md` is gone with the two bats tests that read it (verify: `bats tests/skill-interfaces.bats`)
+- [x] 4.1 [parallel] [medium] `docs/resolvers.md` describes the three resolvers in one page, the README's resolver table and *After a T3 Code update* link to it, the README's *Layout*, *Releases* and *Testing* name no resolver bundle or `pnpm verify`, and `docs/resolver-contract.md` is gone with the two bats tests that read it (verify: `bats tests/skill-interfaces.bats`) (✓ the new bats test failed first with no docs/resolvers.md; then bats tests/skill-interfaces.bats: 24 passed)
 - [ ] 4.2 [parallel] [easy] The 0.6 upgrade note says the release folder has no `resolvers/` and `lets delegate verify` is gone; `AGENTS.md`'s *Checks*, `delegate-default`'s Purpose and the journey map in `openspec/discovery.md` stop naming the programs (verify: `bats tests/skill-interfaces.bats`)
 
 ## 5. Acceptance [depends-on: 3, 4]
