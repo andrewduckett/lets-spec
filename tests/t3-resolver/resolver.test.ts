@@ -112,7 +112,7 @@ test('a run T3 fails before any message exits 3 with its failure, and archives t
     values ('e1', 'T', 'run-1', 1, 'error', 'failed', 'now', ?)`).run(JSON.stringify({ failure: { message: 'gpt-6-astra is not available' } }));
   const answer = await handle('run', runRequest, createAdapter(io));
   assert.equal(answer.code, 3, answer.stderr);
-  assert.match(answer.stderr, /gpt-6-astra is not available/);
+  assert.match(answer.stderr, /gpt-6-astra is not available \(thread T\)\n$/);
   assert.deepEqual(sent.map(({ payload }) => payload.type ?? 'launch'), ['launch', 'thread.archive']);
   assert.equal(sent[1].payload.threadId, 'T');
 });

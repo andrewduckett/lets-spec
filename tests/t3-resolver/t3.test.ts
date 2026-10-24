@@ -226,9 +226,11 @@ test('readFinalMessage returns the run\'s newest assistant message', () => {
 const HANDLE = { kind: 'thread', id: 'T', origin: ORIGIN };
 
 // Run a session in thread T, whose state is db. Each sleep runs the next step.
-function running(db: DatabaseSync, steps: (() => void)[] = [], { timeoutMs = 60000 } = {}) {
-  return createAdapter(launchingIo(db, [], { sleep: async () => steps.shift()?.() })).run(runInput, { timeoutMs });
+// t3 answers each request with the next status, and the log keeps what was sent.
+function running(db: DatabaseSync, steps: (() => void)[] = [], { timeoutMs = 60000, statuses = [200, 200], log = [] as Log } = {}) {
+  return createAdapter(launchingIo(db, log, { sleep: async () => steps.shift()?.(), statuses })).run(runInput, { timeoutMs });
 }
+const sentTypes = (log: Log) => log.filter(([what]) => what === 'send').map(([, frame]) => (frame as { payload: { type?: string } }).payload.type ?? 'launch');
 
 test('run waits for the run to complete and the message to stop streaming', async () => {
   const db = database();
@@ -242,13 +244,26 @@ test('run waits for the run to complete and the message to stop streaming', asyn
   assert.deepEqual(await running(db, steps), { handle: HANDLE, text: 'FINDINGS' });
   assert.equal(steps.length, 0);
 });
-test('run refuses a run that failed before any assistant message, with its failure', async () => {
+// A thread whose run failed before any assistant message.
+function refusedRun() {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'failed');
   addFailure(db, 'run-1', 'model not available');
-  await assert.rejects(running(db),
-    (error) => error instanceof Refused && error.message === 'model not available');
+  return db;
+}
+test('run refuses a run that failed before any assistant message, with its failure and thread', async () => {
+  await assert.rejects(running(refusedRun()),
+    (error) => error instanceof Refused && error.message === 'model not available (thread T)');
+});
+test('run archives a thread it was refused in', async () => {
+  const log: Log = [];
+  await assert.rejects(running(refusedRun(), [], { log }), Refused);
+  assert.deepEqual(sentTypes(log), ['launch', 'thread.archive']);
+});
+test('a refused run that cannot archive its thread is still refused, saying why', async () => {
+  await assert.rejects(running(refusedRun(), [], { statuses: [200, 401] }),
+    (error) => error instanceof Refused && /^model not available; could not archive it: .+ \(thread T\)$/.test(error.message));
 });
 test('run fails a run that failed after an assistant message, with its failure', async () => {
   const db = database();

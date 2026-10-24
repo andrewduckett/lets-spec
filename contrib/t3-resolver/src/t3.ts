@@ -369,6 +369,11 @@ export function createAdapter(io: Io): Adapter {
     return { kind: 'thread', id: threadId, origin };
   }
 
+  async function archive(handle: Handle): Promise<void> {
+    const { origin } = runningServer();
+    await dispatch(io, { origin, token: await readToken(io) }, { type: 'thread.archive', commandId: randomUUID(), threadId: handle.id });
+  }
+
   // Wait for the thread's run to end, and read its final message.
   async function waitForText(handle: Handle, timeoutMs: number): Promise<{ text: string }> {
     // Open the database fresh on each check: the server writes it, and a
@@ -378,7 +383,7 @@ export function createAdapter(io: Io): Adapter {
       if (run === null) return undefined;
       if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
       // A run that failed before any message is a refusal, such as a model
-      // the account cannot run. The kit then archives the thread.
+      // the account cannot run. run then archives the thread.
       if (run.status === 'failed') {
         const failure = run.failure ?? 'run failed';
         throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
@@ -416,8 +421,21 @@ export function createAdapter(io: Io): Adapter {
     },
 
     async run({ effort, ...input }: RunInput, { timeoutMs }) {
+      // An error before the thread exists passes through: there is nothing
+      // to archive or name.
       const handle = await launchThread(input, { readOnly: true, effort });
-      return { handle, ...(await waitForText(handle, timeoutMs)) };
+      try {
+        return { handle, ...(await waitForText(handle, timeoutMs)) };
+      } catch (error) {
+        if (error instanceof Refused) {
+          // Nothing ran, so the thread goes, as finish with ok would do.
+          await archive(handle).catch((why: Error) => {
+            error.message += `; could not archive it: ${why.message}`;
+          });
+          error.message += ` (thread ${handle.id})`;
+        }
+        throw error;
+      }
     },
 
     async start(input: StartInput) {
@@ -426,9 +444,7 @@ export function createAdapter(io: Io): Adapter {
 
     // Archives the thread on ok. A failure throws, and the resolver reports it.
     async finish(handle: Handle, ok: boolean) {
-      if (!ok) return;
-      const { origin } = runningServer();
-      await dispatch(io, { origin, token: await readToken(io) }, { type: 'thread.archive', commandId: randomUUID(), threadId: handle.id });
+      if (ok) await archive(handle);
     },
   };
 }
