@@ -22,7 +22,7 @@ import { fakeIo as fakeResolverIo } from '../../resolvers/kit/fixtures/fake-io.t
 import { fakeIo } from './fake-io.ts';
 
 export const PROMPT_FILE = '/repo/p.md';
-export const CONFIG = '/home/u/.config/lets-delegate/config.yaml';
+export const CONFIG = '/home/u/.config/lets/config.yaml';
 
 // How a fake resolver behaves. By default it detects, starts sessions,
 // lists gpt/fake-model, and answers run with FINDINGS on handle

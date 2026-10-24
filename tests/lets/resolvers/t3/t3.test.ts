@@ -6,14 +6,14 @@ import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../../../le
 import type { Db } from '../../../../lets/src/resolvers/kit/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
-  optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE,
+  optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection,
 } from '../../../../lets/src/resolvers/t3/t3.ts';
 import type { RunInput, StartInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
 import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
-const TOKEN = `/home/u/.config/${TOKEN_FILE}`;
+const TOKEN = '/home/u/.config/lets/t3-token';
 const ORIGIN = 'http://127.0.0.1:3773';
 const RUNNING = { [RUNTIME]: JSON.stringify({ pid: 7, origin: ORIGIN }), [TOKEN]: 'tok' };
 
@@ -320,7 +320,7 @@ test('a missing token is issued with the t3 CLI and stored private', async () =>
   assert.deepEqual(io.calls.map(([cmd, args]) => [cmd, args]), [['t3', ISSUE]]);
   assert.equal(io.files.get(TOKEN), 'fresh-token');
   assert.equal(io.modes.get(TOKEN), 0o600);
-  assert.equal(io.modes.get('/home/u/.config/lets-delegate'), 0o700);
+  assert.equal(io.modes.get('/home/u/.config/lets'), 0o700);
 });
 test('a stored token is used as it is', async () => {
   const io = fakeIo({ env: {}, files: { [TOKEN]: 'stored\n' } });
@@ -328,7 +328,7 @@ test('a stored token is used as it is', async () => {
   assert.equal(io.calls.length, 0);
 });
 
-const XDG_TOKEN = `/cfg/${TOKEN_FILE}`;
+const XDG_TOKEN = '/cfg/lets/t3-token';
 
 test('with XDG_CONFIG_HOME set, the token stored under it is used', async () => {
   const io = fakeIo({ env: { XDG_CONFIG_HOME: '/cfg' }, files: { [XDG_TOKEN]: 'stored\n' } });

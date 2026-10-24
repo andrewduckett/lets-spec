@@ -4,6 +4,7 @@
 // does not know are ignored, so a later lets can add one beside them.
 import { dirname, join } from 'node:path';
 import { parse } from 'yaml';
+import { configDir } from '../config-dir.ts';
 import type { Deps, Io } from '../io.ts';
 import { UsageError } from '../resolvers/kit/errors.ts';
 
@@ -19,10 +20,9 @@ export type Config = { version: typeof CONFIG_VERSION; resolvers: ResolverName[]
 
 export type ConfigDeps = { env: Deps['env']; io: Io };
 
-// $XDG_CONFIG_HOME/lets-delegate/config.yaml, or ~/.config/... when it is unset.
+// config.yaml in the lets config folder.
 export function configPath({ env, io }: ConfigDeps): string {
-  const base = env.XDG_CONFIG_HOME ? env.XDG_CONFIG_HOME : join(io.homedir(), '.config');
-  return join(base, 'lets-delegate', 'config.yaml');
+  return join(configDir(env, io.homedir()), 'config.yaml');
 }
 
 // The config, or null when there is no file. Throws a UsageError that names

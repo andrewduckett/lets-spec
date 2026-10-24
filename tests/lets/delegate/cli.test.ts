@@ -144,8 +144,8 @@ function repo(config?: string) {
   writeFileSync(join(cwd, 'p.md'), 'PROMPT');
   const home = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
   if (config !== undefined) {
-    mkdirSync(join(home, 'lets-delegate'));
-    writeFileSync(join(home, 'lets-delegate', 'config.yaml'), config);
+    mkdirSync(join(home, 'lets'));
+    writeFileSync(join(home, 'lets', 'config.yaml'), config);
   }
   return { cwd, env: { XDG_CONFIG_HOME: home } };
 }
@@ -204,7 +204,7 @@ test('a resolver listed by path is exit 2, naming it and the config file', async
   assert.equal(code, 2);
   assert.equal(stdout, '');
   assert.ok(stderr.includes(example), stderr);
-  assert.ok(stderr.includes(join(r.env.XDG_CONFIG_HOME, 'lets-delegate', 'config.yaml')), stderr);
+  assert.ok(stderr.includes(join(r.env.XDG_CONFIG_HOME, 'lets', 'config.yaml')), stderr);
 });
 
 test('a name lets does not know is exit 2, naming it and the three names', async () => {

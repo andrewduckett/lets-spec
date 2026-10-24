@@ -91,7 +91,7 @@ test('a bad entry after one that would answer is exit 2, and saves no prompt', a
 });
 
 test('a leftover config.json is exit 2, naming both files', async () => {
-  const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets-delegate/config.json': '{}' } });
+  const t = commandDeps({ files: { [PROMPT_FILE]: 'PROMPT TEXT', '/home/u/.config/lets/config.json': '{}' } });
   assert.equal(await run(options, t.deps), 2);
   assert.match(t.stderr(), /config\.json.*config\.yaml/);
 });

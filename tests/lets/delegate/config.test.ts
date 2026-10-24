@@ -4,11 +4,11 @@ import { configPath, guidanceFor, parseConfig, readConfig } from '../../../lets/
 import { UsageError } from '../../../lets/src/resolvers/kit/errors.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
-const HOME_CONFIG = '/home/u/.config/lets-delegate/config.yaml';
+const HOME_CONFIG = '/home/u/.config/lets/config.yaml';
 
 // The deps readConfig takes, with a config file holding text, when given.
 function depsWith(text?: string, env: Record<string, string> = {}) {
-  const path = env.XDG_CONFIG_HOME ? `${env.XDG_CONFIG_HOME}/lets-delegate/config.yaml` : HOME_CONFIG;
+  const path = env.XDG_CONFIG_HOME ? `${env.XDG_CONFIG_HOME}/lets/config.yaml` : HOME_CONFIG;
   const files: Record<string, string> = text === undefined ? {} : { [path]: text };
   return { env, io: fakeIo({ files, homedir: () => '/home/u' }) };
 }
@@ -18,7 +18,7 @@ test('the config file is under ~/.config when XDG_CONFIG_HOME is unset', () => {
 });
 
 test('the config file is under XDG_CONFIG_HOME when it is set', () => {
-  assert.equal(configPath(depsWith(undefined, { XDG_CONFIG_HOME: '/tmp/cfg' })), '/tmp/cfg/lets-delegate/config.yaml');
+  assert.equal(configPath(depsWith(undefined, { XDG_CONFIG_HOME: '/tmp/cfg' })), '/tmp/cfg/lets/config.yaml');
 });
 
 test('no config file reads as null', () => {
@@ -107,7 +107,7 @@ test('an invalid config is a usage error that names the file and the bad value',
   }
 });
 
-const HOME_JSON = '/home/u/.config/lets-delegate/config.json';
+const HOME_JSON = '/home/u/.config/lets/config.json';
 
 test('a leftover config.json with no config.yaml is a usage error that names both files', () => {
   const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: '{"version":1}' } }) };

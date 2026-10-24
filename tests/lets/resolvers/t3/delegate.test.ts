@@ -95,7 +95,7 @@ function runningT3({ projectRoot = '/repo' } = {}) {
   } as unknown as typeof globalThis.WebSocket;
   const fetch = (async () => ({ status: 200, ok: true, json: async () => ({ ticket: 'TICKET' }) })) as unknown as typeof globalThis.fetch;
   const adapterIo = fakeIo({
-    files: { [RUNTIME]: JSON.stringify({ pid: 7, origin: ORIGIN }), '/home/u/.config/lets-delegate/t3-token': 'tok' },
+    files: { [RUNTIME]: JSON.stringify({ pid: 7, origin: ORIGIN }), '/home/u/.config/lets/t3-token': 'tok' },
     pid: 100,
     parentPid: (pid) => ({ 100: 50, 50: 7, 7: 1 } as Record<number, number>)[pid] ?? null,
     processAlive: (pid) => pid === 7,
