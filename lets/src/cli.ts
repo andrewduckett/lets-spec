@@ -95,9 +95,10 @@ Run lets delegate from the repo root.`;
 
 const REVIEW_HELP = `
 stdout: the session's final message.
-stderr: one JSON line with resolver, family, model, independent, handle,
-gitClean and durationSeconds. independent is true when the family that
-answered is not the source family.
+stderr: one JSON line with for, resolver, family, model, independent,
+handle, gitClean and durationSeconds. for is the intent --for gave.
+independent is true when the family that answered is not the source
+family.
 
 --model may be given more than once, best first. When the resolver
 refuses a model, lets sends the next one to the same resolver.

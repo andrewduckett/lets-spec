@@ -43,7 +43,7 @@ Find who wrote the plan. First answer wins:
    ```
 
 5. Act on its exit code:
-   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names the resolver, the family and model that answered, and whether the review was independent.
+   - **0**: the findings are in the raw file. The meta file's last line is JSON. It names what the review was for, the resolver, the family and model that answered, and whether the review was independent.
    - **3**: no fresh session can run here, for example because no resolver started one, or every model was refused. Take the [subagent step](#review-in-a-subagent).
    - **Anything else**: stop. Show the user the meta file and the exit code. Do not run the command again until something has changed.
 
