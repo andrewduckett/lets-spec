@@ -112,7 +112,7 @@ test('the run request has no reviewers, whatever the config holds', async () => 
 });
 
 test('run ignores the guidance, even one that is not a string', async () => {
-  const t = withT3({ config: 'version: 3\ndelegate: { resolvers: [t3] }\ndelegations:\n  code:\n    guidance: 42\n' });
+  const t = withT3({ config: 'version: 3\ndelegate:\n  resolvers: [t3]\n  review:\n    code:\n      guidance: 42\n' });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(t.stdout(), 'FINDINGS\n');
 });

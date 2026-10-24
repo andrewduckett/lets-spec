@@ -59,45 +59,47 @@ test('a key this lets does not know is ignored, at the top level and under deleg
   assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['subagent'] } });
 });
 
-test('delegations is kept as written, unchecked', () => {
-  const text = 'version: 3\ndelegate: { resolvers: [subagent] }\ndelegations:\n  code:\n    guidance: 42\n';
-  assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['subagent'] }, delegations: { code: { guidance: 42 } } });
+test('review and handoff under delegate are kept as written, unchecked', () => {
+  const text = 'version: 3\ndelegate:\n  resolvers: [subagent]\n  review:\n    code:\n      guidance: 42\n  handoff: apply\n';
+  assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['subagent'], review: { code: { guidance: 42 } }, handoff: 'apply' } });
 });
 
 const CONFIG = '/c/config.yaml';
-const withDelegations = (yaml: string) => parseConfig(`version: 3\n${yaml}`, CONFIG);
+const withDelegate = (yaml: string) => parseConfig(`version: 3\n${yaml}`, CONFIG);
 
-test('guidanceFor gives the guidance for the intent', () => {
-  const config = withDelegations('delegations:\n  code:\n    guidance: Use the strongest gpt model.\n');
-  assert.equal(guidanceFor(config, 'code', CONFIG), 'Use the strongest gpt model.');
+test('guidanceFor gives the guidance for the strategy and the intent', () => {
+  const config = withDelegate('delegate:\n  review:\n    code:\n      guidance: Use the strongest gpt model.\n');
+  assert.equal(guidanceFor(config, 'review', 'code', CONFIG), 'Use the strongest gpt model.');
 });
 
 test('guidanceFor keeps a multi-line block whole', () => {
-  const config = withDelegations('delegations:\n  apply:\n    guidance: |\n      First line.\n      Second line.\n');
-  assert.equal(guidanceFor(config, 'apply', CONFIG), 'First line.\nSecond line.\n');
+  const config = withDelegate('delegate:\n  handoff:\n    apply:\n      guidance: |\n        First line.\n        Second line.\n');
+  assert.equal(guidanceFor(config, 'handoff', 'apply', CONFIG), 'First line.\nSecond line.\n');
 });
 
 test('guidanceFor gives null when any level is missing', () => {
-  assert.equal(guidanceFor(null, 'code', CONFIG), null);
-  for (const yaml of ['', 'delegations:\n  plan:\n    guidance: x\n', 'delegations:\n  code:\n    other: x\n', 'delegations:\n  code: {}\n']) {
-    assert.equal(guidanceFor(withDelegations(yaml), 'code', CONFIG), null, yaml);
+  assert.equal(guidanceFor(null, 'review', 'code', CONFIG), null);
+  for (const yaml of ['', 'delegate:\n', 'delegate:\n  review:\n', 'delegate:\n  handoff:\n    apply:\n      guidance: x\n',
+    'delegate:\n  review:\n    plan:\n      guidance: x\n', 'delegate:\n  review:\n    code:\n      other: x\n', 'delegate:\n  review:\n    code: {}\n']) {
+    assert.equal(guidanceFor(withDelegate(yaml), 'review', 'code', CONFIG), null, yaml);
   }
 });
 
-test('guidanceFor rejects a bad level, naming the file and the key', () => {
+test('guidanceFor rejects a bad level, naming the file and the dotted key', () => {
   const cases: [string, string][] = [
-    ['delegations: [a]\n', 'delegations'],
-    ['delegations:\n  code: text\n', 'delegations.code'],
-    ['delegations:\n  code:\n    guidance: 42\n', 'delegations.code.guidance'],
+    ['delegate:\n  review: [a]\n', 'delegate.review must be a mapping'],
+    ['delegate:\n  review:\n    code: text\n', 'delegate.review.code must be a mapping'],
+    ['delegate:\n  review:\n    code:\n      guidance: 42\n', 'delegate.review.code.guidance must be a string'],
   ];
   for (const [yaml, key] of cases) {
-    assert.throws(() => guidanceFor(withDelegations(yaml), 'code', CONFIG),
+    assert.throws(() => guidanceFor(withDelegate(yaml), 'review', 'code', CONFIG),
       (error) => error instanceof UsageError && error.message.includes(CONFIG) && error.message.includes(key), yaml);
   }
 });
 
-test('guidanceFor ignores a bad entry for another intent', () => {
-  assert.equal(guidanceFor(withDelegations('delegations:\n  plan:\n    guidance: [a, b]\n'), 'code', CONFIG), null);
+test('guidanceFor ignores a bad entry for another intent or the other strategy', () => {
+  assert.equal(guidanceFor(withDelegate('delegate:\n  review:\n    plan:\n      guidance: [a, b]\n'), 'review', 'code', CONFIG), null);
+  assert.equal(guidanceFor(withDelegate('delegate:\n  handoff: 42\n'), 'review', 'code', CONFIG), null);
 });
 
 test('an invalid config is a usage error that names the file and the bad value', () => {

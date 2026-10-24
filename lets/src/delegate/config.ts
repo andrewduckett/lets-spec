@@ -7,6 +7,7 @@ import { parse } from 'yaml';
 import { configDir } from '../config-dir.ts';
 import type { Deps, Io } from '../io.ts';
 import { UsageError } from '../resolvers/kit/errors.ts';
+import type { Intent, Strategy } from './strategies.ts';
 
 export const CONFIG_VERSION = 3;
 // The resolvers built into lets, by the names the chain lists them under.
@@ -15,9 +16,13 @@ export type ResolverName = (typeof RESOLVER_NAMES)[number];
 
 // The file's shape, with the keys this lets does not know dropped. delegate
 // is {} when the file has none. Each resolver is one of RESOLVER_NAMES.
-// delegations is as the user wrote it: only lets delegate <strategy>
-// instructions reads it, through guidanceFor, so a bad entry never stops a run.
-export type Config = { version: typeof CONFIG_VERSION; delegate: { resolvers?: ResolverName[] }; delegations?: unknown };
+// review and handoff are as the user wrote them: only lets delegate
+// <strategy> instructions reads them, through guidanceFor, so a bad entry
+// never stops a run.
+export type Config = {
+  version: typeof CONFIG_VERSION;
+  delegate: { resolvers?: ResolverName[]; review?: unknown; handoff?: unknown };
+};
 
 export type ConfigDeps = { env: Deps['env']; io: Io };
 
@@ -57,26 +62,29 @@ export function parseConfig(text: string, path: string): Config {
     });
     config.delegate.resolvers = resolvers;
   }
-  if (value.delegations !== undefined) config.delegations = value.delegations;
+  for (const strategy of ['review', 'handoff'] as const) {
+    if (delegate[strategy] !== undefined) config.delegate[strategy] = delegate[strategy];
+  }
   return config;
 }
 
-// The user's guidance for an intent, from delegations.<intent>.guidance, or
-// null when there is no config or any level is missing. Throws a UsageError
-// that names the file and the key when a level has the wrong type. Other
+// The user's guidance for an intent, from
+// delegate.<strategy>.<intent>.guidance, or null when there is no config or
+// any level is missing. Throws a UsageError that names the file and the
+// dotted key when a level has the wrong type. Other strategies' and other
 // intents' entries are not checked.
-export function guidanceFor(config: Config | null, intent: string, path: string): string | null {
+export function guidanceFor(config: Config | null, strategy: Strategy, intent: Intent, path: string): string | null {
   const fail = (key: string, expected: string, value: unknown) =>
     new UsageError(`${path}: ${key} must be ${expected}, got ${JSON.stringify(value) ?? String(value)}.`);
-  const delegations = config?.delegations;
-  if (delegations === undefined || delegations === null) return null;
-  if (!isObject(delegations)) throw fail('delegations', 'a mapping', delegations);
-  const entry = delegations[intent];
+  const entry = config?.delegate[strategy];
   if (entry === undefined || entry === null) return null;
-  if (!isObject(entry)) throw fail(`delegations.${intent}`, 'a mapping', entry);
-  const { guidance } = entry;
+  if (!isObject(entry)) throw fail(`delegate.${strategy}`, 'a mapping', entry);
+  const forIntent = entry[intent];
+  if (forIntent === undefined || forIntent === null) return null;
+  if (!isObject(forIntent)) throw fail(`delegate.${strategy}.${intent}`, 'a mapping', forIntent);
+  const { guidance } = forIntent;
   if (guidance === undefined || guidance === null) return null;
-  if (typeof guidance !== 'string') throw fail(`delegations.${intent}.guidance`, 'a string', guidance);
+  if (typeof guidance !== 'string') throw fail(`delegate.${strategy}.${intent}.guidance`, 'a string', guidance);
   return guidance;
 }
 

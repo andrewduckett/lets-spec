@@ -6,7 +6,7 @@
 
 ## 2. Guidance [depends-on: 1]
 
-- [ ] 2.1 [medium] `lets delegate <strategy> instructions --for <intent>` prints the guidance at `delegate.<strategy>.<intent>.guidance`, or `null`. A strategy entry or intent entry that is not a mapping, or a guidance that is not a string, exits 2 and names the dotted key, such as `delegate.review.code.guidance`. Entries for the other strategy and other intents are not checked, and `run` still ignores a bad guidance (verify: `node --test tests/lets/delegate/config.test.ts tests/lets/delegate/instructions.test.ts tests/lets/delegate/review.test.ts`)
+- [x] 2.1 [medium] `lets delegate <strategy> instructions --for <intent>` prints the guidance at `delegate.<strategy>.<intent>.guidance`, or `null`. A strategy entry or intent entry that is not a mapping, or a guidance that is not a string, exits 2 and names the dotted key, such as `delegate.review.code.guidance`. Entries for the other strategy and other intents are not checked, and `run` still ignores a bad guidance (verify: `node --test tests/lets/delegate/config.test.ts tests/lets/delegate/instructions.test.ts tests/lets/delegate/review.test.ts`) (✓ node --test tests/lets/delegate/config.test.ts tests/lets/delegate/instructions.test.ts tests/lets/delegate/review.test.ts passed, 65 tests)
 
 ## 3. What users read [depends-on: 2]
 

@@ -19,7 +19,7 @@ export function run({ strategy, for: intent }: InstructionsOptions, deps: Deps):
   return guarded(deps, async () => {
     const config = readConfig(deps);
     // Checked first, so a bad guidance asks no resolver.
-    const guidance = guidanceFor(config, intent, configPath(deps));
+    const guidance = guidanceFor(config, strategy, intent, configPath(deps));
     const adapter = await pick(STRATEGIES[strategy].verb, { ...deps, config });
     const options = await inAdapter(() => adapter.options((message) => deps.stderr(`lets delegate: ${message}\n`)));
     deps.stdout(`${JSON.stringify({ strategy, for: intent, resolver: adapter.name, options, guidance })}\n`);
