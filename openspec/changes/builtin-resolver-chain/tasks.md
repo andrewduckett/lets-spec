@@ -19,7 +19,7 @@
 
 ## 4. Integration [depends-on: 3]
 
-- [ ] 4.1 [medium] Every check passes, including the flake checks that expect `subagent` from `handoff run` with no config, and no test but `verify.test.ts` sets `LETS_SPEC_RESOLVER` or runs `fixtures/fake-resolver` (verify: pnpm test && nix flake check && ! grep -rln -e LETS_SPEC_RESOLVER -e fake-resolver tests/lets/delegate --exclude=verify.test.ts --exclude=fake-resolver)
+- [x] 4.1 [medium] Every check passes, including the flake checks that expect `subagent` from `handoff run` with no config, and no test but `verify.test.ts` sets `LETS_SPEC_RESOLVER` or runs `fixtures/fake-resolver` (verify: pnpm test && nix flake check && ! grep -rln -e LETS_SPEC_RESOLVER -e fake-resolver tests/lets/delegate --exclude=verify.test.ts --exclude=fake-resolver) (✓ pnpm test && nix flake check && ! grep -rln -e LETS_SPEC_RESOLVER -e fake-resolver tests/lets/delegate --exclude=verify.test.ts --exclude=fake-resolver passed)
 
 ## Deviations Ledger
 

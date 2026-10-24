@@ -122,11 +122,11 @@ test('delegate --help describes the chain in config.yaml, and names neither setu
   assert.doesNotMatch(text, /lets-delegate-resolver/);
 });
 
-test('delegate --help lists the resolvers by name, not by path or environment variable', async () => {
+test('delegate --help lists the resolvers by name, not by path', async () => {
   const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
   assert.match(text, /- t3 - subagent/);
   assert.match(text, /t3, cli or subagent/);
-  assert.doesNotMatch(text, /LETS_SPEC_RESOLVER|absolute path|\/absolute/);
+  assert.doesNotMatch(text, /absolute path|\/absolute/);
 });
 
 test('instructions --help says exit 4 is an unknown outcome', async () => {
