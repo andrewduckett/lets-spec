@@ -4,8 +4,9 @@
 // everything comes through deps.
 import type { Deps } from '../io.ts';
 import { readConfig } from './config.ts';
-import { EXIT, exitCodeOf, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { EXIT, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
+import { guarded } from './guarded.ts';
 import { callResolver, resolveWithModels, timeoutFor } from './lookup.ts';
 import type { Candidate } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
@@ -18,15 +19,8 @@ export type ReviewOptions = { name: string; promptFile: string; sourceFamily: Fa
 
 // The exit code: 0 ok, 2 usage, 3 every model refused, 4 contract or unknown outcome,
 // 5 session failed, 6 timeout, 7 tree changed.
-export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
-  try {
-    return await review(options, deps);
-  } catch (error) {
-    const code = exitCodeOf(error);
-    if (code === null) throw error;
-    deps.stderr(`lets delegate: ${(error as Error).message}\n`);
-    return code;
-  }
+export function run(options: ReviewOptions, deps: Deps): Promise<number> {
+  return guarded(deps, () => review(options, deps));
 }
 
 async function review({ name, promptFile, sourceFamily, effort, models, timeoutMinutes }: ReviewOptions, deps: Deps) {
