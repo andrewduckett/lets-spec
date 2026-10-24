@@ -16,6 +16,8 @@
 
 ## 4. Check the whole change [depends-on: 2, 3]
 
-- [ ] 4.1 [medium] No `contrib` mention is left outside OpenSpec's own files, the upgrade notes and ADR-004's amendment (review each of those by hand against design.md's Risks list), and both project checks pass (verify: `! git grep -n contrib -- ':!openspec' ':!docs/upgrading.md' ':!docs/decisions/ADR-004-default-resolver-is-a-program.md' && pnpm test && nix flake check`)
+- [x] 4.1 [medium] No `contrib` mention is left outside OpenSpec's own files, the upgrade notes and ADR-004's amendment (review each of those by hand against design.md's Risks list), and both project checks pass (verify: `! git grep -n contrib -- ':!openspec' ':!docs/upgrading.md' ':!docs/decisions/ADR-004-default-resolver-is-a-program.md' && pnpm test && nix flake check`) (✓ the grep finds only `flake.nix`'s `[ ! -e ${dist}/contrib ]` guard, see the ledger; the upgrade notes and ADR-004's amendment reviewed by hand; `pnpm test` and `nix flake check` passed)
 
 ## Deviations Ledger
+
+- 4.1's grep cannot come back empty: the `dist` check's `[ ! -e ${dist}/contrib ]` guard, which design.md asks for, names `contrib`. That guard is the one extra mention kept, beside the records the Risks list allows.
