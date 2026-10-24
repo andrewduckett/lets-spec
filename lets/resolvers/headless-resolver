@@ -3,7 +3,7 @@
 # and read-only. It needs jq, and claude for run. It issues no handles, and
 # leaves the timeout to lets, which stops it a minute after timeoutMinutes.
 # The contract: docs/resolver-contract.md
-# Check it with: lets delegate verify contrib/headless-resolver
+# Check it with: lets delegate verify lets/resolvers/headless-resolver
 
 request=$(cat)
 if ! printf '%s' "$request" | jq -e '.protocol == 2' >/dev/null 2>&1; then

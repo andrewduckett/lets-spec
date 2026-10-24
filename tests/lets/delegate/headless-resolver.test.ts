@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const RESOLVER = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+const RESOLVER = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
 
 // Sends the example resolver a probe and resolves with what it did.
 function probe(request: object): Promise<{ code: number; stdout: string; stderr: string }> {

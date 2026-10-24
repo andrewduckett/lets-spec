@@ -29,7 +29,7 @@ export const CONFIG = '/home/u/.config/lets-delegate/config.yaml';
 // The Node that runs lets, and the default beside it, as the deps name them.
 export const NODE = '/nix/node';
 export const SUBAGENT = '/pkg/contrib/lets-delegate-subagent';
-const SUBAGENT_SOURCE = fileURLToPath(new URL('../../../../contrib/subagent-resolver/bin/lets-delegate-subagent', import.meta.url));
+const SUBAGENT_SOURCE = fileURLToPath(new URL('../../../../lets/resolvers/lets-delegate-subagent', import.meta.url));
 
 type Options = {
   resolver?: boolean;

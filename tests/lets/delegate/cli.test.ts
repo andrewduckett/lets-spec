@@ -34,7 +34,7 @@ test('every old command is rejected by name', async () => {
 });
 
 test('verify checks a resolver', async () => {
-  const resolver = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+  const resolver = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
   const { code, stdout } = await lets('delegate', 'verify', resolver);
   assert.equal(code, 0);
   assert.equal(stdout.trim().split('\n').at(-1), 'The resolver keeps the contract.');
@@ -216,7 +216,7 @@ test('handoff instructions pass over the sh example to subagent', async () => {
   const cwd = mkdtempSync(join(tmpdir(), 'lets-cli-'));
   execFileSync('git', ['init', '--quiet'], { cwd });
   const config = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
-  const example = fileURLToPath(new URL('../../../contrib/headless-resolver', import.meta.url));
+  const example = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
   mkdirSync(join(config, 'lets-delegate'));
   writeFileSync(join(config, 'lets-delegate', 'config.yaml'), `version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
   const { code, stdout } = await letsIn({ cwd, env: { XDG_CONFIG_HOME: config, LETS_SPEC_RESOLVER: '' } }, 'delegate', 'handoff', 'instructions', '--for', 'apply');
