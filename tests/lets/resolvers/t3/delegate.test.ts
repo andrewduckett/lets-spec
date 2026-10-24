@@ -130,7 +130,3 @@ test('a review in a repository T3 has no project for is exit 3, naming it, and c
   assert.doesNotMatch(t.stderr(), /\(thread /);
   assert.deepEqual(sent, []);
 });
-
-test('the t3 adapter makes thread handles only', () => {
-  assert.equal(createAdapter(fakeIo()).handleKind, 'thread');
-});

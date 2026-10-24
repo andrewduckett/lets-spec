@@ -4,10 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "lets": "bin/lets",
-    "lets-delegate-t3": "resolvers/lets-delegate-t3",
-    "lets-delegate-cli": "resolvers/lets-delegate-cli",
-    "lets-delegate-subagent": "resolvers/lets-delegate-subagent"
+    "lets": "bin/lets"
   },
   "engines": {
     "node": ">=26"

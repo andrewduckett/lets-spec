@@ -403,9 +403,6 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 't3',
-    program: 'lets-delegate-t3',
-    harness: 'T3 Code',
-    handleKind: 'thread',
 
     detect() {
       const runtime = readRuntime(io);

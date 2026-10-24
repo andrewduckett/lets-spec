@@ -1,6 +1,6 @@
-// What a resolver needs from its harness. Each program has one adapter,
-// which makes sessions in one harness; resolver.ts turns protocol verbs into
-// these calls.
+// What a resolver needs from its harness. Each resolver is one adapter,
+// which makes sessions in one harness. lets delegate calls it in process.
+// Also the names the adapters and lets delegate share about sessions.
 import type { Effort, Family } from './families.ts';
 
 // A session a resolver made. kind says what it is, such as thread, tab or
@@ -30,19 +30,12 @@ export type RunInput = { name: string; prompt: string; cwd: string; family: Fami
 export type StartInput = Omit<RunInput, 'effort'>;
 
 export type Adapter = {
-  // What probe answers, such as t3.
+  // The resolver's name in the config and in each command's output, such
+  // as t3.
   name: string;
-  // The program's own name, which starts each line it prints on stderr.
-  program: string;
-  // The harness, as the decline message names it, such as T3 Code.
-  harness: string;
-  // The one kind of handle this adapter makes, such as thread.
-  handleKind: string;
-  // True when this process runs inside the adapter's harness.
+  // True when this process runs inside the adapter's harness. When false,
+  // the resolver declines.
   detect(): boolean;
-  // Why this process declines, when detect() is false and the adapter can
-  // say more than "not inside <harness>".
-  whyDeclined?(): string;
   // The models this harness can run now, in its own order. It never
   // chooses one: the caller does. warn adds a line to stderr.
   options(warn: (message: string) => void): Promise<ModelString[]>;
@@ -52,9 +45,9 @@ export type Adapter = {
   run(input: RunInput, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
   // Starts an interactive session and returns its handle, or the
   // instructions a person needs when it starts none. Throws Refused when
-  // the harness says no. Without it, the kit declines start, and a probe for it.
+  // the harness says no. Without it, the resolver declines every handoff.
   start?(input: StartInput): Promise<Handle | { instructions: string }>;
-  // Cleans up after a session on ok. cwd is the finish request's folder.
+  // Cleans up after a session it made, on ok. cwd is the repository.
   // Throws when it cannot.
   finish(handle: Handle, ok: boolean, options: { cwd: string }): Promise<void>;
 };

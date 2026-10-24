@@ -137,9 +137,8 @@ Exit codes:
 
 const INSTRUCTIONS_HELP = `
 stdout: one JSON line with strategy, for, resolver, options and guidance.
-resolver and options come from the first resolver that does not decline a
-probe for this strategy: options are the models it can run now, in its
-order. guidance is delegations.<intent>.guidance from the config, or null.
+resolver and options come from the first resolver that does not decline
+this strategy: options are the models it can run now, in its order. guidance is delegations.<intent>.guidance from the config, or null.
 It starts no session.
 
 Exit codes:

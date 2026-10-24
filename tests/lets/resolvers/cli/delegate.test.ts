@@ -226,7 +226,3 @@ test('finish removes nothing for a process handle whose id is not a session name
   await assert.rejects(createAdapter(io).finish({ kind: 'process', id: '../x' }, true, { cwd: '/repo' }), /not a session name/);
   assert.deepEqual(io.removed, []);
 });
-
-test('the cli adapter makes process handles only', () => {
-  assert.equal(createAdapter(fakeIo()).handleKind, 'process');
-});

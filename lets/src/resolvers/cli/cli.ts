@@ -74,12 +74,8 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 'cli',
-    program: 'lets-delegate-cli',
-    harness: 'this resolver',
-    handleKind: 'process',
     // Any terminal or harness will do, as long as one family's CLI is on PATH.
     detect: () => FAMILIES.some((family) => io.commandExists(HEADLESS_EXECUTOR[family])),
-    whyDeclined: () => 'none of codex, claude or agy is on PATH',
     // Each family whose CLI is on PATH, gpt, claude, gemini. A listing that
     // fails lists the bare family, so the caller can still try the CLI's
     // default model.

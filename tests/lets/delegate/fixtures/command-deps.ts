@@ -61,7 +61,7 @@ export function fakeAdapter(name: ResolverName, behaviour: FakeResolver = {}): A
     if (behaviour.refuse?.includes(modelOf(input))) throw new Refused(`refused ${modelOf(input)}`);
   };
   return {
-    name, program: `lets-delegate-${name}`, harness: name, handleKind: name,
+    name,
     detect: () => behaviour.declines !== true,
     async options(warn) {
       for (const message of behaviour.warnings ?? []) warn(message);
