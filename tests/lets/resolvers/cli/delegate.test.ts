@@ -190,3 +190,43 @@ test('a CLI that runs past the timeout is stopped, and is exit 6', async () => {
   assert.equal(answer.code, 6);
   assert.match(answer.stderr, /claude did not finish in 3 minutes/);
 });
+
+const LAST_MESSAGE = '/repo/.workspace/lets-delegate/cli-resolver.last-message.md';
+// A codex review named cli-resolver, which leaves the tree as gitAfter says.
+const codexReview = async (gitAfter = '') => {
+  const io = answering();
+  const t = commandDeps({ config: ONLY_CLI, real: { cli: createAdapter(io) }, gitAfter });
+  const code = await review(reviewOptions({ name: 'cli-resolver' }), t.deps);
+  return { code, io };
+};
+
+test('a clean review removes its last-message file', async () => {
+  const { code, io } = await codexReview();
+  assert.equal(code, 0);
+  assert.equal(io.exists(LAST_MESSAGE), false);
+});
+
+test('a review that changed the tree keeps its last-message file', async () => {
+  const { code, io } = await codexReview(' M src/a.js\0');
+  assert.equal(code, 7);
+  assert.equal(io.exists(LAST_MESSAGE), true);
+});
+
+test('a clean claude review, which writes no files, removes nothing', async () => {
+  const io = answering();
+  assert.equal(await review(reviewOptions({ models: ['claude'] }), withCli(io).deps), 0);
+  assert.deepEqual(io.removed, []);
+});
+
+// The adapter itself: the chain only ever finishes a handle the adapter
+// made, so these cases cannot be reached through a command.
+
+test('finish removes nothing for a process handle whose id is not a session name', async () => {
+  const io = fakeIo({ commands: ['codex'], files: { '/repo/.workspace/lets-delegate/../x.last-message.md': 'X' } });
+  await assert.rejects(createAdapter(io).finish({ kind: 'process', id: '../x' }, true, { cwd: '/repo' }), /not a session name/);
+  assert.deepEqual(io.removed, []);
+});
+
+test('the cli adapter makes process handles only', () => {
+  assert.equal(createAdapter(fakeIo()).handleKind, 'process');
+});
