@@ -91,12 +91,12 @@
               ${lib.escapeShellArgs recipe.skills}
           '';
 
-        # The lets command: the bundle esbuild makes, in libexec, and a
-        # bin/lets that runs it with Node 26. The bundle keeps its
-        # #!/usr/bin/env node, because the tarball ships it as it is. lets
-        # runs its default resolver from contrib/ beside libexec/.
-        lets-cli = pkgs.stdenv.mkDerivation {
-          pname = "lets";
+        # One program: the bundle esbuild makes, in libexec, and a
+        # bin/<name> that runs it with Node 26. The bundle keeps its
+        # #!/usr/bin/env node, because the tarball ships it as it is. dir is
+        # the program's package folder.
+        program = name: dir: pkgs.stdenv.mkDerivation {
+          pname = name;
           version = "0.0.0";
           src = workspaceSource;
           nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
@@ -104,49 +104,36 @@
           dontPatchShebangs = true;
           buildPhase = ''
             runHook preBuild
-            pnpm --filter lets build
+            pnpm --filter ${name} build
             runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
-            install -Dm755 lets/dist/lets $out/libexec/lets
-            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets --add-flags $out/libexec/lets
+            install -Dm755 ${dir}/dist/${name} $out/libexec/${name}
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${name} \
+              --add-flags $out/libexec/${name}
             runHook postInstall
+          '';
+          meta.mainProgram = name;
+        };
+
+        # The lets command. It runs its default resolver from contrib/
+        # beside libexec/.
+        lets-cli = (program "lets" "lets").overrideAttrs {
+          postInstall = ''
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           '';
         };
 
-        # A resolver program, for a user's profile: the bundle esbuild makes,
-        # in libexec, and a bin/<program> that runs it with Node 26. Never in
-        # a dev shell: it answers for the machine, not the project. It runs
-        # its harness's commands, such as git and t3, from PATH, because they
-        # are the user's own install.
-        resolver = program: dir: pkgs.stdenv.mkDerivation {
-          pname = program;
-          version = "0.0.0";
-          src = workspaceSource;
-          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
-          inherit pnpmDeps;
-          dontPatchShebangs = true;
-          buildPhase = ''
-            runHook preBuild
-            pnpm --filter ${program} build
-            runHook postBuild
-          '';
-          installPhase = ''
-            runHook preInstall
-            install -Dm755 contrib/${dir}/dist/${program} $out/libexec/${program}
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${program} \
-              --add-flags $out/libexec/${program}
-            runHook postInstall
-          '';
-          meta.mainProgram = program;
-        };
-        lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
-        lets-delegate-cli = resolver "lets-delegate-cli" "cli-resolver";
+        # The resolver programs, for a user's profile. Never in a dev shell:
+        # a resolver answers for the machine, not the project. It runs its
+        # harness's commands, such as git and t3, from PATH, because they are
+        # the user's own install.
+        lets-delegate-t3 = program "lets-delegate-t3" "contrib/t3-resolver";
+        lets-delegate-cli = program "lets-delegate-cli" "contrib/cli-resolver";
         # The default resolver, for lets-cli and dist only. lets runs it from
         # beside itself, so it is not exported, and no one puts it on PATH.
-        lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
+        lets-delegate-subagent = program "lets-delegate-subagent" "contrib/subagent-resolver";
 
         # lets, bound to one release.
         lets = flow:
