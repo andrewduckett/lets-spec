@@ -1,7 +1,7 @@
 // What a resolver needs from its harness. Each program has one adapter,
 // which makes sessions in one harness; resolver.ts turns protocol verbs into
 // these calls.
-import type { Effort, Family, Handle, ModelString, SessionVerb } from './protocol.ts';
+import type { Effort, Family, Handle, ModelString } from './protocol.ts';
 
 // The request for a read-only session, whose final message the resolver
 // waits for. A null model is the harness's default for the family.
@@ -18,9 +18,6 @@ export type Adapter = {
   harness: string;
   // The one kind of handle this adapter makes, such as thread.
   handleKind: string;
-  // The session verbs this adapter takes; both when it is not given. The
-  // kit declines the others, and a probe for one of them.
-  verbs?: readonly SessionVerb[];
   // True when this process runs inside the adapter's harness.
   detect(): boolean;
   // Why this process declines, when detect() is false and the adapter can
@@ -34,7 +31,7 @@ export type Adapter = {
   // cleaning up what it made. An error after the session exists names it.
   run(input: RunInput, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
   // Starts an interactive session and returns its handle. Throws Refused when
-  // the harness says no.
+  // the harness says no. Without it, the kit declines start, and a probe for it.
   start?(input: StartInput): Promise<Handle>;
   // Cleans up after a session on ok. cwd is the finish request's folder.
   // Throws when it cannot.

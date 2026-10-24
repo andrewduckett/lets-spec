@@ -6,7 +6,7 @@ import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
 import { handle } from './fixtures/handle.ts';
 
-type Options = { verbs?: readonly ('run' | 'start')[]; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };
+type Options = { starts?: boolean; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
@@ -19,7 +19,6 @@ function fakeAdapter(options: Options = {}) {
     harness: 'Pond',
     handleKind: 'pad',
     calls,
-    ...(options.verbs === undefined ? {} : { verbs: options.verbs }),
     detect: () => detects,
     ...(options.whyDeclined === undefined ? {} : { whyDeclined: () => options.whyDeclined! }),
     async options(warn) {
@@ -32,10 +31,12 @@ function fakeAdapter(options: Options = {}) {
       if (options.runError) throw options.runError;
       return { handle: { kind: 'pad', id: 'pad-1' }, text };
     },
-    async start(input: StartInput) {
-      calls.push(['start', input]);
-      return { kind: 'pad', id: 'pad-1' };
-    },
+    ...(options.starts === false ? {} : {
+      async start(input: StartInput) {
+        calls.push(['start', input]);
+        return { kind: 'pad', id: 'pad-1' };
+      },
+    }),
     async finish(h: Handle, ok: boolean, { cwd }: { cwd: string }) {
       calls.push(['finish', { h, ok, cwd }]);
       if (options.finishError) throw options.finishError;
@@ -53,36 +54,27 @@ const probeRequest = json(buildRequest('probe', { cwd: '/r' }));
 const probeFor = (verb: 'run' | 'start') => json(buildRequest('probe', { cwd: '/r', verb }));
 const DECLINED = (why: string) => ({ code: 75, stdout: '', stderr: `lets-delegate-pond: ${why}\n` });
 
-test('an adapter that declares no verbs answers a probe for start', async () => {
+test('an adapter with a start method answers a probe for start', async () => {
   const answer = await handle('probe', probeFor('start'), fakeAdapter());
   assert.equal(answer.code, 0);
   assert.equal(JSON.parse(answer.stdout).resolver, 'pond');
 });
 
-test('an adapter that takes only run declines a probe for start, listing nothing', async () => {
-  const adapter = fakeAdapter({ verbs: ['run'] });
+test('an adapter with no start method declines a probe for start, listing nothing', async () => {
+  const adapter = fakeAdapter({ starts: false });
   assert.deepEqual(await handle('probe', probeFor('start'), adapter), DECLINED('this resolver only runs headless'));
   assert.deepEqual(adapter.calls, []);
 });
 
-test('an adapter that takes only run declines start, starting nothing', async () => {
-  const adapter = fakeAdapter({ verbs: ['run'] });
+test('an adapter with no start method declines start, starting nothing', async () => {
+  const adapter = fakeAdapter({ starts: false });
   assert.deepEqual(await handle('start', startRequest, adapter), DECLINED('this resolver only runs headless'));
   assert.deepEqual(adapter.calls, []);
 });
 
-test('an adapter that takes only run answers a probe for run', async () => {
-  const answer = await handle('probe', probeFor('run'), fakeAdapter({ verbs: ['run'] }));
+test('an adapter with no start method answers a probe for run', async () => {
+  const answer = await handle('probe', probeFor('run'), fakeAdapter({ starts: false }));
   assert.equal(answer.code, 0);
-});
-
-test('an adapter that takes only start declines every request for run', async () => {
-  for (const [verb, request] of [['probe', probeFor('run')], ['run', runRequest]]) {
-    const adapter = fakeAdapter({ verbs: ['start'] });
-    const answer = await handle(verb, request, adapter);
-    assert.deepEqual([answer.code, answer.stdout], [75, ''], verb);
-    assert.deepEqual(adapter.calls, [], verb);
-  }
 });
 
 test('outside its harness, the resolver declines each session verb with its own decline message', async () => {

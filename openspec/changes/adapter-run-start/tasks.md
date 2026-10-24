@@ -5,7 +5,7 @@
 ## 1. The kit's adapter interface
 
 - [x] 1.1 [medium] The kit answers `run` with one call to `adapter.run`, passing a `RunInput` and `timeoutMs`, and answers with the handle and text it returns. It rejects an empty text with `empty final message (<kind> <id>)`, exit 5. It no longer appends the handle to a thrown error, and no longer calls `finish` on `Refused`. `Session`, `SpawnRequest`, `spawn` and `waitForResult` are gone from `adapter.ts`; the fake adapter in the kit's tests follows. (verify: node --test tests/resolver-kit/resolver.test.ts) (✓ node --test tests/resolver-kit/resolver.test.ts passed)
-- [ ] 1.2 [easy] The kit answers `start` with one call to `adapter.start`, passing a `StartInput` with no effort. An adapter with no `start` method has `start`, and a probe for `start`, declined with the same message as today. The `verbs` field is gone. (verify: node --test tests/resolver-kit/resolver.test.ts)
+- [x] 1.2 [easy] The kit answers `start` with one call to `adapter.start`, passing a `StartInput` with no effort. An adapter with no `start` method has `start`, and a probe for `start`, declined with the same message as today. The `verbs` field is gone. (verify: node --test tests/resolver-kit/resolver.test.ts) (✓ node --test tests/resolver-kit/resolver.test.ts passed)
 
 ## 2. The cli adapter [depends-on: 1]
 
