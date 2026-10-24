@@ -5,7 +5,7 @@ import type { ReviewOptions } from '../../../lets/src/delegate/review.ts';
 import { commandDeps, CONFIG, FAKE_RESOLVER, NODE, PROMPT_FILE, SUBAGENT } from './fixtures/command-deps.ts';
 
 const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
-  ({ name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', models: ['gpt/gpt-6-luna'], ...over });
+  ({ for: 'code', name: 'X Plan Review', promptFile: 'p.md', sourceFamily: 'claude', effort: 'high', models: ['gpt/gpt-6-luna'], ...over });
 
 const finishes = (calls: [string, Record<string, unknown>][]) => calls.filter(([verb]) => verb === 'finish').map(([, request]) => request);
 
@@ -14,9 +14,21 @@ test('a review prints the final message, then one metadata line on stderr', asyn
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(t.stdout(), 'FINDINGS\n');
   assert.deepEqual(JSON.parse(t.stderr()), {
-    resolver: 'fake', family: 'gpt', model: 'fake-model', independent: true,
+    for: 'code', resolver: 'fake', family: 'gpt', model: 'fake-model', independent: true,
     handle: { kind: 'fake', id: 'f-1', extra: 'kept' }, gitClean: true, durationSeconds: 0,
   });
+});
+
+test('a code review\'s metadata line starts with for: code', async () => {
+  const t = commandDeps();
+  assert.equal(await run(options({ for: 'code' }), t.deps), 0);
+  assert.ok(t.stderr().startsWith('{"for":"code",'), t.stderr());
+});
+
+test('a plan review\'s metadata line starts with for: plan', async () => {
+  const t = commandDeps();
+  assert.equal(await run(options({ for: 'plan' }), t.deps), 0);
+  assert.ok(t.stderr().startsWith('{"for":"plan",'), t.stderr());
 });
 
 test('the run request carries the need, with readOnly true and interactive false', async () => {
@@ -174,7 +186,7 @@ test('no handle means no finish', async () => {
   assert.equal(await run(options(), t.deps), 0);
   assert.deepEqual(finishes(t.resolverCalls()), []);
   assert.deepEqual(JSON.parse(t.stderr()),
-    { resolver: 'fake', family: 'gpt', model: 'gpt/gpt-6-luna', independent: true, handle: null, gitClean: true, durationSeconds: 0 });
+    { for: 'code', resolver: 'fake', family: 'gpt', model: 'gpt/gpt-6-luna', independent: true, handle: null, gitClean: true, durationSeconds: 0 });
 });
 
 test('an empty final message is exit 5, with finish ok false', async () => {

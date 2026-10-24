@@ -13,7 +13,7 @@
 
 ## 3. The review records --for [depends-on: 2]
 
-- [ ] 3.1 [medium] `lets delegate review run --for code` ends stderr with a JSON line that starts `{"for":"code",` and holds `resolver`, `family`, `model`, `independent`, `handle`, `gitClean` and `durationSeconds`; with `--for plan` it starts `{"for":"plan",`. `handoff run` output does not change (verify: node --test tests/lets/delegate/review.test.ts tests/lets/delegate/cli.test.ts)
+- [x] 3.1 [medium] `lets delegate review run --for code` ends stderr with a JSON line that starts `{"for":"code",` and holds `resolver`, `family`, `model`, `independent`, `handle`, `gitClean` and `durationSeconds`; with `--for plan` it starts `{"for":"plan",`. `handoff run` output does not change (verify: node --test tests/lets/delegate/review.test.ts tests/lets/delegate/cli.test.ts) (✓ both test files passed)
 - [ ] 3.2 [easy] [parallel] `REVIEW_HELP` in `lets/src/cli.ts` lists `for` first among the stderr line's fields, and the meta-line sentence in `skills/lets-review-code/SKILL.md` and `skills/lets-review-plan/SKILL.md` says the line also names what the review was for (verify: grep -q 'one JSON line with for, resolver' lets/src/cli.ts && grep -q 'what the review was for' skills/lets-review-code/SKILL.md && grep -q 'what the review was for' skills/lets-review-plan/SKILL.md)
 
 ## 4. Checks [depends-on: 3]

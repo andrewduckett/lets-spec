@@ -245,7 +245,7 @@ strategyCommand('review', 'run a prompt in a fresh, read-only session and wait f
   .addOption(modelOption())
   .option('--timeout-minutes <minutes>', 'how long to wait (default: 15, or 45 with --effort high)', wholeMinutes)
   .addHelpText('after', REVIEW_HELP)
-  .action(async ({ model, for: _intent, ...options }: Omit<ReviewOptions, 'models'> & { model: string[]; for: Intent }) => {
+  .action(async ({ model, ...options }: Omit<ReviewOptions, 'models'> & { model: string[] }) => {
     process.exitCode = await review({ ...options, models: model }, realDeps());
   });
 
