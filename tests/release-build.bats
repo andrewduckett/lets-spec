@@ -139,7 +139,7 @@ build_from() {
 # check it is the one executable script there, and cd to an empty folder.
 bundle_alone() {
   bin="$BATS_TEST_TMPDIR/contrib/$2"
-  node "$repo/contrib/$1/build.mjs" "$bin"
+  (cd "$repo/contrib/$1" && node node_modules/resolver-kit/build.mjs "$bin")
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
   [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = "$2" ]
