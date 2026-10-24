@@ -24,8 +24,9 @@ import { exitCodeOf, Refused, SessionFailed, SpawnError } from '../kit/errors.ts
 import { withEffort, withoutEffort } from '../kit/families.ts';
 import type { Adapter, RunInput, StartInput } from '../kit/adapter.ts';
 import type { Db, Io } from '../kit/io.ts';
-import { FAMILIES } from '../kit/protocol.ts';
-import type { Effort, Family, Handle, ModelString } from '../kit/protocol.ts';
+import type { Handle, ModelString } from '../kit/adapter.ts';
+import { FAMILIES } from '../kit/families.ts';
+import type { Effort, Family } from '../kit/families.ts';
 import { pollUntil } from '../kit/wait.ts';
 
 // Where the token lives under the config folder, beside lets's config.yaml.

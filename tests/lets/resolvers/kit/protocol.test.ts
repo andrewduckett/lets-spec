@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ContractError, UsageError } from '../../../../lets/src/resolvers/kit/errors.ts';
 import {
-  buildRequest, DECLINE, DEFAULT_TIMEOUT_MINUTES, exitFor, normalizeName, parseModel, parseRequest, parseResponse, PROTOCOL,
+  buildRequest, DECLINE, exitFor, parseRequest, parseResponse, PROTOCOL,
 } from '../../../../lets/src/resolvers/kit/protocol.ts';
 
 const run = { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', model: 'gpt/gpt-6-luna' } as const;
@@ -31,21 +31,8 @@ test('buildRequest sets protocol, readOnly and interactive from the verb', () =>
 });
 
 test('buildRequest takes the timeout given, else the default by effort', () => {
-  assert.deepEqual(DEFAULT_TIMEOUT_MINUTES, { low: 15, medium: 15, high: 45 });
   assert.equal(buildRequest('run', { ...run, effort: 'low' }).timeoutMinutes, 15);
   assert.equal(buildRequest('run', { ...run, timeoutMinutes: 3 }).timeoutMinutes, 3);
-});
-
-test('parseModel splits a model string at its first slash', () => {
-  assert.deepEqual(parseModel('gpt/gpt-6-luna'), { family: 'gpt', model: 'gpt-6-luna' });
-  assert.deepEqual(parseModel('claude'), { family: 'claude', model: null });
-  assert.deepEqual(parseModel('gemini/vendor/gemini-x'), { family: 'gemini', model: 'vendor/gemini-x' });
-});
-
-test('parseModel refuses a string that is not <family> or <family>/<id>', () => {
-  for (const text of ['', 'llama/llama-4', 'gpt/', 'gpt/gpt 6', '/gpt-6', 'GPT', ' gpt']) {
-    assert.equal(parseModel(text), null, JSON.stringify(text));
-  }
 });
 
 test('parseRequest rejects a run or start without a valid model, naming it', () => {
@@ -172,12 +159,4 @@ test('parseResponse rejects text that is not one JSON object', () => {
 test('exitFor maps a resolver exit to the exit lets gives', () => {
   const table: [number | null, number][] = [[0, 0], [2, 4], [3, 3], [4, 4], [5, 5], [6, 6], [1, 4], [7, 4], [75, 4], [null, 4]];
   for (const [resolver, lets] of table) assert.equal(exitFor(resolver), lets, `resolver exit ${resolver}`);
-});
-
-test('names are normalized, not refused', () => {
-  assert.equal(normalizeName('Add CSV Parser Tests'), 'add-csv-parser-tests');
-  assert.equal(normalizeName('9lives'), 'x9lives');
-  assert.equal(normalizeName('a'.repeat(40)).length, 32);
-  assert.equal(normalizeName('weird__name--'), 'weird__name');
-  assert.equal(normalizeName('My Change'), 'my-change');
 });

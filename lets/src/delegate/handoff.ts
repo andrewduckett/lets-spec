@@ -9,7 +9,8 @@ import { repoRoot } from './git.ts';
 import { guarded } from './guarded.ts';
 import { checkModels, pick, withModels } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { normalizeName, parseModel } from '../resolvers/kit/protocol.ts';
+import { normalizeName } from '../resolvers/kit/adapter.ts';
+import { parseModel } from '../resolvers/kit/families.ts';
 
 // models: each <family> or <family>/<model>, best first, asked for one at
 // a time until one is not refused.

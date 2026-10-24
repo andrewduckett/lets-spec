@@ -1,6 +1,6 @@
 ## 1. The kit's surviving names
 
-- [ ] 1.1 [medium] `lets delegate` and the adapters import the family, effort and model names and `parseModel` from `kit/families.ts`, and `Handle`, `ModelString`, `normalizeName` and `DEFAULT_TIMEOUT_MINUTES` from `kit/adapter.ts`; `strategies.ts` types its verb with `Kind`; the `parseModel`, `normalizeName` and timeout cases move to `kit/families.test.ts` and `kit/adapter.test.ts`, and every command test passes unchanged (verify: `pnpm check && node --test "tests/**/*.test.ts"`)
+- [x] 1.1 [medium] `lets delegate` and the adapters import the family, effort and model names and `parseModel` from `kit/families.ts`, and `Handle`, `ModelString`, `normalizeName` and `DEFAULT_TIMEOUT_MINUTES` from `kit/adapter.ts`; `strategies.ts` types its verb with `Kind`; the `parseModel`, `normalizeName` and timeout cases move to `kit/families.test.ts` and `kit/adapter.test.ts`, and every command test passes unchanged (verify: `pnpm check && node --test "tests/**/*.test.ts"`) (✓ the two new test files failed with "does not provide an export" first; then pnpm check passed and node --test: 423 passed)
 
 ## 2. The command and the protocol go [depends-on: 1]
 

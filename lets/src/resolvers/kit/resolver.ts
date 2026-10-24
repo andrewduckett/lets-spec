@@ -7,8 +7,9 @@
 // here; main.ts wires in the real world.
 import type { Adapter } from './adapter.ts';
 import { exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
-import { parseModel } from './protocol.ts';
-import type { Model, Request, Requests, Response, Verb } from './protocol.ts';
+import { parseModel } from './families.ts';
+import type { Model } from './families.ts';
+import type { Request, Requests, Response, Verb } from './protocol.ts';
 import { Declined } from './verbs.ts';
 import type { AnswerFn } from './verbs.ts';
 

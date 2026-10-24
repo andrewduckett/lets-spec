@@ -15,9 +15,8 @@
 //   config:    the text of the delegate config, CONFIG, when there is one
 import type { ResolverName } from '../../../../lets/src/delegate/config.ts';
 import type { Deps } from '../../../../lets/src/io.ts';
-import type { Adapter, RunInput, StartInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
+import type { Adapter, Handle, RunInput, StartInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
 import { Refused } from '../../../../lets/src/resolvers/kit/errors.ts';
-import type { Handle } from '../../../../lets/src/resolvers/kit/protocol.ts';
 import { createAdapter as subagentAdapter } from '../../../../lets/src/resolvers/subagent/subagent.ts';
 import { fakeIo as fakeResolverIo } from '../../resolvers/kit/fixtures/fake-io.ts';
 import { fakeIo } from './fake-io.ts';

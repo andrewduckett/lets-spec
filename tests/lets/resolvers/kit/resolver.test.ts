@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { Adapter, RunInput, StartInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
 import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../../../lets/src/resolvers/kit/errors.ts';
 import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
-import type { Handle } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import type { Handle } from '../../../../lets/src/resolvers/kit/adapter.ts';
 import { handle } from './fixtures/handle.ts';
 
 type Options = { starts?: boolean; instructions?: string; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };

@@ -7,7 +7,7 @@ import type { Deps } from '../io.ts';
 import { configPath } from './config.ts';
 import type { Config } from './config.ts';
 import { exitCodeOf, Refused, SpawnError, UsageError } from '../resolvers/kit/errors.ts';
-import { FAMILIES, parseModel } from '../resolvers/kit/protocol.ts';
+import { FAMILIES, parseModel } from '../resolvers/kit/families.ts';
 
 // The kind of session asked for: read-only for a review, interactive for a
 // handoff.

@@ -14,8 +14,10 @@ import { Refused, SessionFailed, SpawnError, TimeoutError } from '../kit/errors.
 import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from '../kit/families.ts';
 import { SCRATCH } from '../kit/io.ts';
 import type { Io } from '../kit/io.ts';
-import { FAMILIES, normalizeName } from '../kit/protocol.ts';
-import type { Effort, Family, ModelString } from '../kit/protocol.ts';
+import { normalizeName } from '../kit/adapter.ts';
+import type { ModelString } from '../kit/adapter.ts';
+import { FAMILIES } from '../kit/families.ts';
+import type { Effort, Family } from '../kit/families.ts';
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
 

@@ -1,7 +1,27 @@
 // What a resolver needs from its harness. Each program has one adapter,
 // which makes sessions in one harness; resolver.ts turns protocol verbs into
 // these calls.
-import type { Effort, Family, Handle, ModelString } from './protocol.ts';
+import type { Effort, Family } from './families.ts';
+
+// A session a resolver made. kind says what it is, such as thread, tab or
+// process. An adapter may add fields; lets passes the handle back whole.
+export type Handle = { kind: string; id: string; [field: string]: unknown };
+
+// The model a session runs, as <family> or <family>/<id>. A bare family is
+// the harness's own default model for that family.
+export type ModelString = string;
+
+// How long a review may run, in minutes, for each effort.
+export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium: 15, high: 45 };
+
+// A session's name: lowercase, kebab-case, a letter first, at most 32
+// characters.
+export function normalizeName(raw: string): string {
+  const trim = (s: string) => s.replace(/^[-_]+/, '').replace(/[-_]+$/, '');
+  let name = trim(raw.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'));
+  if (!/^[a-z]/.test(name)) name = `x${name}`;
+  return trim(name.slice(0, 32));
+}
 
 // The request for a read-only session, whose final message the resolver
 // waits for. A null model is the harness's default for the family.

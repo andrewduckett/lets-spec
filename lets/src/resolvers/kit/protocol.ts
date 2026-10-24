@@ -3,7 +3,11 @@
 // The resolver kit owns this contract: lets imports it from here, and the
 // verify check runs it against each resolver in CI.
 import { isAbsolute } from 'node:path';
+import { DEFAULT_TIMEOUT_MINUTES, normalizeName } from './adapter.ts';
+import type { Handle, ModelString } from './adapter.ts';
 import { ContractError, EXIT, UsageError } from './errors.ts';
+import { EFFORTS, FAMILIES, parseModel } from './families.ts';
+import type { Effort, Family } from './families.ts';
 
 export const PROTOCOL = 2;
 // The exit code a resolver declines with: it does not handle this request
@@ -11,37 +15,7 @@ export const PROTOCOL = 2;
 export const DECLINE = 75;
 
 export const VERBS = ['probe', 'run', 'start', 'finish'] as const;
-export const FAMILIES = ['gpt', 'claude', 'gemini'] as const;
-export const EFFORTS = ['low', 'medium', 'high'] as const;
 export type Verb = (typeof VERBS)[number];
-export type Family = (typeof FAMILIES)[number];
-export type Effort = (typeof EFFORTS)[number];
-
-export const DEFAULT_TIMEOUT_MINUTES: Record<Effort, number> = { low: 15, medium: 15, high: 45 };
-
-// A session a resolver made. kind says what it is, such as thread, tab or
-// process. A resolver may add fields; lets passes the handle back whole.
-export type Handle = { kind: string; id: string; [field: string]: unknown };
-
-// The model a session runs, as <family> or <family>/<id>. A bare family is
-// the harness's own default model for that family.
-export type ModelString = string;
-
-// A model string split into its family and id. A null model is the
-// harness's default.
-export type Model = { family: Family; model: string | null };
-
-// The family and id of a model string, or null when it is not
-// <family> or <family>/<id>. The id is everything after the first slash,
-// and has no whitespace.
-export function parseModel(text: string): Model | null {
-  const slash = text.indexOf('/');
-  const family = slash === -1 ? text : text.slice(0, slash);
-  if (!(FAMILIES as readonly string[]).includes(family)) return null;
-  if (slash === -1) return { family: family as Family, model: null };
-  const model = text.slice(slash + 1);
-  return model !== '' && !/\s/.test(model) ? { family: family as Family, model } : null;
-}
 
 // The session verbs a probe may ask about.
 export const SESSION_VERBS = ['run', 'start'] as const;
@@ -156,14 +130,6 @@ export function parseResponse<V extends Verb>(verb: V, text: string): Responses[
 export function exitFor(resolverExit: number | null): number {
   const passedOn: number[] = [EXIT.ok, EXIT.noSession, EXIT.spawn, EXIT.session, EXIT.timeout];
   return resolverExit !== null && passedOn.includes(resolverExit) ? resolverExit : EXIT.spawn;
-}
-
-// Lowercase, kebab-case, a letter first, at most 32 characters.
-export function normalizeName(raw: string): string {
-  const trim = (s: string) => s.replace(/^[-_]+/, '').replace(/[-_]+$/, '');
-  let name = trim(raw.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'));
-  if (!/^[a-z]/.test(name)) name = `x${name}`;
-  return trim(name.slice(0, 32));
 }
 
 type Json = Record<string, unknown>;

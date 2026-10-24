@@ -10,8 +10,10 @@ import { isTreeClean, repoRoot, treeStatus } from './git.ts';
 import { guarded } from './guarded.ts';
 import { checkModels, inAdapter, pick, withModels } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { DEFAULT_TIMEOUT_MINUTES, normalizeName, parseModel } from '../resolvers/kit/protocol.ts';
-import type { Effort, Family, Handle } from '../resolvers/kit/protocol.ts';
+import { DEFAULT_TIMEOUT_MINUTES, normalizeName } from '../resolvers/kit/adapter.ts';
+import type { Handle } from '../resolvers/kit/adapter.ts';
+import { parseModel } from '../resolvers/kit/families.ts';
+import type { Effort, Family } from '../resolvers/kit/families.ts';
 import type { Intent } from './strategies.ts';
 
 // for: what the review is for, recorded in the metadata line. models: each
