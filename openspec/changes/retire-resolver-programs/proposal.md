@@ -22,13 +22,13 @@ None.
 
 ### Modified Capabilities
 
-- `delegate-config`: the example path entries stop naming a resolver program, and *The chain is asked in order, by name* drops `LETS_SPEC_RESOLVER` and its scenarios about the environment and `PATH` (D7).
-- `delegate-default`: *The default never declines* is restated through `lets delegate`, *The default finishes nothing* is removed, and *Every lets carries the default* loses the scenario about the program beside `lets` (D8).
+- `delegate-config`: the example path entries stop naming a resolver program, and *The chain is asked in order, by name* states its rule without `LETS_SPEC_RESOLVER` (D7).
+- `delegate-default`: *The default never declines* and *The default finishes nothing* are removed, a new requirement, *The default answers wherever lets runs*, restates the first through `lets delegate`, and *Every lets carries the default* rewords its scenario about the program beside `lets` (D8).
 - `delegate-instructions`: the example path entry stops naming a resolver program (D7).
 
 ### Removed Capabilities
 
-- `delegate-verify` and `resolvers`. Their folders are deleted outright, as `delegate-setup` was (D6). Every requirement in them is about a program, the protocol or the verify command.
+- `delegate-verify` and `resolvers`. Every requirement in them is about a program, the protocol or the verify command. Their deltas remove every requirement, and archive retires both specs (D6).
 
 ## Impact
 
