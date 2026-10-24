@@ -19,7 +19,7 @@ The programs, their bundles and `lets delegate verify` stay in this change and m
 **Non-Goals:**
 
 - Shrinking the kit or deleting `protocol.ts`, `verbs.ts`, `resolver.ts` or `main.ts`. The programs still use them; the deletion story removes them.
-- Changing `t3.ts` or `cli.ts` beyond what the wider `start` return type allows. Neither needs an edit.
+- Changing `t3.ts` or `cli.ts`. Neither needs an edit. The one kit edit outside `adapter.ts` is in `resolver.ts`, which must accept the wider `start` result (decision 5).
 - Better decline messages. "Every resolver declined" stays as it is.
 
 ## Test Seams
@@ -63,7 +63,7 @@ Alternatives: keep `Outcome` and `{ code, response, stderr }` (it exists only to
 Each command checks every `--model` with `parseModel` before it reads the config's adapters, and throws a `UsageError` naming the bad value (D8). Then:
 
 - `review.ts` calls `adapter.run({ name, prompt, cwd, family, model, effort }, { timeoutMs })`, with `timeoutMs` from `--timeout` or `DEFAULT_TIMEOUT_MINUTES[effort]`. It reports `resolver: adapter.name`, the family it asked for, and `model ?? <the --model value>`, exactly as the JSON line does now. Its empty-message check, tree check and exit 7 stay as they are. It finishes with `adapter.finish(handle, ok, { cwd })` on the same adapter; any error from `finish` becomes the existing "could not finish" warning.
-- `handoff.ts` calls `adapter.start({ name, prompt, cwd, family, model })` and prints `{ resolver, handle }`, or `{ resolver, handle: null, instructions }` when `start` returned instructions. Its exit mapping (3 stays 3, any other failure is 4) stays.
+- `handoff.ts` calls `adapter.start({ name, prompt, cwd, family, model })` and prints `{ resolver, handle }`, or `{ resolver, handle: null, instructions }` when `start` returned instructions. Its exit mapping stays: when every model is refused it exits 3, and any other error from the adapter, such as a `TimeoutError` or `SessionFailed`, exits 4 with its message. So `handoff run` never exits 5 or 6, as today. A `UsageError` that `lets` raises before it asks an adapter still exits 2.
 - `instructions.ts` calls `adapter.options(warn)` on the adapter `pick` chose for the strategy's kind. `STRATEGIES[...].verb` still says which kind. `warn` writes `lets delegate: <message>` to stderr. The programs' warnings were lost before, because `lets` printed a resolver's stderr only on failure; stderr text may change (#110).
 
 `normalizeName`, `parseModel`, `DEFAULT_TIMEOUT_MINUTES` and the types stay imported from `kit/protocol.ts` until the deletion story moves what survives. `lookup.ts` no longer imports `parseResponse`, `exitFor` or `DECLINE`.
@@ -71,6 +71,8 @@ Each command checks every `--model` with `parseModel` before it reads the config
 ### 5. `start` may return instructions in place of a handle
 
 `Adapter.start` returns `Promise<Handle | { instructions: string }>`. `t3.ts` still returns a `Handle` and needs no change. `subagent.ts` gains `createAdapter(io)`: `name` `subagent`, `detect` always true, `options` `[]`, `run` throws the same `Refused` message as today, `start` saves the prompt under `.workspace/lets-delegate/` and returns the same instructions text, and `finish` does nothing. The prompt-writing and the texts are shared with `createAnswer`, which stays for the program.
+
+`adapterAnswer` in `kit/resolver.ts` must still type-check, because the t3 and cli programs use it. It narrows the result: a `Handle` becomes `{ resolver, handle }` as now, and instructions become `{ resolver, handle: null, instructions }`, the shape `StartResponse` already allows. No program reaches that branch, since only `subagent` returns instructions and its program uses `createAnswer`.
 
 ### 6. The words
 
@@ -80,6 +82,7 @@ Each command checks every `--model` with `parseModel` before it reads the config
 
 - [The t3 adapter now runs inside `lets`'s process, not a child of it, so `detect()` sees a different `pid`.] → `isAncestor` walks up from the process's own `pid`, so it is true when T3 is `lets`'s ancestor, which it is whenever it was the program's. The t3 adapter's tests already cover the walk.
 - [A hung adapter call now hangs `lets`, with no backstop.] → Each adapter already enforces its own deadline (`pollUntil` in t3, the `execFile` timeout in cli). This is the decision in #110's Won't list.
+- [Not every adapter call has a deadline of its own. t3's ticket request is a plain `fetch` with no timeout, so a T3 server that accepts the HTTP connection and never answers hangs `start`, `finish` or a review's cleanup. The 5-minute backstop used to stop the program.] → Accepted, as #110's Won't list decided: no timer in `lets`. The server is local and answers or refuses in normal use, and its WebSocket reply already has a deadline. A deadline on the ticket request is a t3 adapter change, which belongs to the t3 issues, not this move.
 - [An adapter's unknown error used to be contained by a process; now a thrown non-`Error` value could slip past `inAdapter`.] → `inAdapter` turns any thrown value it does not know into a `SpawnError` with `String(value)` as the message.
 - [Users with path entries get exit 2 after upgrading.] → The message names the three names, and the 0.6 note in `docs/upgrading.md` says what to write.
 - [Moving end-to-end tests from `cli.test.ts` to the command seam could lose a check of the real program's wiring.] → `cli.test.ts` keeps the no-config `subagent` answer and the unknown-name exit 2, which pass through `realDeps()`, and the flake checks run the packaged `lets`.

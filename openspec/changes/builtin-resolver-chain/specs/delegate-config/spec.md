@@ -43,7 +43,7 @@ When every resolver the config lists declines, `lets delegate` SHALL exit 2, pri
 - **THEN** the line for exit 2 says that every resolver in the config declined
 
 ### Requirement: A request from lets carries the model the user gave
-`lets delegate review run` and `lets delegate handoff run` SHALL require at least one `--model <family[/model]>`, where the family is `gpt`, `claude` or `gemini`, and SHALL ask the resolver for that family and that model. Without `--model`, or when any `--model` is not of that form, they SHALL exit 2 and ask no resolver.
+`lets delegate review run` and `lets delegate handoff run` SHALL require at least one `--model <family[/model]>`. The family SHALL be `gpt`, `claude` or `gemini`. They SHALL ask the resolver for that family and that model. Without `--model`, or when any `--model` is not of that form, they SHALL exit 2 and ask no resolver.
 
 #### Scenario: A review with a model
 - **WHEN** the user runs `lets delegate review run --for code --model gpt/gpt-6-luna` with the other required options
@@ -60,6 +60,21 @@ When every resolver the config lists declines, `lets delegate` SHALL exit 2, pri
 #### Scenario: An unknown family
 - **WHEN** the user runs `lets delegate review run --for code --model gpt --model llama/llama-4` with the other required options
 - **THEN** it exits 2, stderr names `llama/llama-4`, and no resolver is asked
+
+### Requirement: Every delegation names its intent
+`instructions` and `run` SHALL require `--for <intent>`. Under `review`, the intent SHALL be `plan` or `code`. Under `handoff`, it SHALL be `apply`. Without `--for`, or with any other value, they SHALL exit 2, name `--for` on stderr, and ask no resolver.
+
+#### Scenario: No intent
+- **WHEN** the user runs `lets delegate handoff run --name build-x --prompt-file p.md --model claude`
+- **THEN** it exits 2, stderr names `--for`, and no resolver is asked
+
+#### Scenario: An intent from the other strategy
+- **WHEN** the user runs `lets delegate review instructions --for apply`
+- **THEN** it exits 2, stderr names `--for`, and no resolver is asked
+
+#### Scenario: The one handoff intent
+- **WHEN** the user runs `lets delegate handoff run --for apply --name build-x --prompt-file p.md --model claude`
+- **THEN** the resolver is asked to start an interactive session
 
 ### Requirement: A refused model passes to the next
 `run` SHALL take `--model` one or more times, as a ranked list. It SHALL ask the resolver that answers for the first model. While that resolver refuses, `run` SHALL ask the same resolver for the next model, and SHALL stop at the first answer that is not a refusal. It SHALL NOT ask a later resolver in the chain after a refusal. When every model is refused, `run` SHALL exit 3, print nothing on stdout, and print on stderr one line per model, `<model>: <reason>`. The review's JSON line on stderr SHALL name, as `model`, the model the resolver ran, or the `--model` value `lets` asked for when that value names only a family.
@@ -114,7 +129,7 @@ When every resolver the config lists declines, `lets delegate` SHALL exit 2, pri
 - **THEN** `lets delegate review run --for code` does not run it
 
 ### Requirement: An unknown resolver name stops the command
-When an entry of the config's `resolvers` is not `t3`, `cli` or `subagent`, every `lets delegate review` and `lets delegate handoff` command SHALL exit 2 before it asks any resolver, print nothing on stdout, and name on stderr the config file, the entry, and the three names. An absolute path is such an entry: `lets` SHALL NOT rewrite it to a name.
+An entry of the config's `resolvers` that is not `t3`, `cli` or `subagent` SHALL stop every `lets delegate review` and `lets delegate handoff` command before it asks any resolver. The command SHALL exit 2 and print nothing on stdout. Stderr SHALL name the config file, the entry, and the three names. An absolute path is such an entry: `lets` SHALL NOT rewrite it to a name.
 
 #### Scenario: A path from an older lets
 - **WHEN** the config lists `/opt/r/lets-delegate-t3`
