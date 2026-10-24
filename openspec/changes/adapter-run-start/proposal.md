@@ -2,8 +2,8 @@
 
 A resolver author reads the kit's `Adapter` interface first, and today it
 splits each session into `spawn` and `waitForResult`. That split fits T3
-Code but not the cli resolver. cli's `spawn` starts nothing: it packs the
-request into a loose `Session` object, and `waitForResult` casts it back.
+Code but not the cli resolver. cli's `spawn` starts nothing. It packs the
+request into a loose `Session` object. Then `waitForResult` casts it back.
 That is why `Session` accepts any field and why cli asserts that the
 effort is not null. Every new adapter would copy the same shape. The kit
 now owns the contract (#78), so this is the moment to fix it.
@@ -14,8 +14,8 @@ now owns the contract (#78), so this is the moment to fix it.
   and the final text, and an optional `start(request)`, which returns the
   handle (D2, D4).
 - `spawn`, `waitForResult`, `Session` and its open index signature go.
-  `SpawnRequest` gives way to one request type for `run`, with an effort
-  that is never null, and one for `start`, with no effort (D3).
+  `SpawnRequest` gives way to `RunInput`, with an effort that is never
+  null, and `StartInput`, with no effort (D3).
 - The `verbs` field on `Adapter` goes. An adapter takes `start` only when
   it has a `start` method (D4).
 - The kit still rejects an empty final message, and names the handle in
@@ -28,8 +28,8 @@ now owns the contract (#78), so this is the moment to fix it.
   assertion.
 - Tests follow the new interface.
 
-Nothing a caller sees changes: requests, responses, exit codes and the
-spec stay the same (D1).
+Requests, responses, exit codes and the spec stay the same (D1). Only
+the wording of some error messages on stderr changes (D8).
 
 ## Capabilities
 

@@ -12,7 +12,7 @@ wire protocol.
 
 | # | Question | Answer | Source |
 |---|---|---|---|
-| D1 | Does anything a caller sees change? | No. Requests, responses, exit codes and the spec stay the same. Only the kit's `Adapter` interface and the two adapters change. | Evidence: #83 scope; `openspec/specs/contrib-resolvers/spec.md` |
+| D1 | Does anything a caller sees change? | No. Requests, responses, exit codes and the spec stay the same. Only the kit's `Adapter` interface and the two adapters change. Some error text on stderr changes wording (D8); `lets` only copies it through. | Evidence: #83 scope; `openspec/specs/contrib-resolvers/spec.md` |
 | D2 | What does an adapter offer in place of `spawn` and `waitForResult`? | `run(request, { timeoutMs })` returns `{ handle, text }`, and `start(request)` returns a handle. `spawn`, `waitForResult`, `Session` and `SpawnRequest` go. | User |
 | D3 | What does each call get? | `run` gets name, prompt, cwd, family, model and an effort that is never null. `start` gets the same fields without effort. The `kind` and `readOnly` fields go: the call itself says which. | User |
 | D4 | How does the kit know which verbs an adapter takes? | `run` is required and `start` is optional. An adapter takes `start` only when it has one. The `verbs` field goes. | User |

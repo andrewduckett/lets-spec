@@ -62,18 +62,22 @@ exit codes and the spec stay as they are.
 ```ts
 // The request for a read-only session. A null model is the harness's
 // default for the family.
-export type RunRequest = { name: string; prompt: string; cwd: string; family: Family; model: string | null; effort: Effort };
+export type RunInput = { name: string; prompt: string; cwd: string; family: Family; model: string | null; effort: Effort };
 // The request for an interactive session.
-export type StartRequest = Omit<RunRequest, 'effort'>;
+export type StartInput = Omit<RunInput, 'effort'>;
 
 export type Adapter = {
   name, program, harness, handleKind, detect, whyDeclined?, options, finish, // as now
-  run(request: RunRequest, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
-  start?(request: StartRequest): Promise<Handle>;
+  run(input: RunInput, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
+  start?(input: StartInput): Promise<Handle>;
 };
 ```
 
 `SpawnRequest`, `Session`, `spawn`, `waitForResult` and `verbs` go.
+
+The names `RunInput` and `StartInput` differ from the wire types
+`RunRequest` and `StartRequest` in `protocol.ts`, so the kit can import
+both without aliases.
 
 Alternatives: keep `spawn` and `waitForResult` and only tighten the
 types. That leaves cli faking a spawn. A single `session(kind, ...)`
@@ -106,11 +110,18 @@ which is today's `spawn` body with `kind === 'start'` replaced by
 `!readOnly`. Today's `waitForResult` body becomes a private
 `waitForText(handle, timeoutMs)`.
 
-`run` is: launch with `readOnly: true`; wait; on `Refused`, archive the
-thread with the same `dispatch` call `finish` makes. If archiving throws,
-append `; could not archive it: <why>` to the refusal's message. Then
-append ` (thread <id>)` and rethrow. The exit stays 3, and stderr names
-the thread, as the spec requires.
+`run` works in two steps:
+
+1. It launches the thread with `readOnly: true`. An error here, such as
+   no T3 project for the repository, passes through unchanged. No thread
+   exists yet, so there is nothing to archive or name.
+2. It waits for the text inside a try/catch. Only this step can fail
+   after the thread exists. On `Refused`, `run` archives the thread with
+   the same `dispatch` call that `finish` makes. If archiving throws,
+   `run` appends `; could not archive it: <why>` to the refusal's
+   message. For any kit error, it then appends ` (thread <id>)` and
+   rethrows. The exit stays 3 for a refusal, and stderr names the
+   thread, as the spec requires.
 
 `start` is: launch with `readOnly: false` and a null effort, and return
 the handle. `t3ModelSelection` keeps its nullable effort: that is t3's
@@ -142,8 +153,9 @@ Nothing here is costly to reverse.
 - [t3 no longer has the kit's warning line when an archive fails; the
   reason moves into the error message] → The spec asks only that the
   exit stays 3 and stderr names the thread. Both hold.
-- [cli's stderr loses `(process <name>)`] → The name is the request's own
-  `name`, so nothing is lost for the caller.
+- [cli's stderr loses `(process <name>)` on a failed run] → The name is
+  the request's own `name`, so nothing is lost. `lets` copies a
+  resolver's stderr through and never parses it (`lets/src/delegate/review.ts`).
 
 ## Migration & Rollback
 
