@@ -13,8 +13,8 @@ The config SHALL be one YAML document in `$XDG_CONFIG_HOME/lets-delegate/config.
 - **THEN** `lets delegate review run --for code` reads it without error, and asks `t3`, then the default, in that order
 
 #### Scenario: An invalid config
-- **WHEN** the file's `resolvers` holds `bin/lets-delegate-t3`
-- **THEN** `lets delegate review run --for code` exits 2, and stderr names the file and `bin/lets-delegate-t3`
+- **WHEN** the file's `resolvers` holds `bin/old-resolver`
+- **THEN** `lets delegate review run --for code` exits 2, and stderr names the file and `bin/old-resolver`
 
 #### Scenario: The old version
 - **WHEN** the file holds `version: 1`
@@ -126,42 +126,19 @@ When `config.yaml` does not exist and `config.json` exists in the same folder, e
 - **WHEN** the resolver answers for `--model claude`, and reports no model of its own
 - **THEN** the JSON line on stderr has `"model":"claude"`
 
-### Requirement: The chain is asked in order, by name
-`lets delegate` SHALL ask the resolvers the config's `resolvers` names, in the order listed. A resolver declines when it cannot run here, and one that cannot start interactive sessions declines every handoff. The first that does not decline SHALL answer, and no later one is asked. `lets` SHALL NOT read `LETS_SPEC_RESOLVER`, and SHALL NOT run any program to answer a review or a handoff.
-
-#### Scenario: The first declines
-- **WHEN** the config lists `t3` then `cli`, and `t3` declines the review
-- **THEN** `cli` is asked, and `lets delegate review run --for code` exits 0 with `cli`'s answer
-
-#### Scenario: The first answers
-- **WHEN** the config lists `t3` then `cli`, and `t3` answers the review
-- **THEN** `lets delegate review run --for code` prints `t3`'s answer, and `cli` is not asked
-
-#### Scenario: A headless resolver and a handoff
-- **WHEN** the config lists `cli` then `subagent`, `cli` can run here, and the user runs `lets delegate handoff run --for apply`
-- **THEN** `cli` starts nothing, and the JSON line has `"resolver":"subagent"`
-
-#### Scenario: The environment is ignored
-- **WHEN** `LETS_SPEC_RESOLVER` names an executable `/x`, and the config lists `t3`, which answers
-- **THEN** `t3` answers, and `/x` is not run
-
-#### Scenario: A resolver on PATH is not run
-- **WHEN** an executable named `lets-delegate-t3` is on `PATH`, and the config lists `t3`
-- **THEN** `lets delegate review run --for code` does not run it
-
 ### Requirement: An unknown resolver name stops the command
 An entry of the config's `resolvers` that is not `t3`, `cli` or `subagent` SHALL stop every `lets delegate review` and `lets delegate handoff` command before it asks any resolver. The command SHALL exit 2 and print nothing on stdout. Stderr SHALL name the config file, the entry, and the three names. An absolute path is such an entry: `lets` SHALL NOT rewrite it to a name.
 
 #### Scenario: A path from an older lets
-- **WHEN** the config lists `/opt/r/lets-delegate-t3`
-- **THEN** `lets delegate review run --for code` exits 2, and stderr contains the config file's path, `/opt/r/lets-delegate-t3`, `t3`, `cli` and `subagent`
+- **WHEN** the config lists `/opt/r/old-resolver`
+- **THEN** `lets delegate review run --for code` exits 2, and stderr contains the config file's path, `/opt/r/old-resolver`, `t3`, `cli` and `subagent`
 
 #### Scenario: A name lets does not know
 - **WHEN** the config lists `codex`
 - **THEN** `lets delegate handoff run --for apply` exits 2, stdout is empty, and stderr contains `codex` and the config file's path
 
 #### Scenario: A bad entry after one that would answer
-- **WHEN** the config lists `subagent`, then `/opt/r/lets-delegate-t3`
+- **WHEN** the config lists `subagent`, then `/opt/r/old-resolver`
 - **THEN** `lets delegate handoff run --for apply` exits 2, and no prompt is saved under `.workspace/lets-delegate/`
 
 ### Requirement: An unexpected failure inside a resolver exits 4
@@ -189,3 +166,18 @@ After a review's session gives its final message, `lets delegate review run` SHA
 #### Scenario: Finishing fails
 - **WHEN** the review succeeds, and finishing `thread t-1` fails
 - **THEN** `lets delegate review run` exits 0, prints the final message, and stderr says it could not finish `thread t-1`
+
+### Requirement: The chain is the names the config lists
+`lets delegate` SHALL ask the resolvers the config's `resolvers` names, in the order listed, and no others. A resolver declines when it cannot run here, and one that cannot start interactive sessions declines every handoff. The first that does not decline SHALL answer, and no later one is asked.
+
+#### Scenario: The first declines
+- **WHEN** the config lists `t3` then `cli`, and `t3` declines the review
+- **THEN** `cli` is asked, and `lets delegate review run --for code` exits 0 with `cli`'s answer
+
+#### Scenario: The first answers
+- **WHEN** the config lists `t3` then `cli`, and `t3` answers the review
+- **THEN** `lets delegate review run --for code` prints `t3`'s answer, and `cli` is not asked
+
+#### Scenario: A headless resolver and a handoff
+- **WHEN** the config lists `cli` then `subagent`, `cli` can run here, and the user runs `lets delegate handoff run --for apply`
+- **THEN** `cli` starts nothing, and the JSON line has `"resolver":"subagent"`

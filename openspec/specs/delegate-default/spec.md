@@ -80,19 +80,12 @@ The `lets` of the release tarball, of the Nix `lets` package and of the reposito
 - **THEN** the JSON line has `"resolver":"subagent"`
 
 #### Scenario: The program beside lets is gone
-- **WHEN** the release folder's `resolvers/lets-delegate-subagent` is deleted, nothing else is configured, and the user runs `lets delegate handoff run --for apply`
+- **WHEN** the release folder has no `resolvers/` folder, nothing else is configured, and the user runs `lets delegate handoff run --for apply`
 - **THEN** the JSON line has `"resolver":"subagent"`
 
-### Requirement: The default never declines
-`lets-delegate-subagent` SHALL answer `probe`, `run` and `start` wherever it runs, and SHALL never exit 75. It SHALL answer `probe` with `{"resolver":"subagent","options":[]}`, because it can run no model.
+### Requirement: The default answers wherever lets runs
+The default, `subagent`, SHALL answer wherever `lets` runs, inside a harness or not, and SHALL never decline. Asked which models it can run, it SHALL list none.
 
-#### Scenario: probe in a plain terminal
-- **WHEN** `lets-delegate-subagent probe` runs outside any harness
-- **THEN** it exits 0 and prints `{"resolver":"subagent","options":[]}`
-
-### Requirement: The default finishes nothing
-`lets-delegate-subagent` SHALL answer `finish` with exit 0 and nothing on stdout, whatever the handle.
-
-#### Scenario: A handle it never issued
-- **WHEN** `lets-delegate-subagent finish` gets a handle of kind `thread`
-- **THEN** it exits 0 and stdout is empty
+#### Scenario: Instructions in a plain terminal
+- **WHEN** no config file exists, the command runs outside any harness, and the user runs `lets delegate review instructions --for code`
+- **THEN** it exits 0 and prints one JSON line with `"resolver":"subagent"` and `"options":[]`

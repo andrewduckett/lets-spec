@@ -65,5 +65,5 @@ When `delegations`, or its entry for the intent `--for` gives, is present and is
 - **THEN** it exits 2, stdout is empty, and stderr names the config file and says every resolver declined
 
 #### Scenario: A listed resolver is missing
-- **WHEN** the config lists `/gone/lets-delegate-t3`
+- **WHEN** the config lists `/gone/old-resolver`
 - **THEN** `lets delegate review instructions --for code` exits 2, and stderr names that entry and the config file
