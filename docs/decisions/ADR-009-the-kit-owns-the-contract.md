@@ -1,12 +1,14 @@
 ---
 id: adr-009
 date: 2026-10-23
-status: accepted
+status: superseded by ADR-010
 title: 'ADR-009: The resolver kit owns the contract, and lets imports it'
 description: Architecture decision record (ADR) for keeping the resolver protocol and its errors only in the resolver kit, which lets depends on
 ---
 
 # ADR-009: The resolver kit owns the contract, and lets imports it
+
+> Superseded by [ADR-010](ADR-010-the-resolvers-are-built-into-lets.md): the resolvers are built into `lets`, and the config names them. There is no protocol between `lets` and separate programs left to own.
 
 ## Context
 

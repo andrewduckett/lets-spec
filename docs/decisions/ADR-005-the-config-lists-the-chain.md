@@ -8,6 +8,8 @@ description: Architecture decision record (ADR) for lets asking only the resolve
 
 # ADR-005: The config lists the resolvers to ask, in order, and lets detects nothing
 
+> Amended by [ADR-010](ADR-010-the-resolvers-are-built-into-lets.md): each entry is a name, `t3`, `cli` or `subagent`, not an absolute path, and `LETS_SPEC_RESOLVER` is gone. The chain, its order and the rule that `lets` looks on `PATH` for nothing still hold.
+
 ## Context
 
 `lets delegate` hands a review or a handoff to a resolver, a program for one harness that answers inside it and declines anywhere else (ADR-003). `lets` used to find the resolver to ask in four places at run time. They were an environment variable, one `resolver` path in the user's config, a program with a fixed name on `PATH`, and the default, `lets-delegate-subagent`, which `lets` appended to every lookup with rules of its own. So which resolver ran a review depended on what happened to be on `PATH` and on a special case in `lets`, and a user could not see or change the order. Each harness now has its own resolver. The only thing left to decide is which ones to ask, and in what order. That is a choice about the user's machine, and only the user can make it.

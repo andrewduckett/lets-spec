@@ -1,7 +1,7 @@
 ---
 id: adr-003
 date: 2026-10-20
-status: accepted
+status: superseded by ADR-010
 title: 'ADR-003: One resolver program per harness, and each answers only inside its own'
 description: Architecture decision record (ADR) for shipping one resolver program per harness that declines outside its own harness
 ---
@@ -9,6 +9,8 @@ description: Architecture decision record (ADR) for shipping one resolver progra
 # ADR-003: One resolver program per harness, and each answers only inside its own
 
 > One resolver is not tied to a harness. `lets-delegate-cli` opens no harness window, so it answers a review wherever `codex`, `claude` or `agy` is on `PATH`. It declines every handoff.
+>
+> Superseded by [ADR-010](ADR-010-the-resolvers-are-built-into-lets.md): the resolvers are built into `lets`, and the config names them. Each harness still has its own adapter, which declines outside it.
 
 ## Context
 

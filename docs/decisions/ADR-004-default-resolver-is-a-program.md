@@ -1,12 +1,14 @@
 ---
 id: adr-004
 date: 2026-10-21
-status: accepted
+status: superseded by ADR-010
 title: 'ADR-004: The default resolver is a program that ships with lets, not code inside lets'
 description: Architecture decision record (ADR) for making the default resolver a separate program that every lets carries and runs as a process
 ---
 
 # ADR-004: The default resolver is a program that ships with lets, not code inside lets
+
+> Superseded by [ADR-010](ADR-010-the-resolvers-are-built-into-lets.md): the resolvers are built into `lets`, and the config names them. The default, `subagent`, is part of `lets`, so it cannot be missing.
 
 ## Context
 
