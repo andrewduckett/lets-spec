@@ -5,4 +5,4 @@ if (Number(process.versions.node.split('.')[0]) < 26) {
   process.stderr.write(`lets: needs Node 26 or later, and this is Node ${process.versions.node}.\n`);
   process.exit(1);
 }
-import('../src/cli.ts');
+import('../src/main.ts');

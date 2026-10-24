@@ -19,7 +19,7 @@ if (Number(process.versions.node.split('.')[0]) < 26) {
 }`;
 
 await build({
-  entryPoints: [fileURLToPath(new URL('src/cli.ts', import.meta.url))],
+  entryPoints: [fileURLToPath(new URL('src/main.ts', import.meta.url))],
   outfile,
   bundle: true,
   platform: 'node',
