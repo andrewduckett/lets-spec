@@ -11,7 +11,7 @@
 ## 3. What users read [depends-on: 2]
 
 - [x] 3.1 [parallel] [easy] `lets delegate --help` gives the new path and a `version: 3` example with `delegate.resolvers`, `delegate.review` and `delegate.handoff`. The `instructions` help names `delegate.<strategy>.<intent>.guidance` (verify: `node --test tests/lets/delegate/cli.test.ts`) (✓ node --test tests/lets/delegate/cli.test.ts passed, 25 tests)
-- [ ] 3.2 [easy] The README's *Set up delegation* shows the new file and its shape only, with no sentence about `config.json` or the old folder. `docs/resolvers.md` gives the token at `lets/t3-token`. `tests/skill-interfaces.bats` checks the README for `delegate.<strategy>.<intent>.guidance` (verify: `bats tests/skill-interfaces.bats && ! git grep -nE 'lets-delegate/(config|t3-token)|delegations|\bconfig\.json' -- README.md docs/resolvers.md`)
+- [x] 3.2 [easy] The README's *Set up delegation* shows the new file and its shape only, with no sentence about `config.json` or the old folder. `docs/resolvers.md` gives the token at `lets/t3-token`. `tests/skill-interfaces.bats` checks the README for `delegate.<strategy>.<intent>.guidance` (verify: `bats tests/skill-interfaces.bats && ! git grep -nE 'lets-delegate/(config|t3-token)|delegations|\bconfig\.json' -- README.md docs/resolvers.md`) (✓ bats tests/skill-interfaces.bats passed, 24 tests; the git grep found nothing)
 - [ ] 3.3 [easy] `skills/lets-build`, `skills/lets-review-code` and `skills/lets-review-plan` name `delegate.handoff.apply.guidance`, `delegate.review.code.guidance` and `delegate.review.plan.guidance`, and `tests/skill-interfaces.bats` checks each skill for its path (verify: `bats tests/skill-interfaces.bats && ! git grep -n 'delegations\.' -- skills`)
 
 ## 4. Acceptance [depends-on: 3]
@@ -24,3 +24,4 @@
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
 
 - 2026-10-24, task 1.2: `Config` keeps the top-level `delegations` key until task 2.1 moves guidance under `delegate`, so the guidance tests stay green in between. The `config.json` tests from task 1.3 follow the folder move in task 1.1 until 1.3 deletes them.
+- 2026-10-24, task 3.2: `docs/resolvers.md` also had a `version: 2` example and three mentions of the "delegate config". They now show `version: 3` with `delegate.resolvers`, which task 4.1's search needs.

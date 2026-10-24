@@ -2,7 +2,7 @@
 
 A resolver is the part of `lets` that turns a review or a handoff into a
 real session in one harness. `lets` has three, and you choose them by name
-in your delegate config. There is nothing to install. The README's
+under `delegate.resolvers` in your `lets` config. There is nothing to install. The README's
 [Set up delegation](../README.md#set-up-delegation) section explains the
 config file.
 
@@ -16,11 +16,12 @@ Each one declines where it cannot work, and the next in your config is
 asked. List them in this order, and leave out any you do not use:
 
 ```yaml
-version: 2
-resolvers:
-  - t3
-  - cli
-  - subagent
+version: 3
+delegate:
+  resolvers:
+    - t3
+    - cli
+    - subagent
 ```
 
 ## `t3`
@@ -58,11 +59,11 @@ Add your repository as a T3 project once:
 t3 project add <path>
 ```
 
-`t3` keeps a T3 token beside the delegate config:
+`t3` keeps a T3 token beside the `lets` config:
 
-- in `$XDG_CONFIG_HOME/lets-delegate/t3-token` when `XDG_CONFIG_HOME` is
+- in `$XDG_CONFIG_HOME/lets/t3-token` when `XDG_CONFIG_HOME` is
   set and not empty
-- in `~/.config/lets-delegate/t3-token` otherwise
+- in `~/.config/lets/t3-token` otherwise
 
 It issues a new token when none is stored there, or when T3 rejects the
 one it has. T3 Code keeps its data in `~/.t3`. If you set `T3CODE_HOME`,
@@ -150,8 +151,8 @@ Exit 3 is a refusal: the caller can try another model.
 
 ## `subagent`
 
-`subagent` is the default. `lets` asks it when you have no delegate
-config, or where your config lists `subagent`. It never declines, it can
+`subagent` is the default. `lets` asks it when your config lists no
+`delegate.resolvers`, or where that list has `subagent`. It never declines, it can
 run no model, and it starts no session.
 
 | Request | What it does |
@@ -161,4 +162,4 @@ run no model, and it starts no session.
 | `instructions` | Lists no models. |
 
 To get a fresh session in another model family, list `t3` or `cli` before
-`subagent` in your delegate config.
+`subagent` in `delegate.resolvers`.

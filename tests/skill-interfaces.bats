@@ -167,7 +167,7 @@ flow_texts() {
 }
 
 @test "the README names where the guidance lives, and --for" {
-  grep -qF 'delegations.<intent>.guidance' "$repo/README.md"
+  grep -qF 'delegate.<strategy>.<intent>.guidance' "$repo/README.md"
   grep -qF -- '--for' "$repo/README.md"
 }
 
