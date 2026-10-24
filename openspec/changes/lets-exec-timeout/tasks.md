@@ -9,7 +9,7 @@
 
 - [x] 2.1 [medium] `guarded(deps, fn)` in `lets/src/delegate/guarded.ts` returns `fn`'s exit code. On an error that `exitCodeOf` knows, it prints `lets delegate: <message>` on stderr and returns that code; it rethrows any other error. A test covers all three cases (verify: node --test tests/lets/delegate/guarded.test.ts) (✓ node --test tests/lets/delegate/guarded.test.ts passed)
 - [x] 2.2 [medium] `review run`, `handoff run` and `instructions` use `guarded`, and `handoff`'s catch no longer remaps exit codes. Their exit codes and messages do not change (verify: node --test tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts tests/lets/delegate/instructions.test.ts tests/lets/delegate/cli.test.ts) (✓ the four test files passed)
-- [ ] 2.3 [easy] `LookupDeps` is `Pick<Deps, 'env' | 'io' | 'packageRoot' | 'nodePath'>` plus `cwd` and `config`, and the three commands pass `{ ...deps, cwd, config }` (verify: pnpm check && node --test tests/lets/delegate/lookup.test.ts tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts tests/lets/delegate/instructions.test.ts)
+- [x] 2.3 [easy] `LookupDeps` is `Pick<Deps, 'env' | 'io' | 'packageRoot' | 'nodePath'>` plus `cwd` and `config`, and the three commands pass `{ ...deps, cwd, config }` (verify: pnpm check && node --test tests/lets/delegate/lookup.test.ts tests/lets/delegate/review.test.ts tests/lets/delegate/handoff.test.ts tests/lets/delegate/instructions.test.ts) (✓ the verify command passed)
 
 ## 3. The review records --for [depends-on: 2]
 

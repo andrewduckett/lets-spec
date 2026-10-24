@@ -29,7 +29,7 @@ export type Outcome<V extends Verb> = { code: number; response: Responses[V] | n
 
 // config: the user's delegate config, or null when there is none.
 // packageRoot: the folder lets runs from. nodePath: the Node that runs lets.
-export type LookupDeps = { env: Deps['env']; io: Io; cwd: string; config: Config | null; packageRoot: string; nodePath: string };
+export type LookupDeps = Pick<Deps, 'env' | 'io' | 'packageRoot' | 'nodePath'> & { cwd: string; config: Config | null };
 
 // The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
 // names a file that is missing or that this process cannot run.

@@ -23,7 +23,7 @@ export function run({ strategy, for: intent }: InstructionsOptions, deps: Deps):
     const guidance = guidanceFor(config, intent, configPath(deps));
     const cwd = await repoRoot(deps.cwd, deps.io);
     const request = buildRequest('probe', { cwd, verb: STRATEGIES[strategy].verb });
-    const { outcome } = await resolve('probe', request, { env: deps.env, io: deps.io, cwd, config, packageRoot: deps.packageRoot, nodePath: deps.nodePath });
+    const { outcome } = await resolve('probe', request, { ...deps, cwd, config });
     if (outcome.code !== EXIT.ok) {
       deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
       return outcome.code;

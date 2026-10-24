@@ -22,8 +22,7 @@ export function run({ name, promptFile, models }: HandoffOptions, deps: Deps): P
     const prompt = readPromptFile(promptFile, deps);
     const cwd = await repoRoot(deps.cwd, deps.io);
     const requestFor = (model: string) => buildRequest('start', { cwd, name: normalizeName(name), prompt, model });
-    const { outcome } = await resolveWithModels('start', requestFor, models,
-      { env: deps.env, io: deps.io, cwd, config: readConfig(deps), packageRoot: deps.packageRoot, nodePath: deps.nodePath });
+    const { outcome } = await resolveWithModels('start', requestFor, models, { ...deps, cwd, config: readConfig(deps) });
     if (outcome.code !== EXIT.ok) {
       deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
       // Every model was refused, which the caller can act on. Any other

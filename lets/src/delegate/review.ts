@@ -33,8 +33,7 @@ async function review({ name, promptFile, sourceFamily, effort, models, timeoutM
   const before = await treeStatus(cwd, io);
 
   const requestFor = (model: string) => buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, model });
-  const { candidate, outcome, model: sent } = await resolveWithModels('run', requestFor, models,
-    { env: deps.env, io, cwd, config, packageRoot: deps.packageRoot, nodePath: deps.nodePath });
+  const { candidate, outcome, model: sent } = await resolveWithModels('run', requestFor, models, { ...deps, cwd, config });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
     return outcome.code;
