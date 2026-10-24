@@ -19,7 +19,7 @@ Stacked on #104 (`resolvers-in-lets`, pull request #107), which moved the resolv
 | D8 | Where does the upgrade note go? | In the existing `0.6` section of `docs/upgrading.md`, which #104 added. Its heading and intro widen to say the release folder moved too, a mise row is added, and it says Nix profile and home-manager users need nothing. Older sections stay as written. | User |
 | D9 | Which docs change? | `docs/resolver-contract.md` (the default's path, and "The resolvers in `contrib/`"), the three pages in `docs/resolvers/`, the README's Layout row for `lets/` and its Releases paragraph, and the flake's comments. | Evidence: `git grep contrib` on this branch |
 | D10 | Which records stay? | `openspec/discovery.md`, archived changes and old upgrade sections record what was true then. ADR-004 is amended in place; no new ADR. | User |
-| D11 | How is it accepted? | `pnpm test` and `nix flake check` pass. The `dist` check lists `resolvers/` and runs the tarball's `lets` with nothing else installed; `source-tree.test.ts` runs the checkout's `lets` with no link; `git grep contrib/` finds no install path outside the kept records and the capability's name and Purpose. | User |
+| D11 | How is it accepted? | `pnpm test` and `nix flake check` pass. The `dist` check lists `resolvers/` and runs the tarball's `lets` with nothing else installed; `source-tree.test.ts` runs the checkout's `lets` with no link; `git grep -n contrib` finds nothing outside the kept records, the upgrade note and the capability's name and Purpose. | User |
 | D12 | Are there glossary edits? | No. The project has no glossary, and this story agrees no new terms. | Evidence: #103 Shared decisions |
 
 ## Changes from the story

@@ -12,7 +12,6 @@
 
 **Non-Goals:**
 - Any change to the lookup's logic, the resolvers' code, the protocol or the config.
-- A check that `contrib/` is absent. The `dist` output is built fresh, and the `ls` check pins `resolvers/` exactly.
 - The `contrib-resolvers` capability's name and Purpose (#106).
 
 ## Test Seams
@@ -39,14 +38,14 @@
 
 - `lets-cli`: `install -Dm755 … $out/resolvers/lets-delegate-subagent`, and its comment says `resolvers/`.
 - `dist`: `mkdir -p $out/bin $out/releases $out/resolvers`, then the same four copies into `$out/resolvers/`. Its comment drops the word "contrib".
-- The `dist` check: every `${dist}/contrib` becomes `${dist}/resolvers`, including the exact `ls` list, the shebang loop, `declines` and the copy-alone step.
+- The `dist` check: every `${dist}/contrib` becomes `${dist}/resolvers`, including the exact `ls` list, the shebang loop, `declines` and the copy-alone step. It gains `[ ! -e ${dist}/contrib ]` beside the `node_modules` check, so a leftover folder or compatibility link fails it.
 - The `node-tests` comment "the contrib resolvers" becomes "the resolvers".
 
 The `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent` derivations keep `libexec/`; they are build inputs and profile packages, not the release layout.
 
 ### Tests first, then the constant
 
-The unit tests pin the path, so they go red first: `SUBAGENT` in `lookup.test.ts` and `fixtures/command-deps.ts` becomes `/pkg/resolvers/lets-delegate-subagent`, the source-tree case in `lookup.test.ts` expects `join(SOURCE.packageRoot, 'resolvers/lets-delegate-subagent')`, and the `handoff` and `review` matches name `resolvers/lets-delegate-subagent`. The constant then turns them green. `source-tree.test.ts` stays green throughout; its header says it runs the checkout's default dev entry with no link. `lookup.test.ts`'s comment about `contrib/` linking goes the same way. `release-build.bats`'s `bundle_alone` copies into `$BATS_TEST_TMPDIR/resolvers/`, and its comment says the tarball ships `resolvers/<program>`.
+The unit tests pin the path, so they go red first: `SUBAGENT` in `lookup.test.ts` and `fixtures/command-deps.ts` becomes `/pkg/resolvers/lets-delegate-subagent`, the source-tree case in `lookup.test.ts` expects `join(SOURCE.packageRoot, 'resolvers/lets-delegate-subagent')`, and the `handoff` and `review` matches name `resolvers/lets-delegate-subagent`. The constant then turns them green. `source-tree.test.ts` stays green throughout. Its header, which today names the `lets/contrib/` symlink, is rewritten to say the checkout's `lets` runs the default's dev entry, with no link. `lookup.test.ts`'s comment about `contrib/` linking goes the same way. `release-build.bats`'s `bundle_alone` copies into `$BATS_TEST_TMPDIR/resolvers/`, and its comment says the tarball ships `resolvers/<program>`.
 
 ### Docs
 
@@ -60,7 +59,7 @@ The unit tests pin the path, so they go red first: `SUBAGENT` in `lookup.test.ts
 ## Risks / Trade-offs
 
 - [A flake output installs the default in the old folder, so `lets` exits 4] → the `dist` check runs the tarball's `lets` with nothing installed; the `commands` check runs the packaged `lets`.
-- [A stale `contrib/` path in prose] → no test reads release paths in prose. A task greps the tree for `contrib/` and allows only the archived changes, `openspec/discovery.md`, the 0.5 upgrade section and the `contrib-resolvers` name and Purpose.
+- [A stale `contrib` mention in prose or a comment] → no test reads release paths in prose. A task runs `git grep -n contrib` and allows only the archived changes, this change's folder, `openspec/discovery.md`, the 0.5 upgrade section, ADR-004's dated amendment, the `0.6` note's "not `contrib/`", and the `contrib-resolvers` name and Purpose.
 - [Mise users' links break on upgrade] → accepted (D4). The `0.6` note says how to re-link; the link already names one version, so they re-run it on every update anyway.
 
 ## Migration & Rollback
