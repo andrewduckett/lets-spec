@@ -9,7 +9,7 @@
 
 ## 2. The cli adapter [depends-on: 1]
 
-- [ ] 2.1 [parallel] [medium] cli's `run` runs the family's CLI and returns a `process` handle named after the session, with the final text. It has no `start`, no `verbs`, no fake `spawn`, no `CliSession` cast and no `effort!`. Every end-to-end cli test keeps its exit code and stdout; any that expected `(process <name>)` on stderr drops it. (verify: node --test tests/cli-resolver/cli.test.ts tests/cli-resolver/resolver.test.ts)
+- [x] 2.1 [parallel] [medium] cli's `run` runs the family's CLI and returns a `process` handle named after the session, with the final text. It has no `start`, no `verbs`, no fake `spawn`, no `CliSession` cast and no `effort!`. Every end-to-end cli test keeps its exit code and stdout; any that expected `(process <name>)` on stderr drops it. (verify: node --test tests/cli-resolver/cli.test.ts tests/cli-resolver/resolver.test.ts) (✓ node --test tests/cli-resolver/cli.test.ts tests/cli-resolver/resolver.test.ts passed)
 
 ## 3. The t3 adapter [depends-on: 1]
 

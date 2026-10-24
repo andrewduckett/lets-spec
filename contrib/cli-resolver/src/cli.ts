@@ -8,7 +8,7 @@
 // The child is started by this process, so it gets this process's
 // environment without the session markers.
 import { join } from 'node:path';
-import type { Adapter, Session } from 'resolver-kit/adapter.ts';
+import type { Adapter } from 'resolver-kit/adapter.ts';
 import { scrubbedEnv } from 'resolver-kit/env.ts';
 import { Refused, SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
 import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from 'resolver-kit/families.ts';
@@ -67,10 +67,6 @@ export function runCommand({ family, model, effort, prompt, lastMessagePath, tim
   };
 }
 
-// A run waiting to start: the handle names the session; the rest is what
-// waitForResult needs to run the CLI.
-type CliSession = Session & { cwd: string; name: string; prompt: string; family: Family; model: string | null; effort: Effort };
-
 export function createAdapter(io: Io): Adapter {
   const lastMessagePath = (cwd: string, name: string) => join(cwd, SCRATCH, `${name}.last-message.md`);
 
@@ -79,7 +75,6 @@ export function createAdapter(io: Io): Adapter {
     program: 'lets-delegate-cli',
     harness: 'this resolver',
     handleKind: 'process',
-    verbs: ['run'],
     // Any terminal or harness will do, as long as one family's CLI is on PATH.
     detect: () => FAMILIES.some((family) => io.commandExists(HEADLESS_EXECUTOR[family])),
     whyDeclined: () => 'none of codex, claude or agy is on PATH',
@@ -105,13 +100,9 @@ export function createAdapter(io: Io): Adapter {
       return lists.flat();
     },
 
-    // The CLI starts in waitForResult, which knows the timeout.
-    async spawn({ name, cwd, prompt, family, model, effort }): Promise<CliSession> {
-      return { handle: { kind: 'process', id: name }, cwd, name, prompt, family, model, effort: effort! };
-    },
-
-    async waitForResult(session, { timeoutMs }) {
-      const { cwd, name, prompt, family, model, effort } = session as CliSession;
+    // Runs the family's CLI. The handle is the session's name, so an error
+    // need not name it: the caller sent the name. cli has no start.
+    async run({ name, cwd, prompt, family, model, effort }, { timeoutMs }) {
       io.mkdirp(join(cwd, SCRATCH));
       const timeoutMinutes = Math.ceil(timeoutMs / 60000);
       const { cmd, args, input, readResultFrom } = runCommand({ family, model, effort, prompt, timeoutMinutes, lastMessagePath: lastMessagePath(cwd, name) });
@@ -130,7 +121,7 @@ export function createAdapter(io: Io): Adapter {
         throw printed ? new SessionFailed(`${cmd} failed: ${why}`) : new Refused(`${cmd} refused: ${why}`);
       }
       // The kit turns an empty message, or a missing file, into a failed session.
-      return { text };
+      return { handle: { kind: 'process', id: name }, text };
     },
 
     // Removes the session's files on ok. The handle's id is the session's
