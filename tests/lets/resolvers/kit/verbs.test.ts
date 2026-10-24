@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Refused, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
-import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import { Declined, respond } from '../../contrib/resolver-kit/src/verbs.ts';
+import { Refused, SpawnError } from '../../../../lets/src/resolvers/kit/errors.ts';
+import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import { Declined, respond } from '../../../../lets/src/resolvers/kit/verbs.ts';
 
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
 const PROGRAM = 'lets-delegate-pond';

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { RunInput } from '../../contrib/resolver-kit/src/adapter.ts';
-import { createAdapter, runCommand } from '../../contrib/cli-resolver/src/cli.ts';
-import type { ExecResult } from '../../contrib/resolver-kit/src/io.ts';
-import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
+import type { RunInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
+import { createAdapter, runCommand } from '../../../../lets/src/resolvers/cli/cli.ts';
+import type { ExecResult } from '../../../../lets/src/resolvers/kit/io.ts';
+import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
 const TRICKY = 'Say "hi".\nIt\'s fine.';
 const LAST = '/r/.workspace/lets-delegate/x.last-message.md';

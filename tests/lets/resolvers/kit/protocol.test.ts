@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ContractError, UsageError } from '../../contrib/resolver-kit/src/errors.ts';
+import { ContractError, UsageError } from '../../../../lets/src/resolvers/kit/errors.ts';
 import {
   buildRequest, DECLINE, DEFAULT_TIMEOUT_MINUTES, exitFor, normalizeName, parseModel, parseRequest, parseResponse, PROTOCOL,
-} from '../../contrib/resolver-kit/src/protocol.ts';
+} from '../../../../lets/src/resolvers/kit/protocol.ts';
 
 const run = { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', model: 'gpt/gpt-6-luna' } as const;
 const runRequest = () => buildRequest('run', run);

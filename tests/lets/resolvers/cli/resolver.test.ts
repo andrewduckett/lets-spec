@@ -2,10 +2,10 @@
 // adapter, on a fake io.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../resolver-kit/fixtures/handle.ts';
-import { createAdapter } from '../../contrib/cli-resolver/src/cli.ts';
-import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
+import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import { handle } from '../kit/fixtures/handle.ts';
+import { createAdapter } from '../../../../lets/src/resolvers/cli/cli.ts';
+import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
 const probeRequest = JSON.stringify(buildRequest('probe', { cwd: '/r' }));
 const runRequest = JSON.stringify(buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'high', model: 'gpt' }));

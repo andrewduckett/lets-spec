@@ -8,7 +8,7 @@ import { Command, CommanderError, InvalidArgumentError, Option } from 'commander
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { run as instructions } from './delegate/instructions.ts';
-import { EFFORTS, FAMILIES, parseModel } from 'resolver-kit/protocol.ts';
+import { EFFORTS, FAMILIES, parseModel } from './resolvers/kit/protocol.ts';
 import { run as review } from './delegate/review.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { STRATEGIES } from './delegate/strategies.ts';

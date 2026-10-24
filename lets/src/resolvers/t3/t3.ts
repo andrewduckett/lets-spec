@@ -20,13 +20,13 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { exitCodeOf, Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
-import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Adapter, RunInput, StartInput } from 'resolver-kit/adapter.ts';
-import type { Db, Io } from 'resolver-kit/io.ts';
-import { FAMILIES } from 'resolver-kit/protocol.ts';
-import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
-import { pollUntil } from 'resolver-kit/wait.ts';
+import { exitCodeOf, Refused, SessionFailed, SpawnError } from '../kit/errors.ts';
+import { withEffort, withoutEffort } from '../kit/families.ts';
+import type { Adapter, RunInput, StartInput } from '../kit/adapter.ts';
+import type { Db, Io } from '../kit/io.ts';
+import { FAMILIES } from '../kit/protocol.ts';
+import type { Effort, Family, Handle, ModelString } from '../kit/protocol.ts';
+import { pollUntil } from '../kit/wait.ts';
 
 // Where the token lives under the config folder, beside lets's config.yaml.
 export const TOKEN_FILE = 'lets-delegate/t3-token';

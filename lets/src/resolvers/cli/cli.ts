@@ -8,14 +8,14 @@
 // The child is started by this process, so it gets this process's
 // environment without the session markers.
 import { join } from 'node:path';
-import type { Adapter } from 'resolver-kit/adapter.ts';
-import { scrubbedEnv } from 'resolver-kit/env.ts';
-import { Refused, SessionFailed, SpawnError, TimeoutError } from 'resolver-kit/errors.ts';
-import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import { SCRATCH } from 'resolver-kit/io.ts';
-import type { Io } from 'resolver-kit/io.ts';
-import { FAMILIES, normalizeName } from 'resolver-kit/protocol.ts';
-import type { Effort, Family, ModelString } from 'resolver-kit/protocol.ts';
+import type { Adapter } from '../kit/adapter.ts';
+import { scrubbedEnv } from '../kit/env.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from '../kit/errors.ts';
+import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from '../kit/families.ts';
+import { SCRATCH } from '../kit/io.ts';
+import type { Io } from '../kit/io.ts';
+import { FAMILIES, normalizeName } from '../kit/protocol.ts';
+import type { Effort, Family, ModelString } from '../kit/protocol.ts';
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
 

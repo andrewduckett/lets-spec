@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parentPid, realIo } from '../../contrib/resolver-kit/src/io.ts';
+import { parentPid, realIo } from '../../../../lets/src/resolvers/kit/io.ts';
 
 test('execFile writes its input to the command\'s stdin', async () => {
   const { stdout, code } = await realIo().execFile('cat', [], { input: 'Say "hi".\nIt\'s fine.' });

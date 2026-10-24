@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { parentPid, type Db } from '../../contrib/resolver-kit/src/io.ts';
-import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../resolver-kit/fixtures/handle.ts';
-import { createAdapter } from '../../contrib/t3-resolver/src/t3.ts';
-import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
+import { parentPid, type Db } from '../../../../lets/src/resolvers/kit/io.ts';
+import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import { handle } from '../kit/fixtures/handle.ts';
+import { createAdapter } from '../../../../lets/src/resolvers/t3/t3.ts';
+import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
 // This process is 100, and the T3 server is 7.

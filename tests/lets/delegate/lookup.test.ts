@@ -7,9 +7,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { realIo } from '../../../lets/src/io.ts';
 import type { Io } from '../../../lets/src/io.ts';
-import { UsageError } from '../../../contrib/resolver-kit/src/errors.ts';
+import { UsageError } from '../../../lets/src/resolvers/kit/errors.ts';
 import { callResolver, candidates, resolve, resolveWithModels } from '../../../lets/src/delegate/lookup.ts';
-import { buildRequest } from '../../../contrib/resolver-kit/src/protocol.ts';
+import { buildRequest } from '../../../lets/src/resolvers/kit/protocol.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));

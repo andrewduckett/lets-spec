@@ -2,12 +2,12 @@
 // on a fake io.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
-import type { Verb } from '../../contrib/resolver-kit/src/protocol.ts';
-import { respond } from '../../contrib/resolver-kit/src/verbs.ts';
-import { createAnswer, PROGRAM } from '../../contrib/subagent-resolver/src/subagent.ts';
-import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
-import type { FakeIo } from '../resolver-kit/fixtures/fake-io.ts';
+import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import type { Verb } from '../../../../lets/src/resolvers/kit/protocol.ts';
+import { respond } from '../../../../lets/src/resolvers/kit/verbs.ts';
+import { createAnswer, PROGRAM } from '../../../../lets/src/resolvers/subagent/subagent.ts';
+import { fakeIo } from '../kit/fixtures/fake-io.ts';
+import type { FakeIo } from '../kit/fixtures/fake-io.ts';
 
 const ask = (io: FakeIo, verb: Verb, request: object) => respond(PROGRAM, verb, JSON.stringify(request), createAnswer(io));
 const runRequest = () => buildRequest('run', { cwd: '/r', name: 'x', prompt: 'PROMPT', sourceFamily: 'claude', effort: 'high', model: 'gpt' });

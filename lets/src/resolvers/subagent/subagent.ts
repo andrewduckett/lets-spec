@@ -2,11 +2,11 @@
 // never declines, and it starts no session: a review is exit 3, for the
 // review skills' subagent step, and a handoff hands the prompt back.
 import { join } from 'node:path';
-import { Refused } from 'resolver-kit/errors.ts';
-import { SCRATCH } from 'resolver-kit/io.ts';
-import type { Io } from 'resolver-kit/io.ts';
-import type { Request, Response, StartRequest, Verb } from 'resolver-kit/protocol.ts';
-import type { AnswerFn } from 'resolver-kit/verbs.ts';
+import { Refused } from '../kit/errors.ts';
+import { SCRATCH } from '../kit/io.ts';
+import type { Io } from '../kit/io.ts';
+import type { Request, Response, StartRequest, Verb } from '../kit/protocol.ts';
+import type { AnswerFn } from '../kit/verbs.ts';
 
 export const PROGRAM = 'lets-delegate-subagent';
 const RESOLVER = 'subagent';

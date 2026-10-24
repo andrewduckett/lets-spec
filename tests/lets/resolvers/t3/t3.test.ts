@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
-import type { Db } from '../../contrib/resolver-kit/src/io.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../../../lets/src/resolvers/kit/errors.ts';
+import type { Db } from '../../../../lets/src/resolvers/kit/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
   optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE,
-} from '../../contrib/t3-resolver/src/t3.ts';
-import type { RunInput, StartInput } from '../../contrib/resolver-kit/src/adapter.ts';
-import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
+} from '../../../../lets/src/resolvers/t3/t3.ts';
+import type { RunInput, StartInput } from '../../../../lets/src/resolvers/kit/adapter.ts';
+import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
