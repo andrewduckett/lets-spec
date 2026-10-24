@@ -17,7 +17,7 @@
 ## 4. Acceptance [depends-on: 3]
 
 - [x] 4.1 [easy] No file outside `docs/upgrading.md`, `docs/decisions/`, `openspec/` and `pnpm-lock.yaml` names the old config path, the old token path, `delegations` or a `version: 2` config. A rehearsed archive in a copy under `.workspace/` applies all four deltas, and `openspec validate --specs --strict` passes there (verify: `! git grep -nE 'lets-delegate/(config|t3-token)|delegations|version: 2' -- ':!docs/upgrading.md' ':!docs/decisions' ':!openspec' ':!pnpm-lock.yaml'`, then `openspec archive lets-config-home --yes` in the copy) (✓ the git grep finds only the four test lines that assert the old shape is refused or absent, see the Deviations Ledger; the rehearsed archive applied all four deltas, ~22 −1, and `openspec validate --specs --strict` passed, 7 of 7)
-- [ ] 4.2 [easy] Every check passes (verify: `pnpm test && nix flake check`)
+- [x] 4.2 [easy] Every check passes (verify: `pnpm test && nix flake check`) (✓ pnpm test passed: 334 Node tests, the type check, 119 bats tests; nix flake check passed: all checks passed)
 
 ## Deviations Ledger
 
