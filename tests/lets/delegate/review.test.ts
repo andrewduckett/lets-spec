@@ -111,6 +111,12 @@ test('the run request has no reviewers, whatever the config holds', async () => 
   assert.equal('reviewers' in (runs(t.adapterCalls)[0].input as object), false);
 });
 
+test('run ignores the guidance, even one that is not a string', async () => {
+  const t = withT3({ config: 'version: 2\nresolvers: [t3]\ndelegations:\n  code:\n    guidance: 42\n' });
+  assert.equal(await run(options(), t.deps), 0);
+  assert.equal(t.stdout(), 'FINDINGS\n');
+});
+
 test('finish goes to the same resolver with the handle, with ok after a clean tree', async () => {
   const t = commandDeps({ config: 'version: 2\nresolvers: [cli, t3]\n', adapters: { t3: {}, cli: {} } });
   await run(options(), t.deps);

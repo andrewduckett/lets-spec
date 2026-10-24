@@ -336,9 +336,14 @@
             cp ${dist}/resolvers/lets-delegate-subagent ../alone/
             [ "$(echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent","options":[]}' ]
             # With nothing else installed or configured, the tarball's lets
-            # finds the default beside it.
+            # answers as the default, which is part of it.
             echo 'Run lets-build on branch build-x' > p.md
             [ "$(node ${dist}/bin/lets delegate handoff run --for apply --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
+            # It still does with the default's program gone from beside it.
+            cp -r ${dist} ../without-default
+            chmod -R u+w ../without-default
+            rm ../without-default/resolvers/lets-delegate-subagent
+            [ "$(node ../without-default/bin/lets delegate handoff run --for apply --name build-x --prompt-file p.md --model claude | jq -r .resolver)" = subagent ]
             touch "$out"
           '';
 
