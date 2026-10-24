@@ -111,7 +111,7 @@ When `lets-delegate-cli finish` gets a `process` handle that it issued and `ok` 
 - **THEN** it exits 0, and `.workspace/lets-delegate/cli-resolver.last-message.md` still exists
 
 ### Requirement: Each resolver passes the verify check
-`lets delegate verify` SHALL pass for `lets-delegate-t3`, `lets-delegate-cli`, `lets-delegate-subagent` and `contrib/headless-resolver`, each checked on its own.
+`lets delegate verify` SHALL pass for `lets-delegate-t3`, `lets-delegate-cli`, `lets-delegate-subagent` and `lets/resolvers/headless-resolver`, each checked on its own.
 
 #### Scenario: Checking the T3 resolver outside T3 Code
 - **WHEN** `lets delegate verify` runs against `lets-delegate-t3` outside T3 Code
@@ -268,22 +268,22 @@ When `lets-delegate-t3` exits 3 for a thread it started, it SHALL archive that t
 - **THEN** it exits 0 and prints `{"resolver":"subagent","options":[]}`
 
 ### Requirement: The sh example declines a probe for start
-`contrib/headless-resolver` SHALL decline a `probe` request whose `verb` is `start`: exit 75, print nothing on stdout, and print `headless-resolver: this resolver only runs headless` on stderr. A `probe` whose `verb` is `run`, or that has no `verb`, SHALL exit 0 and print `{"resolver":"headless-sh","options":["claude"]}`.
+`lets/resolvers/headless-resolver` SHALL decline a `probe` request whose `verb` is `start`: exit 75, print nothing on stdout, and print `headless-resolver: this resolver only runs headless` on stderr. A `probe` whose `verb` is `run`, or that has no `verb`, SHALL exit 0 and print `{"resolver":"headless-sh","options":["claude"]}`.
 
 #### Scenario: A probe for a handoff
-- **WHEN** `contrib/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo","verb":"start"}`
+- **WHEN** `lets/resolvers/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo","verb":"start"}`
 - **THEN** it exits 75, stdout is empty, and stderr is `headless-resolver: this resolver only runs headless`
 
 #### Scenario: A probe for a review
-- **WHEN** `contrib/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo","verb":"run"}`
+- **WHEN** `lets/resolvers/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo","verb":"run"}`
 - **THEN** it exits 0 and prints `{"resolver":"headless-sh","options":["claude"]}`
 
 #### Scenario: A probe with no verb
-- **WHEN** `contrib/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo"}`
+- **WHEN** `lets/resolvers/headless-resolver probe` gets `{"protocol":2,"cwd":"/repo"}`
 - **THEN** it exits 0 and prints `{"resolver":"headless-sh","options":["claude"]}`
 
 #### Scenario: Handoff instructions with the example first
-- **WHEN** the delegate config lists the absolute path of `contrib/headless-resolver`, then `subagent`, and the user runs `lets delegate handoff instructions --for apply`
+- **WHEN** the delegate config lists the absolute path of `lets/resolvers/headless-resolver`, then `subagent`, and the user runs `lets delegate handoff instructions --for apply`
 - **THEN** the JSON line it prints has `"resolver":"subagent"`
 
 ### Requirement: The T3 resolver keeps its token beside the lets config
