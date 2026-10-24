@@ -78,3 +78,55 @@ test('handoff instructions skip cli with codex on PATH, running nothing, and the
   assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
   assert.deepEqual(io.calls, []);
 });
+
+// An io with every CLI on PATH, whose one run prints FINDINGS: codex in its
+// last-message file, the others on stdout.
+const answering = () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'], results: [(cmd, args) => {
+    if (cmd === 'codex') io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS\n');
+    return { stdout: cmd === 'codex' ? '' : 'FINDINGS\n', stderr: '', code: 0 };
+  }] });
+  return io;
+};
+const argsOf = (io: FakeIo) => io.calls.map(([cmd, args]) => [cmd, args]);
+// The review's JSON line on stderr.
+const metadata = (t: ReturnType<typeof withCli>) => JSON.parse(t.stderr());
+
+test('a review with codex prints codex\'s final message, on gpt, with a process handle', async () => {
+  const t = withCli(answering());
+  assert.equal(await review(reviewOptions(), t.deps), 0);
+  assert.equal(t.stdout(), 'FINDINGS\n');
+  const { resolver, family, model, handle } = metadata(t);
+  assert.deepEqual({ resolver, family, model, handle }, { resolver: 'cli', family: 'gpt', model: 'gpt', handle: { kind: 'process', id: 'x' } });
+});
+
+test('a review with codex runs the given model with -m, and names it', async () => {
+  const io = answering();
+  const t = withCli(io);
+  assert.equal(await review(reviewOptions({ models: ['gpt/gpt-6-luna'] }), t.deps), 0);
+  assert.equal(io.calls.length, 1);
+  const args = io.calls[0][1];
+  assert.deepEqual(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2), ['-m', 'gpt-6-luna']);
+  assert.deepEqual([metadata(t).family, metadata(t).model], ['gpt', 'gpt-6-luna']);
+});
+
+test('a bare family runs the CLI with no model argument', async () => {
+  const io = answering();
+  const t = withCli(io);
+  assert.equal(await review(reviewOptions({ models: ['claude'] }), t.deps), 0);
+  assert.deepEqual(argsOf(io), [['claude', ['-p', '--permission-mode', 'plan', '--effort', 'high']]]);
+  assert.equal(metadata(t).family, 'claude');
+});
+
+test('a gemini model runs with the review\'s effort added', async () => {
+  const io = answering();
+  assert.equal(await review(reviewOptions({ models: ['gemini/gemini-3.8-flash'], effort: 'high' }), withCli(io).deps), 0);
+  assert.deepEqual(argsOf(io)[0][1].slice(4, 6), ['--model', 'gemini-3.8-flash-high']);
+});
+
+test('a model the CLI never listed is still tried', async () => {
+  const io = answering();
+  await review(reviewOptions({ models: ['gpt/gpt-6-astra'] }), withCli(io).deps);
+  assert.equal(io.calls.length, 1);
+  assert.ok(io.calls[0][1].includes('gpt-6-astra'));
+});
