@@ -27,6 +27,7 @@ test('a review prints the final message, then one metadata line on stderr', asyn
     for: 'code', resolver: 't3', family: 'gpt', model: 'gpt-6-luna', independent: true,
     handle: { kind: 't3', id: 't3-1' }, gitClean: true, durationSeconds: 0,
   });
+  assert.deepEqual(Object.keys(JSON.parse(t.stderr())), ['for', 'resolver', 'family', 'model', 'independent', 'handle', 'gitClean', 'durationSeconds']);
 });
 
 test('a code review\'s metadata line starts with for: code, and a plan review\'s with for: plan', async () => {

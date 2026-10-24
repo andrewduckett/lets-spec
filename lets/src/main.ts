@@ -70,10 +70,11 @@ what it is for: plan or code for a review, and apply for a handoff. Each
 strategy has two commands: instructions says what can run and gives the
 user's guidance, and run runs it.
 
-A resolver turns each request into a real session. lets asks, in order:
-the executable LETS_SPEC_RESOLVER names, then each resolver your delegate
-config lists under resolvers. It stops at the first that does not
-decline. Nothing on PATH is asked.
+A resolver turns each request into a real session. Three are built into
+lets: t3 starts sessions in T3 Code, cli runs a family's CLI headless, and
+subagent, the default, starts none. lets asks each resolver your delegate
+config lists under resolvers, in order, and stops at the first that does
+not decline. Nothing is run from PATH.
 
 The config is $XDG_CONFIG_HOME/lets-delegate/config.yaml, or
 ~/.config/lets-delegate/config.yaml when XDG_CONFIG_HOME is unset. You
@@ -81,16 +82,15 @@ write it by hand:
 
   version: 2
   resolvers:
-    - /absolute/path/to/lets-delegate-t3
+    - t3
     - subagent
   delegations:
     code:
       guidance: Prefer the strongest gpt model.
 
-Each entry under resolvers is an absolute path, or subagent: the default,
-lets-delegate-subagent, which ships with lets. With no config, only the
-default is asked. The default starts no session: a review exits 3, and a
-handoff gives back the prompt to carry on by hand.
+Each entry under resolvers is t3, cli or subagent. With no config, only
+subagent is asked. It starts no session: a review exits 3, and a handoff
+gives back the prompt to carry on by hand.
 
 delegations is optional. delegations.<intent>.guidance is prose that the
 skill reads to rank the models; only instructions reads it.
@@ -105,7 +105,7 @@ independent is true when the family that answered is not the source
 family.
 
 --model may be given more than once, best first. When the resolver
-refuses a model, lets sends the next one to the same resolver.
+refuses a model, lets asks the same resolver for the next one.
 
 Exit codes:
   0  the final message is on stdout
@@ -115,8 +115,8 @@ Exit codes:
      running or not set up, there are no tokens left, it cannot run the
      model, or no resolver started a session. stderr names each model and
      why.
-  4  the resolver broke the contract, or the outcome is unknown, such as
-     no reply from the harness
+  4  the outcome is unknown, such as no reply from the harness, or the
+     resolver failed in a way it could not report
   5  the session failed: an error, it stopped to ask, or an empty message
   6  the session did not finish in time
   7  the session changed files outside .workspace/`;
@@ -126,15 +126,15 @@ stdout: one JSON line, { resolver, handle }. When no session could be
 started, handle is null and instructions holds the text to show the user.
 
 --model may be given more than once, best first. When the resolver
-refuses a model, lets sends the next one to the same resolver.
+refuses a model, lets asks the same resolver for the next one.
 
 Exit codes:
   0  ok
   2  usage error, or every resolver in the config declined
   3  no fresh session can run here on any model given: the harness or the
      account said no. stderr names each model and why.
-  4  the resolver broke the contract, or the outcome is unknown, such as
-     no reply from the harness`;
+  4  the outcome is unknown: the session could not start, or the harness
+     did not answer`;
 
 const INSTRUCTIONS_HELP = `
 stdout: one JSON line with strategy, for, resolver, options and guidance.
@@ -147,7 +147,7 @@ Exit codes:
   0  ok
   2  usage error, or every resolver in the config declined. A guidance
      that is not a string is a usage error.
-  4  the resolver broke the contract`;
+  4  the outcome is unknown, such as no reply from the harness`;
 
 const VERIFY_HELP = `
 It prints one line per check, and exits 1 if any fails.
