@@ -221,7 +221,7 @@ test('with lets\'s own default missing, a review is exit 4, naming it and an inc
   const t = commandDeps({ resolver: false, subagent: false });
   assert.equal(await run(options(), t.deps), 4);
   assert.equal(t.stdout(), '');
-  assert.match(t.stderr(), /\/pkg\/contrib\/lets-delegate-subagent/);
+  assert.match(t.stderr(), /\/pkg\/resolvers\/lets-delegate-subagent/);
   assert.match(t.stderr(), /incomplete/);
 });
 

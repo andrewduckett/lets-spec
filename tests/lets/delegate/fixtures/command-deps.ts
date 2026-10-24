@@ -28,7 +28,7 @@ export const PROMPT_FILE = '/repo/p.md';
 export const CONFIG = '/home/u/.config/lets-delegate/config.yaml';
 // The Node that runs lets, and the default beside it, as the deps name them.
 export const NODE = '/nix/node';
-export const SUBAGENT = '/pkg/contrib/lets-delegate-subagent';
+export const SUBAGENT = '/pkg/resolvers/lets-delegate-subagent';
 const SUBAGENT_SOURCE = fileURLToPath(new URL('../../../../lets/resolvers/lets-delegate-subagent', import.meta.url));
 
 type Options = {

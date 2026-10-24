@@ -1,6 +1,6 @@
 ## 1. The default's path
 
-- [ ] 1.1 [easy] `lets` asks its default at `<packageRoot>/resolvers/lets-delegate-subagent`: first make the unit tests expect it and fail (`SUBAGENT` in `tests/lets/delegate/lookup.test.ts` and `fixtures/command-deps.ts`, the source-tree case and its comment in `lookup.test.ts`, the matches in `handoff.test.ts` and `review.test.ts`), then set `DEFAULT_RESOLVER` in `lets/src/delegate/lookup.ts` (design.md, "Change the constant, not the lookup") (verify: `node --test "tests/lets/delegate/*.test.ts"`)
+- [x] 1.1 [easy] `lets` asks its default at `<packageRoot>/resolvers/lets-delegate-subagent`: first make the unit tests expect it and fail (`SUBAGENT` in `tests/lets/delegate/lookup.test.ts` and `fixtures/command-deps.ts`, the source-tree case and its comment in `lookup.test.ts`, the matches in `handoff.test.ts` and `review.test.ts`), then set `DEFAULT_RESOLVER` in `lets/src/delegate/lookup.ts` (design.md, "Change the constant, not the lookup") (verify: `node --test "tests/lets/delegate/*.test.ts"`) (✓ `node --test "tests/lets/delegate/*.test.ts"` passed: 182 pass, 0 fail; 17 failed before the constant changed)
 - [ ] 1.2 [easy] The checkout's `lets/bin/lets` finds the default's dev entry with no link: `git rm` `lets/contrib/lets-delegate-subagent`, and rewrite `source-tree.test.ts`'s header to say so (verify: `test ! -e lets/contrib && node --test tests/lets/delegate/source-tree.test.ts`)
 
 ## 2. Ship the resolvers in resolvers/ [depends-on: 1]

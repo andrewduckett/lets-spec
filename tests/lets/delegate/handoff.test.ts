@@ -77,7 +77,7 @@ test('with lets\'s own default missing, a handoff is exit 4 and writes no prompt
   const t = commandDeps({ resolver: false, subagent: false });
   assert.equal(await run(options, t.deps), 4);
   assert.equal(t.stdout(), '');
-  assert.match(t.stderr(), /contrib\/lets-delegate-subagent.*incomplete/);
+  assert.match(t.stderr(), /resolvers\/lets-delegate-subagent.*incomplete/);
   assert.equal(t.repoFile('.workspace/lets-delegate/fix-login.prompt.md'), null);
 });
 

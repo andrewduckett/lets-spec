@@ -15,8 +15,8 @@ import { fakeIo } from './fixtures/fake-io.ts';
 const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));
 // Where lets runs from, and the Node that runs it.
 const SELF = { packageRoot: '/pkg', nodePath: '/bin/node' };
-const SUBAGENT = '/pkg/contrib/lets-delegate-subagent';
-// The source tree's lets, whose contrib/ links to the real subagent.
+const SUBAGENT = '/pkg/resolvers/lets-delegate-subagent';
+// The source tree's lets, whose resolvers/ holds the real subagent's dev entry.
 const SOURCE = { packageRoot: fileURLToPath(new URL('../../../lets', import.meta.url)), nodePath: process.execPath };
 const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sourceFamily: 'claude', effort: 'low', model: 'gpt' });
 const probeRequest = buildRequest('probe', { cwd: '/r' });
@@ -161,7 +161,7 @@ test('the override answers when it does not decline, and is passed the verb and 
 test('a decline passes the request to the next candidate', async () => {
   const io = ioWith({ FAKE_RESOLVER_EXIT: '75', FAKE_RESOLVER_STDOUT: '' });
   const { candidate, outcome } = await resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: FAKE }, io, cwd: '/r', ...SOURCE, config: null });
-  assert.equal(candidate.name, join(SOURCE.packageRoot, 'contrib/lets-delegate-subagent'));
+  assert.equal(candidate.name, join(SOURCE.packageRoot, 'resolvers/lets-delegate-subagent'));
   assert.deepEqual(outcome.response, { resolver: 'subagent', options: [] });
 });
 
