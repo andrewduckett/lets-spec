@@ -19,7 +19,7 @@
 
 ## 5. Acceptance [depends-on: 3, 4]
 
-- [ ] 5.1 [easy] The packet's search finds nothing outside `docs/upgrading.md`, `docs/decisions/` and `openspec/changes/`, and a rehearsed archive in a copy under `.workspace/` retires `delegate-verify` and `resolvers` and applies the three other deltas (verify: `! git grep -nE 'lets-delegate-(t3|cli|subagent)|headless-resolver|LETS_SPEC_RESOLVER|delegate verify|resolver-contract|DECLINE' -- ':!docs/upgrading.md' ':!docs/decisions' ':!openspec/changes'`, then `openspec archive retire-resolver-programs --yes` in the copy)
+- [x] 5.1 [easy] The packet's search finds nothing outside `docs/upgrading.md`, `docs/decisions/` and `openspec/changes/`, and a rehearsed archive in a copy under `.workspace/` retires `delegate-verify` and `resolvers` and applies the three other deltas (verify: `! git grep -nE 'lets-delegate-(t3|cli|subagent)|headless-resolver|LETS_SPEC_RESOLVER|delegate verify|resolver-contract|DECLINE' -- ':!docs/upgrading.md' ':!docs/decisions' ':!openspec/changes'`, then `openspec archive retire-resolver-programs --yes` in the copy) (✓ the search found only the main specs before archive; the rehearsed archive in .workspace/rehearse retired delegate-verify and resolvers, applied + 2, ~ 4, - 17, and after it the search with only the three allowed paths excluded found nothing; openspec validate --specs --strict passed there)
 - [ ] 5.2 [easy] Every check passes (verify: `pnpm test && nix flake check`)
 
 ## Deviations Ledger
