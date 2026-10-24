@@ -368,9 +368,6 @@
             # Node's runner expands the glob itself. It does not take a folder.
             node --test "tests/**/*.test.ts"
             pnpm check
-            # The default, lets-delegate-subagent, the resolvers and the shell example
-            # keep the shape of the contract. None starts a session here.
-            pnpm verify
             touch "$out"
           '';
 

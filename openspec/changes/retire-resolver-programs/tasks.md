@@ -4,7 +4,7 @@
 
 ## 2. The command and the protocol go [depends-on: 1]
 
-- [ ] 2.1 [easy] `lets delegate verify` exits 2 as an unknown command: `verify.ts`, the command, `VERIFY_HELP`, `verify.test.ts`, `fixtures/fake-resolver` and the verify case go, and `pnpm test` no longer runs `pnpm verify` (verify: `node --test tests/lets/delegate/cli.test.ts`)
+- [x] 2.1 [easy] `lets delegate verify` exits 2 as an unknown command: `verify.ts`, the command, `VERIFY_HELP`, `verify.test.ts`, `fixtures/fake-resolver` and the verify case go, and `pnpm test` no longer runs `pnpm verify` (verify: `node --test tests/lets/delegate/cli.test.ts`) (✓ the old-command test failed first on `verify`; then pnpm check passed and node --test tests/lets/delegate/cli.test.ts: 24 passed)
 - [ ] 2.2 [medium] Only `lets` is built and installed: `lets/resolvers/`, each program's `main.ts`, `kit/main.ts`, `verbs.ts`, `resolver.ts`, `protocol.ts`, `ContractError`, `createAnswer`, `PROGRAM` and the `Adapter` fields `program`, `harness` and `whyDeclined` go, `build.mjs` bundles only `lets`, and `package.json` lists only its bin, with the tests design D8 lists (verify: `pnpm check && node --test "tests/**/*.test.ts"`)
 - [ ] 2.3 [easy] With no config, `lets delegate review instructions --for code` answers `subagent` with no options, and no command test names a retired program in a path entry (verify: `node --test tests/lets/delegate/*.test.ts`)
 
@@ -23,3 +23,5 @@
 - [ ] 5.2 [easy] Every check passes (verify: `pnpm test && nix flake check`)
 
 ## Deviations Ledger
+
+- 2026-10-24: Task 2.1 also removes `pnpm verify` from the flake's `node-tests` check, which task 3.1 planned. Without it, every commit until 3.1 would fail `nix flake check`.
