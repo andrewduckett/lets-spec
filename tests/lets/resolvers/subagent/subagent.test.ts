@@ -5,7 +5,8 @@ import { test } from 'node:test';
 import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
 import type { Verb } from '../../../../lets/src/resolvers/kit/protocol.ts';
 import { respond } from '../../../../lets/src/resolvers/kit/verbs.ts';
-import { createAnswer, PROGRAM } from '../../../../lets/src/resolvers/subagent/subagent.ts';
+import { Refused } from '../../../../lets/src/resolvers/kit/errors.ts';
+import { createAdapter, createAnswer, PROGRAM } from '../../../../lets/src/resolvers/subagent/subagent.ts';
 import { fakeIo } from '../kit/fixtures/fake-io.ts';
 import type { FakeIo } from '../kit/fixtures/fake-io.ts';
 
@@ -98,4 +99,37 @@ test('finish exits 0 and prints nothing for any handle, removing no file', async
       assert.deepEqual(io.removed, []);
     }
   }
+});
+
+// createAdapter: the same answers, called in process.
+const startInput = { cwd: '/r', name: 'fix-login', prompt: TRICKY, family: 'claude', model: null } as const;
+
+test('the adapter is named subagent, always detects and lists no models', async () => {
+  const adapter = createAdapter(fakeIo({ env: {} }));
+  assert.equal(adapter.name, 'subagent');
+  assert.equal(adapter.detect(), true);
+  assert.deepEqual(await adapter.options(() => assert.fail('no warning')), []);
+});
+
+test('the adapter refuses run with the same message as the program, and starts no process', async () => {
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy'] });
+  const { stderr } = await ask(fakeIo(), 'run', runRequest());
+  await assert.rejects(createAdapter(io).run({ ...startInput, effort: 'high' }, { timeoutMs: 1000 }),
+    (error) => error instanceof Refused && stderr === `lets-delegate-subagent: ${error.message}\n`);
+  assert.deepEqual(io.calls, []);
+});
+
+test('the adapter\'s start saves the prompt and gives the program\'s instructions', async () => {
+  const io = fakeIo();
+  const { instructions } = JSON.parse((await ask(fakeIo(), 'start', startRequest())).stdout);
+  assert.deepEqual(await createAdapter(io).start!(startInput), { instructions });
+  assert.equal(io.files.get(`${DIR}/fix-login.prompt.md`), TRICKY);
+  assert.deepEqual(io.calls, []);
+});
+
+test('the adapter\'s finish does nothing', async () => {
+  const io = fakeIo({ files: { [`${DIR}/x.prompt.md`]: 'P' } });
+  await createAdapter(io).finish({ kind: 'process', id: '1' }, true, { cwd: '/r' });
+  assert.deepEqual(io.removed, []);
+  assert.deepEqual(io.calls, []);
 });
