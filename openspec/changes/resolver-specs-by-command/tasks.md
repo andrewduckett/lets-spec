@@ -17,10 +17,11 @@
 
 ## 4. Retire the program-level tests and move the rules [depends-on: 2, 3]
 
-- [ ] 4.1 [easy] Both `resolver.test.ts` files are deleted once every case has its twin, and nothing under `tests/lets/resolvers/t3/` or `cli/` imports `protocol.ts`, `resolver.ts`, `verbs.ts` or the `handle` fixture (verify: `! grep -rlE "kit/(protocol|resolver|verbs)\.ts|fixtures/handle\.ts" tests/lets/resolvers/t3 tests/lets/resolvers/cli`)
+- [x] 4.1 [easy] Both `resolver.test.ts` files are deleted once every case has its twin, and nothing under `tests/lets/resolvers/t3/` or `cli/` imports `protocol.ts`, `resolver.ts`, `verbs.ts` or the `handle` fixture (verify: `! grep -rlE "kit/(protocol|resolver|verbs)\.ts|fixtures/handle\.ts" tests/lets/resolvers/t3 tests/lets/resolvers/cli`) (✓ grep found no such import; node --test tests/lets/resolvers: 183 passed)
 - [ ] 4.2 [easy] A rehearsed archive in a copy under `.workspace/` writes `delegate-resolvers` with the 15 requirements of the delta, leaves exactly the 7 kept requirements in `resolvers` word for word, and each moved scenario keeps its assertions but for D5 to D7 (verify: `openspec validate resolver-specs-by-command --strict`, then `openspec archive resolver-specs-by-command --yes` in the copy and `diff` each spec's requirements)
 - [ ] 4.3 [easy] `lets/src/` is unchanged on this branch, and the whole suite and the flake checks pass (verify: `git diff --quiet builtin-resolver-chain -- lets/src && pnpm test && nix flake check`)
 
 ## Deviations Ledger
 
 - 2026-10-24: The twins test behaviour that already exists, since no code changes. So each task's red step is to break the new tests' expectations once and watch them fail, and then restore them.
+- 2026-10-24: *probe for run answers cli* has no twin of its own: at the command level it is *review instructions answer cli with one family CLI on PATH*, as D6 merges the two rules. *a run with no model* has its twin in `tests/lets/delegate/review.test.ts`, *a bad --model is exit 2*, as D10 says.
