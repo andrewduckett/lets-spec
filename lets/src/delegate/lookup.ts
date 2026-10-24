@@ -7,6 +7,7 @@ import type { Deps } from '../io.ts';
 import { configPath } from './config.ts';
 import type { Config } from './config.ts';
 import { exitCodeOf, Refused, SpawnError, UsageError } from '../resolvers/kit/errors.ts';
+import { FAMILIES, parseModel } from '../resolvers/kit/protocol.ts';
 
 // The kind of session asked for: read-only for a review, interactive for a
 // handoff.
@@ -29,6 +30,14 @@ export async function pick(kind: Kind, deps: LookupDeps): Promise<Adapter> {
     if (await inAdapter(async () => adapter.detect())) return adapter;
   }
   throw new UsageError(`every resolver declined. ${configPath(deps)} lists the resolvers to ask; add subagent to fall back to a subagent.`);
+}
+
+// Throws a UsageError when models is empty, or naming the first that is not
+// <family> or <family>/<model>, so a bad one asks no resolver.
+export function checkModels(models: string[]): void {
+  if (models.length === 0) throw new UsageError('give --model at least once.');
+  const bad = models.find((text) => parseModel(text) === null);
+  if (bad !== undefined) throw new UsageError(`--model must be <family> or <family>/<model>, for a family of ${FAMILIES.join(', ')}, got ${JSON.stringify(bad)}.`);
 }
 
 // call's answer for the first of models, best first, that is not refused,
