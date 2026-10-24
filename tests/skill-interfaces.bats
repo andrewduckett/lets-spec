@@ -134,13 +134,6 @@ flow_texts() {
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 
-@test "the resolver contract says verify probes for start, and --live matches it to start" {
-  local text
-  text=$(tr '\n' ' ' <"$repo/docs/resolver-contract.md")
-  [[ "$text" == *"It probes for \`start\` as well as \`run\`"* ]]
-  [[ "$text" == *"but answers its probe for \`start\` fails"* ]]
-}
-
 @test "the review skills say exit 3 also means no resolver started a session" {
   for skill in lets-review-code lets-review-plan; do
     grep -q '\*\*3\*\*: no fresh session can run here, for example because no resolver started one' \
@@ -154,8 +147,18 @@ flow_texts() {
 }
 
 @test "the docs name lets delegate review or handoff only with instructions or run" {
-  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo'/docs/*.md '$repo'/docs/resolvers/*.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
+  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo'/docs/*.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
   [ "$status" -eq 1 ] || { echo "$output"; false; }
+}
+
+@test "one page describes each resolver, and the README links to each section" {
+  for name in t3 cli subagent; do
+    grep -qx "## \`$name\`" "$repo/docs/resolvers.md" || { echo "no section for $name"; false; }
+    grep -qF "(docs/resolvers.md#$name)" "$repo/README.md" || { echo "no README link to $name"; false; }
+  done
+  grep -qx '### After a t3 update' "$repo/docs/resolvers.md"
+  grep -qF '(docs/resolvers.md#after-a-t3-update)' "$repo/README.md"
+  [ ! -e "$repo/docs/resolvers" ]
 }
 
 @test "the README's warning about #58 is gone" {
@@ -166,10 +169,6 @@ flow_texts() {
 @test "the README names where the guidance lives, and --for" {
   grep -qF 'delegations.<intent>.guidance' "$repo/README.md"
   grep -qF -- '--for' "$repo/README.md"
-}
-
-@test "the resolver contract describes the probe's verb" {
-  grep -qE '^\| `verb` \| `probe` \|' "$repo/docs/resolver-contract.md"
 }
 
 # skill_says <skill> <fixed text>: the skill's SKILL.md holds the text,

@@ -95,7 +95,6 @@ export function fakeIo({ files = {}, dirs = [], toplevel = null, openspec = null
       }
       return { stdout: '', stderr: 'fatal: not a git repository', code: 128 };
     },
-    isExecutable: () => false,
     homedir: () => '/home/u',
     now: () => 0,
   };

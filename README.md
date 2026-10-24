@@ -69,7 +69,7 @@ This section is for you if you want the details behind the Quick start.
 | GitHub CLI (`gh`) | 2.102.0 or later | The skills set Project fields by name, and create sub-issues and "blocked by" links. |
 | OpenSpec CLI | The version the release was generated from | The `openspec-*` skills are generated from it. |
 | Node | 26 or later | `lets` runs on it. |
-| A resolver, optional | any | Runs reviews in a [fresh session](#-reviews-in-a-fresh-session). Without one that reaches another model family, the reviews are not independent. |
+| T3 Code, or `codex`, `claude` or `agy`, optional | any | Lets the resolvers built into `lets` run reviews in a [fresh session](#-reviews-in-a-fresh-session). Without one that reaches another model family, the reviews are not independent. |
 
 The flake supplies `gh`, the OpenSpec CLI and Node. With mise, you pin them.
 
@@ -283,7 +283,8 @@ This section is for you if you want reviews by another model family.
 Reviews, and builds that `lets-build` hands off, can run in a fresh
 session that shares no context with the author. These words come up:
 
-- **Resolver:** a program that turns a request into a real session.
+- **Resolver:** the part of `lets` that turns a request into a real
+  session in one harness. `lets` has three: `t3`, `cli` and `subagent`.
 - **Harness:** the agent app you work in, such as Claude Code or T3 Code.
 - **Family:** the models from one maker: `gpt`, `claude` or `gemini`.
 - **Chain:** the resolvers your config lists, which `lets` asks in order.
@@ -312,15 +313,14 @@ all. `review.md` records which ran, such as `fresh context, other family`.
 
 ### Set up delegation
 
-With no config, only the default resolver, `lets-delegate-subagent`,
-answers. For fresh sessions, write `~/.config/lets-delegate/config.yaml`
+With no config, only the default resolver, `subagent`, answers. For fresh sessions, write `~/.config/lets-delegate/config.yaml`
 (or under `$XDG_CONFIG_HOME`) by hand, once on each machine:
 
 ```yaml
 version: 2
 resolvers:
-  - /home/you/.nix-profile/bin/lets-delegate-t3
-  - /home/you/.nix-profile/bin/lets-delegate-cli
+  - t3
+  - cli
   - subagent
 delegations:
   plan:
@@ -331,39 +331,30 @@ delegations:
     guidance: Prefer claude. Use a small model for a chore.
 ```
 
-List the resolvers for your harnesses first, then `lets-delegate-cli`,
-then `subagent`, the default resolver; without it, a review every resolver
-declines fails. Write absolute paths: `lets` does not expand `~` or
-`$HOME`. An old `config.json` is not read; `lets delegate` names it.
+List the resolvers for your harnesses first, then `cli`, then
+`subagent`, the default resolver; without it, a review every resolver
+declines fails. Each entry is `t3`, `cli` or `subagent`; any other entry,
+such as a path from an older `lets`, makes `lets delegate` exit 2. An old
+`config.json` is not read; `lets delegate` names it.
 
 `delegations` is optional. `delegations.<intent>.guidance` is your advice,
 in plain words, on which models to use; its middle part is a value `--for`
 takes: `plan`, `code` or `apply`. The skill uses it only to rank and leave
 out models. A value that is not a string makes `instructions` exit 2.
-[The resolver contract](docs/resolver-contract.md#how-lets-finds-a-resolver)
-says how `lets` walks the chain.
 
-### Install a resolver
+### The resolvers
 
-This repo has two resolvers you can install:
+The resolvers are part of `lets`, so there is nothing to install. List
+the ones you want by name:
 
-| Resolver | It answers | A review runs as | A handoff |
-|---|---|---|---|
-| [`lets-delegate-t3`](docs/resolvers/t3.md) | Inside T3 Code | A new thread, archived when the review succeeds | Starts a new thread in the sidebar |
-| [`lets-delegate-cli`](docs/resolvers/cli.md) | In any terminal with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, so the next resolver answers |
+| Name | It answers | It needs | A review runs as | A handoff |
+|---|---|---|---|---|
+| [`t3`](docs/resolvers.md#t3) | Inside T3 Code | T3 Code running | A new thread, archived when the review succeeds | Starts a new thread in the sidebar |
+| [`cli`](docs/resolvers.md#cli) | In any terminal | `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | Declines, so the next resolver answers |
+| [`subagent`](docs/resolvers.md#subagent) | Anywhere | nothing | Nothing: the skill runs the review in a subagent | Gives back the prompt to start any agent with |
 
-Install each one once for your user, never in a project; its README gives
-the steps. Then add its path to `resolvers` in your config. Each declines
-where it cannot work, so the first that fits where you are answers.
-
-### Write your own
-
-Any executable can be a resolver: `lets` runs it as `<resolver> <verb>`,
-with one JSON request on stdin and one response on stdout.
-[The resolver contract](docs/resolver-contract.md) gives every rule, and
-[`lets/resolvers/headless-resolver`](lets/resolvers/headless-resolver) is one in `sh` to
-copy. Check yours with `lets delegate verify <your resolver>`; add `--live`
-to also run a short session, which spends tokens.
+Each declines where it cannot work, so the first that fits where you are
+answers.
 
 ## 📜 The working rules
 
@@ -425,7 +416,7 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 | `nix/flake-module.nix` | The flake module that projects import. It puts the OpenSpec CLI, `lets` and `gh` in the dev shell, and runs `lets sync` when the shell starts. |
 | `build/` | The release builder, the OpenSpec skill generator and the list of OpenSpec workflows |
 | `openspec-*` skills | Not committed. The flake generates them from the OpenSpec CLI in its nixpkgs, for the workflows in `build/openspec.json`, so moving nixpkgs can change their text. Each release records the CLI version in its `release.json`. |
-| `lets/` | The `lets` command and its resolvers, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `src/resolvers/kit/` is the code the resolvers share, which owns the contract: `lets` imports the protocol and its errors from it, and nothing under `src/resolvers/` imports from the rest of `lets`. `src/resolvers/t3/`, `cli/` and `subagent/` are the adapters for `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent`, the default that ships with `lets`. `resolvers/` holds their dev entries and `headless-resolver`, a complete resolver in `sh` to copy when you write your own. `build.mjs` bundles `lets` and each resolver into one file with esbuild. |
+| `lets/` | The `lets` command, in TypeScript. `src/sync/` is `lets sync`, and `src/delegate/` is `lets delegate`. `src/resolvers/t3/`, `cli/` and `subagent/` are the three resolvers, each an adapter that `lets delegate` calls in process. `src/resolvers/kit/` is the code they share with `lets delegate`: the adapter type, the model families, the errors and exit codes. `build.mjs` bundles `lets` into one file with esbuild. |
 | `docs/` | The pages the README links to, and the decision records in `docs/decisions/` |
 | `package.json`, `pnpm-workspace.yaml`, `tsconfig.json`, `mise.toml` | The pnpm workspace, its scripts, the type check's settings, and the tools for working without Nix |
 | `skills/` | The authored skills, one `lets-*` folder each: the entry points, and the flow skills the schemas call |
@@ -437,9 +428,7 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 ### Releases
 
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
-a release for every flow, and the four resolvers in `resolvers/`, each one
-file with no `node_modules`. `nix build .#lets-delegate-t3` and
-`.#lets-delegate-cli` build those resolvers for a user's profile. Bump
+one file with no `node_modules`, and a release for every flow. Bump
 `version` in `lets/package.json` in the commit you tag. Pushing a
 `v<major>.<minor>.<patch>` tag publishes `lets-spec-<version>.tar.gz`, with
 the OpenSpec CLI version in its notes. Then bump this repository's own
@@ -452,10 +441,9 @@ sets up sample projects. In the dev shell:
 
 | Command | What it runs |
 |---|---|
-| `pnpm test` | The Node tests, the type check, the verify check and the bats tests |
+| `pnpm test` | The Node tests, the type check and the bats tests |
 | `pnpm check` | The type check alone: `tsc --noEmit` |
-| `pnpm verify` | The verify check alone, against each dev entry in `lets/resolvers/`: the three resolvers and the shell example |
-| `pnpm build` | The bundles, into `lets/dist/`: `lets`, `lets-delegate-t3`, `lets-delegate-cli` and `lets-delegate-subagent` |
+| `pnpm build` | The `lets` bundle, into `lets/dist/lets` |
 | `bats tests` | The bats tests alone |
 
 Node runs the TypeScript source directly, so you do not need to build
@@ -466,9 +454,9 @@ To try an unmerged change in a project, override the input for one shell:
 
 ### After a T3 Code update
 
-`lets-delegate-t3` depends on T3 Code's internals. After each T3 Code
+The `t3` resolver depends on T3 Code's internals. After each T3 Code
 update, run the smoke test in
-[its README](docs/resolvers/t3.md#after-a-t3-update).
+[After a t3 update](docs/resolvers.md#after-a-t3-update).
 
 ## 📄 License
 

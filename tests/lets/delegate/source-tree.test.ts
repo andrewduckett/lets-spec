@@ -1,6 +1,6 @@
-// The source tree's lets, run as a process, finds its default at the dev entry
-// lets/resolvers/lets-delegate-subagent, with no link. The fakes in the other
-// tests cannot see a missing default.
+// The source tree's lets, run as a process with nothing else installed or
+// configured, answers as the default, subagent, which is built into it. The
+// other tests pass fake resolvers, so they cannot see the real wiring.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -13,8 +13,9 @@ const LETS = fileURLToPath(new URL('../../../lets/bin/lets', import.meta.url));
 // The git on this PATH. The Nix sandbox has no sh to ask.
 const GIT = (process.env.PATH ?? '').split(delimiter).map((dir) => join(dir, 'git')).find((path) => existsSync(path))!;
 
-// A git repository, and a PATH that holds git alone, so no other resolver is
-// installed. HOME and XDG_CONFIG_HOME are empty, so no delegate config exists.
+// A git repository, and a PATH that holds git alone, so neither node nor
+// any resolver program is on it. HOME and XDG_CONFIG_HOME are empty, so no
+// delegate config exists.
 function bareRepo() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'lets-source-tree-')));
   const repo = join(root, 'repo');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -26,18 +26,11 @@ const REVIEW = ['delegate', 'review', 'run', '--for', 'code', '--name', 'x', '--
 const HANDOFF = ['delegate', 'handoff', 'run', '--for', 'apply', '--name', 'x', '--prompt-file', 'p.md', '--model', 'claude'];
 
 test('every old command is rejected by name', async () => {
-  for (const command of ['critique', 'detect', 'setup', 'conformance']) {
+  for (const command of ['critique', 'detect', 'setup', 'conformance', 'verify']) {
     const { code, stderr } = await lets('delegate', command);
     assert.equal(code, 2, command);
     assert.match(stderr, new RegExp(`unknown command '${command}'`));
   }
-});
-
-test('verify checks a resolver', async () => {
-  const resolver = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
-  const { code, stdout } = await lets('delegate', 'verify', resolver);
-  assert.equal(code, 0);
-  assert.equal(stdout.trim().split('\n').at(-1), 'The resolver keeps the contract.');
 });
 
 test('every old flag is rejected by name', async () => {
@@ -99,7 +92,8 @@ test('each run --help names --model, and says exit 3 is every model refused and 
     const text = (await lets(...argv)).stdout.replace(/\s+/g, ' ');
     assert.match(text, /--model <family\[\/model\]>/, argv.join(' '));
     assert.match(text, /3 no fresh session can run here on any model given: the harness or the account said no/, argv.join(' '));
-    assert.match(text, /4 the resolver broke the contract, or the outcome is unknown/, argv.join(' '));
+    assert.match(text, /4 the outcome is unknown/, argv.join(' '));
+    assert.doesNotMatch(text, /broke the contract/, argv.join(' '));
   }
 });
 
@@ -121,6 +115,19 @@ test('delegate --help describes the chain in config.yaml, and names neither setu
   assert.doesNotMatch(text, /lets-delegate-resolver/);
 });
 
+test('delegate --help lists the resolvers by name, not by path', async () => {
+  const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
+  assert.match(text, /- t3 - subagent/);
+  assert.match(text, /t3, cli or subagent/);
+  assert.doesNotMatch(text, /absolute path|\/absolute/);
+});
+
+test('instructions --help says exit 4 is an unknown outcome', async () => {
+  const text = (await lets('delegate', 'review', 'instructions', '--help')).stdout.replace(/\s+/g, ' ');
+  assert.match(text, /4 the outcome is unknown/);
+  assert.doesNotMatch(text, /broke the contract/);
+});
+
 test('each run and instructions --help says exit 2 covers every resolver in the config declining', async () => {
   for (const argv of [['delegate', 'review', 'run', '--help'], ['delegate', 'handoff', 'run', '--help'],
     ['delegate', 'review', 'instructions', '--help'], ['delegate', 'handoff', 'instructions', '--help']]) {
@@ -129,20 +136,18 @@ test('each run and instructions --help says exit 2 covers every resolver in the 
   }
 });
 
-const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));
-
-// A git repo with a prompt file, the fake resolver as LETS_SPEC_RESOLVER
-// logging its calls, and an empty config folder. calls() lists the verb and
-// request of each call it took.
-function repo(settings: Record<string, string> = {}) {
+// A git repo with a prompt file, and an empty config folder, so the
+// default, subagent, answers. config, when given, is the delegate config.
+function repo(config?: string) {
   const cwd = mkdtempSync(join(tmpdir(), 'lets-cli-'));
   execFileSync('git', ['init', '--quiet'], { cwd });
   writeFileSync(join(cwd, 'p.md'), 'PROMPT');
-  const log = join(cwd, '.git', 'calls');
-  const env = { LETS_SPEC_RESOLVER: FAKE, FAKE_RESOLVER_LOG: log, XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'lets-cfg-')), ...settings };
-  const calls = (): [string, Record<string, unknown>][] => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : [])
-    .map((line) => { const [verb, request] = line.split('\t'); return [verb, JSON.parse(request)]; });
-  return { cwd, env, calls };
+  const home = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
+  if (config !== undefined) {
+    mkdirSync(join(home, 'lets-delegate'));
+    writeFileSync(join(home, 'lets-delegate', 'config.yaml'), config);
+  }
+  return { cwd, env: { XDG_CONFIG_HOME: home } };
 }
 
 test('review --help names instructions and run', async () => {
@@ -158,70 +163,56 @@ test('handoff --help names instructions and run', async () => {
   assert.match(stdout, /^ {2}run\b/m);
 });
 
-test('review run records its --for first in the metadata line on stderr', async () => {
+test('with no config, handoff run answers with subagent and saves the prompt', async () => {
   const r = repo();
-  const { code, stderr } = await letsIn(r, 'delegate', 'review', 'run', '--for', 'plan', '--name', 'x', '--prompt-file', 'p.md',
-    '--source-family', 'claude', '--effort', 'low', '--model', 'gpt');
-  assert.equal(code, 0, stderr);
-  const line = stderr.trim().split('\n').at(-1)!;
-  assert.ok(line.startsWith('{"for":"plan",'), line);
-  assert.deepEqual(Object.keys(JSON.parse(line)), ['for', 'resolver', 'family', 'model', 'independent', 'handle', 'gitClean', 'durationSeconds']);
-});
-
-test('handoff run prints the resolver\'s response unchanged, without for', async () => {
-  const r = repo();
-  const { code, stdout } = await letsIn(r, 'delegate', 'handoff', 'run', '--for', 'apply', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');
+  const { code, stdout } = await letsIn(r, ...HANDOFF.slice(0, 6), 'build-x', ...HANDOFF.slice(7));
   assert.equal(code, 0);
-  assert.equal(JSON.parse(stdout).for, undefined);
+  assert.equal(JSON.parse(stdout).resolver, 'subagent');
+  assert.equal(readFileSync(join(r.cwd, '.workspace/lets-delegate/build-x.prompt.md'), 'utf8'), 'PROMPT');
 });
 
-test('a run without --for is a usage error that names it, and asks no resolver', async () => {
-  const r = repo();
-  const { code, stderr } = await letsIn(r, 'delegate', 'handoff', 'run', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');
-  assert.equal(code, 2);
-  assert.match(stderr, /--for/);
-  assert.deepEqual(r.calls(), []);
-});
-
-test('an intent from the other strategy is a usage error that names --for, and asks no resolver', async () => {
-  const r = repo();
-  const { code, stderr } = await letsIn(r, 'delegate', 'review', 'instructions', '--for', 'apply');
-  assert.equal(code, 2);
-  assert.match(stderr, /--for/);
-  assert.deepEqual(r.calls(), []);
-});
-
-test('handoff run --for apply sends a start request', async () => {
-  const r = repo();
-  const { code } = await letsIn(r, 'delegate', 'handoff', 'run', '--for', 'apply', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');
+test('with no config, review instructions --for plan prints one JSON line from subagent', async () => {
+  const { code, stdout } = await letsIn(repo(), 'delegate', 'review', 'instructions', '--for', 'plan');
   assert.equal(code, 0);
-  assert.deepEqual(r.calls().map(([verb]) => verb), ['start']);
+  assert.deepEqual(JSON.parse(stdout), { strategy: 'review', for: 'plan', resolver: 'subagent', options: [], guidance: null });
 });
 
 test('run takes --model more than once, in order', async () => {
-  const r = repo({ FAKE_RESOLVER_REFUSE: 'gpt/gpt-6-astra' });
-  const { code } = await letsIn(r, ...REVIEW.slice(0, -2), '--model', 'gpt/gpt-6-astra', '--model', 'gemini');
-  assert.equal(code, 0);
-  assert.deepEqual(r.calls().filter(([verb]) => verb === 'run').map(([, request]) => request.model), ['gpt/gpt-6-astra', 'gemini']);
+  const { code, stderr } = await letsIn(repo(), ...REVIEW.slice(0, -2), '--model', 'gpt/gpt-6-astra', '--model', 'gemini');
+  assert.equal(code, 3);
+  assert.match(stderr, /gpt\/gpt-6-astra: .*\ngemini: /);
 });
 
-test('review instructions --for plan prints one JSON line', async () => {
-  const r = repo();
-  const { code, stdout } = await letsIn(r, 'delegate', 'review', 'instructions', '--for', 'plan');
-  assert.equal(code, 0);
-  assert.deepEqual(JSON.parse(stdout), { strategy: 'review', for: 'plan', resolver: 'fake', options: ['gpt/fake-model'], guidance: null });
+test('a run without --for is a usage error that names it', async () => {
+  const { code, stdout, stderr } = await letsIn(repo(), 'delegate', 'handoff', 'run', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');
+  assert.equal(code, 2);
+  assert.equal(stdout, '');
+  assert.match(stderr, /--for/);
 });
 
-test('handoff instructions pass over the sh example to subagent', async () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'lets-cli-'));
-  execFileSync('git', ['init', '--quiet'], { cwd });
-  const config = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
-  const example = fileURLToPath(new URL('../../../lets/resolvers/headless-resolver', import.meta.url));
-  mkdirSync(join(config, 'lets-delegate'));
-  writeFileSync(join(config, 'lets-delegate', 'config.yaml'), `version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
-  const { code, stdout } = await letsIn({ cwd, env: { XDG_CONFIG_HOME: config, LETS_SPEC_RESOLVER: '' } }, 'delegate', 'handoff', 'instructions', '--for', 'apply');
-  assert.equal(code, 0);
-  assert.equal(JSON.parse(stdout).resolver, 'subagent');
+test('an intent from the other strategy is a usage error that names --for', async () => {
+  const { code, stdout, stderr } = await letsIn(repo(), 'delegate', 'review', 'instructions', '--for', 'apply');
+  assert.equal(code, 2);
+  assert.equal(stdout, '');
+  assert.match(stderr, /--for/);
+});
+
+test('a resolver listed by path is exit 2, naming it and the config file', async () => {
+  const example = '/opt/r/old-resolver';
+  const r = repo(`version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
+  const { code, stdout, stderr } = await letsIn(r, 'delegate', 'handoff', 'instructions', '--for', 'apply');
+  assert.equal(code, 2);
+  assert.equal(stdout, '');
+  assert.ok(stderr.includes(example), stderr);
+  assert.ok(stderr.includes(join(r.env.XDG_CONFIG_HOME, 'lets-delegate', 'config.yaml')), stderr);
+});
+
+test('a name lets does not know is exit 2, naming it and the three names', async () => {
+  const { code, stdout, stderr } = await letsIn(repo('version: 2\nresolvers: [codex]\n'), ...HANDOFF);
+  assert.equal(code, 2);
+  assert.equal(stdout, '');
+  assert.match(stderr, /codex/);
+  assert.match(stderr, /t3, cli or subagent/);
 });
 
 test('each strategy\'s --help names its intents', async () => {

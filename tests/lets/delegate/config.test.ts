@@ -25,9 +25,17 @@ test('no config file reads as null', () => {
   assert.equal(readConfig(depsWith()), null);
 });
 
-test('a valid config reads as its chain, in order', () => {
-  const text = 'version: 2\nresolvers:\n  - /opt/r/lets-delegate-t3\n  - subagent\n';
-  assert.deepEqual(readConfig(depsWith(text)), { version: 2, resolvers: ['/opt/r/lets-delegate-t3', 'subagent'] });
+test('a valid config reads as its chain of names, in order', () => {
+  const text = 'version: 2\nresolvers:\n  - t3\n  - cli\n  - subagent\n';
+  assert.deepEqual(readConfig(depsWith(text)), { version: 2, resolvers: ['t3', 'cli', 'subagent'] });
+});
+
+test('an entry that is not t3, cli or subagent names the file, the entry and the three names', () => {
+  for (const entry of ['/opt/r/old-resolver', 'codex', 'T3', '7']) {
+    assert.throws(() => readConfig(depsWith(`version: 2\nresolvers:\n  - t3\n  - ${entry}\n`)),
+      (error) => error instanceof UsageError && error.message.includes(HOME_CONFIG) && error.message.includes('resolvers[1]')
+        && error.message.includes(entry) && /t3, cli or subagent/.test(error.message), entry);
+  }
 });
 
 test('an empty chain is a valid config', () => {
@@ -89,8 +97,8 @@ test('an invalid config is a usage error that names the file and the bad value',
     ['resolvers: []\n', 'version must be 2'],
     ['version: 2\n', 'resolvers'],
     ['version: 2\nresolvers: subagent\n', 'subagent'],
-    ['version: 2\nresolvers:\n  - bin/lets-delegate-t3\n', 'bin/lets-delegate-t3'],
-    ['version: 2\nresolvers:\n  - ~/bin/lets-delegate-t3\n', '~/bin/lets-delegate-t3'],
+    ['version: 2\nresolvers:\n  - bin/old-resolver\n', 'bin/old-resolver'],
+    ['version: 2\nresolvers:\n  - ~/bin/old-resolver\n', '~/bin/old-resolver'],
     ['version: 2\nresolvers:\n  - 7\n', '7'],
   ];
   for (const [text, named] of cases) {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { run, skillsMode } from '../../../lets/src/sync/main.ts';
+import type { Deps } from '../../../lets/src/io.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const RELEASE = '/store/abc-lets-spec-release';
@@ -20,7 +21,9 @@ function setup({ env = { WORKFLOW_RELEASE: RELEASE }, files = releaseFiles, topl
   const out: string[] = [];
   const err: string[] = [];
   const deps = {
-    env, cwd: '/project', packageRoot: '/pkg', nodePath: process.execPath, io,
+    env, cwd: '/project', packageRoot: '/pkg', io,
+    // sync asks no resolver.
+    resolvers: {} as Deps['resolvers'],
     stdout: (text: string) => out.push(text),
     stderr: (text: string) => err.push(text),
   };

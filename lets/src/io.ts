@@ -2,11 +2,13 @@
 // Tests pass a fake with the same methods.
 import { execFile as nodeExecFile } from 'node:child_process';
 import {
-  accessSync, chmodSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
+  chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
   readlinkSync, rmSync, statSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import type { ResolverName } from './delegate/config.ts';
+import type { Adapter } from './resolvers/kit/adapter.ts';
 
 // What a command printed, and its exit code. code is null when the command
 // cannot start. timedOut: the command ran past timeoutMs, and was stopped.
@@ -39,8 +41,6 @@ export type Io = {
   listNames(path: string): string[];
   listFiles(path: string): string[];
   execFile(cmd: string, args: string[], options?: ExecOptions): Promise<ExecResult>;
-  // A file this process may run.
-  isExecutable(path: string): boolean;
   // The user's home folder.
   homedir(): string;
   now(): number;
@@ -51,8 +51,8 @@ export type Deps = {
   env: Record<string, string | undefined>;
   cwd: string;
   packageRoot: string;
-  // The Node that runs lets, which runs the default resolver too.
-  nodePath: string;
+  // The resolvers built into lets, by the names the chain lists.
+  resolvers: Record<ResolverName, Adapter>;
   io: Io;
   stdout: (text: string) => void;
   stderr: (text: string) => void;
@@ -132,14 +132,6 @@ export function realIo(): Io {
       });
     },
 
-    isExecutable(path) {
-      try {
-        accessSync(path, constants.X_OK);
-        return statSync(path).isFile();
-      } catch {
-        return false;
-      }
-    },
     homedir: () => homedir(),
     now: () => Date.now(),
   };

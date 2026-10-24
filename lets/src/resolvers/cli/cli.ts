@@ -14,8 +14,10 @@ import { Refused, SessionFailed, SpawnError, TimeoutError } from '../kit/errors.
 import { HEADLESS_EXECUTOR, withEffort, withoutEffort } from '../kit/families.ts';
 import { SCRATCH } from '../kit/io.ts';
 import type { Io } from '../kit/io.ts';
-import { FAMILIES, normalizeName } from '../kit/protocol.ts';
-import type { Effort, Family, ModelString } from '../kit/protocol.ts';
+import { normalizeName } from '../kit/adapter.ts';
+import type { ModelString } from '../kit/adapter.ts';
+import { FAMILIES } from '../kit/families.ts';
+import type { Effort, Family } from '../kit/families.ts';
 
 const modelArgs = (flag: string, model: string | null) => (model ? [flag, model] : []);
 
@@ -72,12 +74,8 @@ export function createAdapter(io: Io): Adapter {
 
   return {
     name: 'cli',
-    program: 'lets-delegate-cli',
-    harness: 'this resolver',
-    handleKind: 'process',
     // Any terminal or harness will do, as long as one family's CLI is on PATH.
     detect: () => FAMILIES.some((family) => io.commandExists(HEADLESS_EXECUTOR[family])),
-    whyDeclined: () => 'none of codex, claude or agy is on PATH',
     // Each family whose CLI is on PATH, gpt, claude, gemini. A listing that
     // fails lists the bare family, so the caller can still try the CLI's
     // default model.

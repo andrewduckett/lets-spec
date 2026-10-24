@@ -1,15 +1,15 @@
 # delegate-default Specification
 
 ## Purpose
-Says when `lets delegate` asks the built-in default, `lets-delegate-subagent`: when there is no config, or where the config's chain lists `subagent`. The default starts no session and chooses no model family.
+Says when `lets delegate` asks the built-in default, `subagent`: when there is no config, or where the config's chain lists `subagent`. The default starts no session and chooses no model family.
 
 ## Requirements
 
 ### Requirement: The default answers when nothing else does
-When no config file exists, `lets delegate` SHALL ask the default, its own `resolvers/lets-delegate-subagent` beside the running `lets`, after the resolver `LETS_SPEC_RESOLVER` names, if any. When a config file exists, `lets delegate` SHALL ask the default only where the chain holds the entry `subagent`, in that position, and only when every resolver before it declines. On both paths `lets` SHALL run the default with its own Node.
+When no config file exists, `lets delegate` SHALL ask the default, `subagent`, which is built into `lets`. When a config file exists, `lets delegate` SHALL ask the default only where the chain holds the entry `subagent`, in that position, and only when every resolver before it declines.
 
 #### Scenario: No config
-- **WHEN** `LETS_SPEC_RESOLVER` is unset, no config file exists, and the user runs `lets delegate handoff run --for apply`
+- **WHEN** no config file exists, and the user runs `lets delegate handoff run --for apply`
 - **THEN** `lets delegate handoff run` prints a JSON line with `"resolver":"subagent"`
 
 #### Scenario: A listed resolver answers before the default
@@ -65,7 +65,7 @@ The default's handoff instructions SHALL be the same whichever agent CLIs are on
 - **THEN** both answers have the same `instructions`, and neither contains `claude`, `codex` or `agy` as a command to run
 
 ### Requirement: Every lets carries the default
-The release tarball, the Nix `lets` package and the repository's source tree SHALL each carry `lets-delegate-subagent` beside `lets`. Each `lets` SHALL run its own copy as a separate process, with no other install.
+The `lets` of the release tarball, of the Nix `lets` package and of the repository's source tree SHALL each answer as the default with nothing else installed or configured. The default SHALL be part of `lets` itself, and SHALL need no file beside it.
 
 #### Scenario: The release tarball
 - **WHEN** a user unpacks the release tarball, and runs its `bin/lets delegate handoff run --for apply` with nothing else installed or configured
@@ -79,39 +79,13 @@ The release tarball, the Nix `lets` package and the repository's source tree SHA
 - **WHEN** a developer runs `lets/bin/lets delegate handoff run --for apply` in this repository with nothing else installed or configured
 - **THEN** the JSON line has `"resolver":"subagent"`
 
-### Requirement: The default never declines
-`lets-delegate-subagent` SHALL answer `probe`, `run` and `start` wherever it runs, and SHALL never exit 75. It SHALL answer `probe` with `{"resolver":"subagent","options":[]}`, because it can run no model.
+#### Scenario: The program beside lets is gone
+- **WHEN** the release folder has no `resolvers/` folder, nothing else is configured, and the user runs `lets delegate handoff run --for apply`
+- **THEN** the JSON line has `"resolver":"subagent"`
 
-#### Scenario: probe in a plain terminal
-- **WHEN** `lets-delegate-subagent probe` runs outside any harness
-- **THEN** it exits 0 and prints `{"resolver":"subagent","options":[]}`
+### Requirement: The default answers wherever lets runs
+The default, `subagent`, SHALL answer wherever `lets` runs, inside a harness or not, and SHALL never decline. Asked which models it can run, it SHALL list none.
 
-### Requirement: The default finishes nothing
-`lets-delegate-subagent` SHALL answer `finish` with exit 0 and nothing on stdout, whatever the handle.
-
-#### Scenario: A handle it never issued
-- **WHEN** `lets-delegate-subagent finish` gets a handle of kind `thread`
-- **THEN** it exits 0 and stdout is empty
-
-### Requirement: A missing or broken default fails the request
-When the lookup reaches the default, through no config or through the `subagent` entry, and the running `lets`'s own `lets-delegate-subagent` is missing or fails with any exit other than 0 or 3, `lets delegate` SHALL exit 4 and print nothing on stdout. Stderr SHALL name the file `lets` tried to run and say that the `lets` install is incomplete. An absolute path the config lists is never the default: when it is missing, "A missing configured resolver stops the command" applies.
-
-#### Scenario: The file is gone
-- **WHEN** the release folder's `resolvers/lets-delegate-subagent` is deleted, nothing else is installed or configured, and the user runs `lets delegate review run --for code`
-- **THEN** the command exits 4, stdout is empty, and stderr contains the path of `resolvers/lets-delegate-subagent` and the word `incomplete`
-
-#### Scenario: A handoff with the file gone
-- **WHEN** the release folder's `resolvers/lets-delegate-subagent` is deleted, nothing else is installed or configured, and the user runs `lets delegate handoff run --for apply`
-- **THEN** the command exits 4, stdout is empty, and no file is written under `.workspace/lets-delegate/`
-
-#### Scenario: The file is broken
-- **WHEN** the release folder's `resolvers/lets-delegate-subagent` holds text that Node cannot run, nothing else is installed or configured, and the user runs `lets delegate review run --for code`
-- **THEN** the command exits 4, stdout is empty, and stderr contains the path of `resolvers/lets-delegate-subagent` and the word `incomplete`
-
-#### Scenario: The file is gone and the chain lists subagent
-- **WHEN** the release folder's `resolvers/lets-delegate-subagent` is deleted, and the config lists only `subagent`
-- **THEN** `lets delegate review run --for code` exits 4, and stderr contains that path and the word `incomplete`
-
-#### Scenario: A listed copy of the program is gone
-- **WHEN** the config lists `/opt/r/lets-delegate-subagent` by absolute path, and that file does not exist
-- **THEN** `lets delegate review run --for code` exits 2, and stderr names that path and the config file
+#### Scenario: Instructions in a plain terminal
+- **WHEN** no config file exists, the command runs outside any harness, and the user runs `lets delegate review instructions --for code`
+- **THEN** it exits 0 and prints one JSON line with `"resolver":"subagent"` and `"options":[]`

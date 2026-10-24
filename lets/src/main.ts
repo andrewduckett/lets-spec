@@ -8,14 +8,17 @@ import { Command, CommanderError, InvalidArgumentError, Option } from 'commander
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { run as instructions } from './delegate/instructions.ts';
-import { EFFORTS, FAMILIES, parseModel } from './resolvers/kit/protocol.ts';
+import { EFFORTS, FAMILIES, parseModel } from './resolvers/kit/families.ts';
 import { run as review } from './delegate/review.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { STRATEGIES } from './delegate/strategies.ts';
 import type { Intent, Strategy } from './delegate/strategies.ts';
-import { run as verify } from './delegate/verify.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
+import { createAdapter as cli } from './resolvers/cli/cli.ts';
+import { realIo as realResolverIo } from './resolvers/kit/io.ts';
+import { createAdapter as subagent } from './resolvers/subagent/subagent.ts';
+import { createAdapter as t3 } from './resolvers/t3/t3.ts';
 import { run as sync } from './sync/main.ts';
 
 // The folder above the one that holds this file: lets/ in the repo, and the
@@ -66,10 +69,11 @@ what it is for: plan or code for a review, and apply for a handoff. Each
 strategy has two commands: instructions says what can run and gives the
 user's guidance, and run runs it.
 
-A resolver turns each request into a real session. lets asks, in order:
-the executable LETS_SPEC_RESOLVER names, then each resolver your delegate
-config lists under resolvers. It stops at the first that does not
-decline. Nothing on PATH is asked.
+A resolver turns each request into a real session. Three are built into
+lets: t3 starts sessions in T3 Code, cli runs a family's CLI headless, and
+subagent, the default, starts none. lets asks each resolver your delegate
+config lists under resolvers, in order, and stops at the first that does
+not decline. Nothing is run from PATH.
 
 The config is $XDG_CONFIG_HOME/lets-delegate/config.yaml, or
 ~/.config/lets-delegate/config.yaml when XDG_CONFIG_HOME is unset. You
@@ -77,16 +81,15 @@ write it by hand:
 
   version: 2
   resolvers:
-    - /absolute/path/to/lets-delegate-t3
+    - t3
     - subagent
   delegations:
     code:
       guidance: Prefer the strongest gpt model.
 
-Each entry under resolvers is an absolute path, or subagent: the default,
-lets-delegate-subagent, which ships with lets. With no config, only the
-default is asked. The default starts no session: a review exits 3, and a
-handoff gives back the prompt to carry on by hand.
+Each entry under resolvers is t3, cli or subagent. With no config, only
+subagent is asked. It starts no session: a review exits 3, and a handoff
+gives back the prompt to carry on by hand.
 
 delegations is optional. delegations.<intent>.guidance is prose that the
 skill reads to rank the models; only instructions reads it.
@@ -101,7 +104,7 @@ independent is true when the family that answered is not the source
 family.
 
 --model may be given more than once, best first. When the resolver
-refuses a model, lets sends the next one to the same resolver.
+refuses a model, lets asks the same resolver for the next one.
 
 Exit codes:
   0  the final message is on stdout
@@ -111,8 +114,8 @@ Exit codes:
      running or not set up, there are no tokens left, it cannot run the
      model, or no resolver started a session. stderr names each model and
      why.
-  4  the resolver broke the contract, or the outcome is unknown, such as
-     no reply from the harness
+  4  the outcome is unknown, such as no reply from the harness, or the
+     resolver failed in a way it could not report
   5  the session failed: an error, it stopped to ask, or an empty message
   6  the session did not finish in time
   7  the session changed files outside .workspace/`;
@@ -122,38 +125,27 @@ stdout: one JSON line, { resolver, handle }. When no session could be
 started, handle is null and instructions holds the text to show the user.
 
 --model may be given more than once, best first. When the resolver
-refuses a model, lets sends the next one to the same resolver.
+refuses a model, lets asks the same resolver for the next one.
 
 Exit codes:
   0  ok
   2  usage error, or every resolver in the config declined
   3  no fresh session can run here on any model given: the harness or the
      account said no. stderr names each model and why.
-  4  the resolver broke the contract, or the outcome is unknown, such as
-     no reply from the harness`;
+  4  the outcome is unknown: the session could not start, or the harness
+     did not answer`;
 
 const INSTRUCTIONS_HELP = `
 stdout: one JSON line with strategy, for, resolver, options and guidance.
-resolver and options come from the first resolver that does not decline a
-probe for this strategy: options are the models it can run now, in its
-order. guidance is delegations.<intent>.guidance from the config, or null.
+resolver and options come from the first resolver that does not decline
+this strategy: options are the models it can run now, in its order. guidance is delegations.<intent>.guidance from the config, or null.
 It starts no session.
 
 Exit codes:
   0  ok
   2  usage error, or every resolver in the config declined. A guidance
      that is not a string is a usage error.
-  4  the resolver broke the contract`;
-
-const VERIFY_HELP = `
-It prints one line per check, and exits 1 if any fails.
-
-The live part runs "Reply with the single word ready and stop" read-only
-on each model probe lists, in order, until one is not refused (exit 3).
-It checks the answer and the tree, and sends finish. A resolver that lists
-no model gets no run. Then it starts a session with "Say hello and stop"
-on the first model the probe for start lists, or on claude when it lists
-none or does not answer, and leaves it for you to close.`;
+  4  the outcome is unknown, such as no reply from the harness`;
 
 // --timeout-minutes: a whole number of minutes.
 function wholeMinutes(value: string): number {
@@ -185,11 +177,13 @@ function version(): string {
 }
 
 function realDeps(): Deps {
+  // Building an adapter does no I/O, so a command that asks none costs nothing.
+  const resolverIo = realResolverIo();
   return {
     env: process.env,
     cwd: process.cwd(),
     packageRoot,
-    nodePath: process.execPath,
+    resolvers: { t3: t3(resolverIo), cli: cli(resolverIo), subagent: subagent(resolverIo) },
     io: realIo(),
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),
@@ -261,17 +255,6 @@ strategyCommand('handoff', 'start a fresh, interactive session and return at onc
   .addHelpText('after', HANDOFF_HELP)
   .action(async ({ model, for: _intent, ...options }: Omit<HandoffOptions, 'models'> & { model: string[]; for: Intent }) => {
     process.exitCode = await handoff({ ...options, models: model }, realDeps());
-  });
-
-delegate
-  .command('verify')
-  .summary('check that a resolver keeps the contract')
-  .description('Check that a resolver keeps the contract. The checks send requests that start nothing, unless you give --live.')
-  .argument('<command...>', 'the resolver, and any arguments to give it before the verb')
-  .option('--live', 'also run a session and start another: this spends tokens and may open a thread')
-  .addHelpText('after', VERIFY_HELP)
-  .action(async (command: string[], { live }: { live?: boolean }) => {
-    process.exitCode = await verify({ command, live: live === true }, realDeps());
   });
 
 try {
