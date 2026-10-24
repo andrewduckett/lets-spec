@@ -21,7 +21,7 @@ function setup({ env = { WORKFLOW_RELEASE: RELEASE }, files = releaseFiles, topl
   const out: string[] = [];
   const err: string[] = [];
   const deps = {
-    env, cwd: '/project', packageRoot: '/pkg', nodePath: process.execPath, io,
+    env, cwd: '/project', packageRoot: '/pkg', io,
     // sync asks no resolver.
     resolvers: {} as Deps['resolvers'],
     stdout: (text: string) => out.push(text),

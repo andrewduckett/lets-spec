@@ -53,8 +53,6 @@ export type Deps = {
   env: Record<string, string | undefined>;
   cwd: string;
   packageRoot: string;
-  // The Node that runs lets, which runs the default resolver too.
-  nodePath: string;
   // The resolvers built into lets, by the names the chain lists.
   resolvers: Record<ResolverName, Adapter>;
   io: Io;

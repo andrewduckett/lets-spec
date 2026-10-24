@@ -1,148 +1,62 @@
-// Which resolver answers a request. In order: the executable LETS_SPEC_RESOLVER
-// names, then the chain, the resolvers the user's delegate config lists. With
-// no config, the default, lets-delegate-subagent, which ships beside lets,
-// stands in for the chain. The first that does not decline answers. Nothing
-// is looked up on PATH. No process access here; everything comes through io.
-import { join, resolve as resolvePath } from 'node:path';
-import type { Deps, Io } from '../io.ts';
+// Which resolver answers a delegation: the first in the chain, the resolvers
+// the user's delegate config names, that does not decline. With no config,
+// the chain is the default, subagent. Every resolver is built into lets, so
+// nothing is run or looked up on PATH.
+import type { Adapter } from '../resolvers/kit/adapter.ts';
+import type { Deps } from '../io.ts';
 import { configPath } from './config.ts';
 import type { Config } from './config.ts';
-import { ContractError, EXIT, UsageError } from '../resolvers/kit/errors.ts';
-import { DECLINE, exitFor, parseResponse } from '../resolvers/kit/protocol.ts';
-import type { Requests, Responses, Verb } from '../resolvers/kit/protocol.ts';
+import { exitCodeOf, Refused, SpawnError, UsageError } from '../resolvers/kit/errors.ts';
 
-// The default resolver, relative to the folder lets runs from.
-export const DEFAULT_RESOLVER = 'resolvers/lets-delegate-subagent';
-// How long lets waits past a run's own timeout before it stops the resolver.
-export const BACKSTOP_MINUTES = 1;
-// How long lets waits on any verb but run. None of them waits on a session.
-export const OTHER_VERB_TIMEOUT_MS = 5 * 60000;
-
-// A resolver to ask: lets runs `<command> [...args] <verb>`. listed: the
-// user's delegate config lists it by path, and it is checked only when the
-// lookup reaches it. builtIn: it is the default that ships with lets, at name.
-export type Candidate = { name: string; command: string; args?: string[]; listed?: true; builtIn?: true };
-
-// What a verb came to: the exit lets gives, the response, if any, and what
-// the resolver said on stderr.
-export type Outcome<V extends Verb> = { code: number; response: Responses[V] | null; stderr: string };
+// The kind of session asked for: read-only for a review, interactive for a
+// handoff.
+export type Kind = 'run' | 'start';
 
 // config: the user's delegate config, or null when there is none.
-// packageRoot: the folder lets runs from. nodePath: the Node that runs lets.
-export type LookupDeps = Pick<Deps, 'env' | 'io' | 'packageRoot' | 'nodePath'> & { cwd: string; config: Config | null };
+export type LookupDeps = Pick<Deps, 'env' | 'io' | 'resolvers'> & { config: Config | null };
 
-// The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
-// names a file that is missing or that this process cannot run.
-export function candidates({ env, io, cwd, config, packageRoot, nodePath }: LookupDeps): Candidate[] {
-  const list: Candidate[] = [];
-  const override = env.LETS_SPEC_RESOLVER;
-  if (override !== undefined && override !== '') {
-    const command = resolvePath(cwd, override);
-    if (!io.isExecutable(command)) {
-      throw new UsageError(`LETS_SPEC_RESOLVER is ${command}, which does not exist or is not executable.`);
-    }
-    list.push({ name: command, command });
-  }
-  // The default runs with lets's own Node, so it needs no node on PATH.
-  const subagent = join(packageRoot, DEFAULT_RESOLVER);
-  const builtIn: Candidate = { name: subagent, command: nodePath, args: [subagent], builtIn: true };
-  for (const entry of config?.resolvers ?? ['subagent'] as string[]) {
-    list.push(entry === 'subagent' ? builtIn : { name: entry, command: entry, listed: true });
-  }
-  return list;
+// The adapters to ask, in order.
+export function chain({ config, resolvers }: Pick<LookupDeps, 'config' | 'resolvers'>): Adapter[] {
+  return (config?.resolvers ?? ['subagent']).map((name) => resolvers[name]);
 }
 
-// Ask one candidate. null means it declined. The outcome's code is the exit
-// lets gives, not the resolver's own.
-export async function callResolver<V extends Verb>(
-  candidate: Candidate, verb: V, request: Requests[V], { io, timeoutMs }: { io: Io; timeoutMs: number },
-): Promise<Outcome<V> | null> {
-  // name, not command, in messages: the default's command is Node.
-  const { name, command, args = [] } = candidate;
-  const failed = (code: number, stderr: string) => ({ code, response: null, stderr });
-  const result = await io.execFile(command, [...args, verb], { cwd: request.cwd, input: JSON.stringify(request), timeoutMs });
-  if (result.timedOut) {
-    const wait = timeoutMs >= 60000 ? `${Math.round(timeoutMs / 60000)} minutes` : `${Math.round(timeoutMs / 1000)} seconds`;
-    return failed(EXIT.timeout, `${name} did not answer ${verb} in ${wait}, so it was stopped.`);
+// The first adapter in the chain that does not decline kind. An adapter
+// declines when it cannot run here, and declines a handoff when it cannot
+// start one. Throws a UsageError when every adapter declines.
+export async function pick(kind: Kind, deps: LookupDeps): Promise<Adapter> {
+  for (const adapter of chain(deps)) {
+    if (kind === 'start' && adapter.start === undefined) continue;
+    if (await inAdapter(async () => adapter.detect())) return adapter;
   }
-  if (result.code === null) return failed(EXIT.spawn, `cannot run ${name}: ${result.stderr}`);
-  if (result.code === DECLINE) {
-    if (result.stdout.trim() === '') return null;
-    return failed(EXIT.spawn, `${name} declined after printing a response. A resolver must decline before it starts anything.\n${result.stderr}`);
-  }
-  if (result.code !== 0) return failed(exitFor(result.code), result.stderr.trim() || `${name} exited ${result.code}`);
-  try {
-    return { code: EXIT.ok, response: parseResponse(verb, result.stdout), stderr: result.stderr };
-  } catch (error) {
-    if (!(error instanceof ContractError)) throw error;
-    return failed(EXIT.spawn, `${name} broke the contract: ${error.message}`);
-  }
-}
-
-// How long to wait on a resolver for a verb: a run's own timeout plus the
-// backstop, else a few minutes.
-export function timeoutFor<V extends Verb>(verb: V, request: Requests[V]): number {
-  if (verb !== 'run') return OTHER_VERB_TIMEOUT_MS;
-  return ((request as Requests['run']).timeoutMinutes + BACKSTOP_MINUTES) * 60000;
-}
-
-// Why lets cannot use its own default resolver. lets ships it, so a missing
-// or broken one means the install is broken, not the user's setup.
-const incompleteInstall = (path: string) =>
-  `lets cannot run its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
-
-// Ask each candidate in turn. Answers with the one that did not decline, so
-// the caller can send finish to the same resolver. Throws a UsageError when
-// it reaches a listed resolver that is missing or cannot be run, or when
-// every resolver declines.
-export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
-  for (const candidate of candidates(deps)) {
-    if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
-      throw new UsageError(`${configPath(deps)} lists the resolver ${candidate.command}, which does not exist or is not an executable file.`);
-    }
-    const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
-    // The default answers 0 or 3, and never declines. Anything else means
-    // it could not run.
-    if (candidate.builtIn && (outcome === null || (outcome.code !== EXIT.ok && outcome.code !== EXIT.noSession))) {
-      const stderr = outcome === null ? 'it declined' : outcome.stderr;
-      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall(candidate.name)}\n${stderr}` } };
-    }
-    if (outcome !== null) return { candidate, outcome };
-  }
-  // Only a config can get here: with none, the default is last, and it
-  // never declines.
   throw new UsageError(`every resolver declined. ${configPath(deps)} lists the resolvers to ask; add subagent to fall back to a subagent.`);
 }
 
-// Ask for a session on each model in turn, best first. The chain picks the
-// resolver for the first model, and every later model goes to that same
-// resolver: a refusal (exit 3) is an answer, not a decline, so no later
-// resolver is asked. It stops at the first answer that is not a refusal.
-// When every model is refused, the outcome is exit 3, with one line per
-// model on stderr. model is the model of the last request sent. Throws as
-// resolve does.
-export async function resolveWithModels<V extends 'run' | 'start'>(
-  verb: V, requestFor: (model: string) => Requests[V], models: string[], deps: LookupDeps,
-) {
+// call's answer for the first of models, best first, that is not refused,
+// and that model. A refusal is an answer, not a decline, so the caller asks
+// the same adapter for each model. Any other failure stops at once. When
+// every model is refused, throws one Refused with a line per model,
+// <model>: <reason>.
+export async function withModels<T>(models: string[], call: (model: string) => Promise<T>): Promise<{ value: T; model: string }> {
   const refusals: string[] = [];
-  const refused = (model: string, stderr: string) => refusals.push(`${model}: ${stderr.trim().split('\n').at(-1) || 'refused'}`);
-  let [model] = models;
-  const first = await resolve(verb, requestFor(model), deps);
-  const { candidate } = first;
-  let { outcome } = first;
-  for (const next of models.slice(1)) {
-    if (outcome.code !== EXIT.noSession) break;
-    refused(model, outcome.stderr);
-    model = next;
-    const request = requestFor(model);
-    // The resolver already answered this request for another model, so a
-    // decline now breaks the contract.
-    outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) })
-      ?? { code: EXIT.spawn, response: null, stderr: `${candidate.name} declined ${verb} for ${model} after it answered for ${models[0]}. A resolver that answers a request must answer it for any model.` };
+  for (const model of models) {
+    try {
+      return { value: await inAdapter(() => call(model)), model };
+    } catch (error) {
+      if (!(error instanceof Refused)) throw error;
+      refusals.push(`${model}: ${error.message}`);
+    }
   }
-  if (outcome.code === EXIT.noSession) {
-    refused(model, outcome.stderr);
-    outcome = { code: EXIT.noSession, response: null, stderr: refusals.join('\n') };
+  throw new Refused(refusals.join('\n'));
+}
+
+// fn, an adapter call. An error the commands do not know becomes a
+// SpawnError with its message, so it exits 4: lets cannot tell what the
+// adapter did.
+export async function inAdapter<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (exitCodeOf(error) !== null) throw error;
+    throw new SpawnError(error instanceof Error ? error.message : String(error));
   }
-  return { candidate, outcome, model, refusals };
 }

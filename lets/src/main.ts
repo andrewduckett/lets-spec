@@ -195,7 +195,6 @@ function realDeps(): Deps {
     env: process.env,
     cwd: process.cwd(),
     packageRoot,
-    nodePath: process.execPath,
     resolvers: { t3: t3(resolverIo), cli: cli(resolverIo), subagent: subagent(resolverIo) },
     io: realIo(),
     stdout: (text) => process.stdout.write(text),
