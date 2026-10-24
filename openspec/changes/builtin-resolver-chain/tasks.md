@@ -1,7 +1,7 @@
 ## 1. Shared contracts
 
 - [x] 1.1 [medium] `parseConfig` accepts only `t3`, `cli` and `subagent` as `resolvers` entries, typed as resolver names; a path or any other value throws a `UsageError` that names the config file, the entry and the three names; with no config the chain is `['subagent']`, and `SUBAGENT_ENTRY` goes (verify: node --test tests/lets/delegate/config.test.ts) (✓ node --test tests/lets/delegate/config.test.ts passed)
-- [ ] 1.2 [easy] `Adapter.start` may return `{ instructions }` in place of a `Handle`, and `adapterAnswer` answers such a result as `{ resolver, handle: null, instructions }`, while a `Handle` still answers as `{ resolver, handle }` (verify: node --test tests/lets/resolvers/kit/*.test.ts && pnpm check)
+- [x] 1.2 [easy] `Adapter.start` may return `{ instructions }` in place of a `Handle`, and `adapterAnswer` answers such a result as `{ resolver, handle: null, instructions }`, while a `Handle` still answers as `{ resolver, handle }` (verify: node --test tests/lets/resolvers/kit/*.test.ts && pnpm check) (✓ node --test tests/lets/resolvers/kit/*.test.ts && pnpm check passed)
 - [ ] 1.3 [medium] `subagent`'s `createAdapter(io)` always detects, lists no models, refuses `run` with today's message, saves a handoff's prompt under `.workspace/lets-delegate/` and returns today's instructions text, and finishes nothing; `createAnswer` keeps working on the same shared texts (verify: node --test tests/lets/resolvers/subagent/subagent.test.ts)
 - [ ] 1.4 [medium] `Deps` carries `resolvers`, the three adapters by name, and loses `nodePath`; `realDeps()` builds them with one kit `realIo()`; `fixtures/command-deps.ts` builds fake adapters by name, each set to decline, list models, answer, refuse given models, or throw a known or plain error from `run`, `start` or `finish`, and records each call with its input (verify: pnpm check)
 
@@ -22,3 +22,5 @@
 - [ ] 4.1 [medium] Every check passes, including the flake checks that expect `subagent` from `handoff run` with no config, and no test but `verify.test.ts` sets `LETS_SPEC_RESOLVER` or runs `fixtures/fake-resolver` (verify: pnpm test && nix flake check && ! grep -rln -e LETS_SPEC_RESOLVER -e fake-resolver tests/lets/delegate --exclude=verify.test.ts --exclude=fake-resolver)
 
 ## Deviations Ledger
+
+- 1.2: `pnpm check` failed after 1.1, because the old `lookup.test.ts` builds configs that list paths. Its `chain` helper casts them to resolver names until 2.1 replaces those tests.

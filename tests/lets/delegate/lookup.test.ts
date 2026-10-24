@@ -10,6 +10,7 @@ import type { Io } from '../../../lets/src/io.ts';
 import { UsageError } from '../../../lets/src/resolvers/kit/errors.ts';
 import { callResolver, candidates, resolve, resolveWithModels } from '../../../lets/src/delegate/lookup.ts';
 import { buildRequest } from '../../../lets/src/resolvers/kit/protocol.ts';
+import type { ResolverName } from '../../../lets/src/delegate/config.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));
@@ -33,7 +34,8 @@ function ioWith(settings: Record<string, string>): Io {
 
 
 // A config whose chain is resolvers.
-const chain = (...resolvers: string[]) => ({ version: 2 as const, resolvers });
+// Paths, which the config no longer takes, until task 2.1 replaces these tests.
+const chain = (...resolvers: string[]) => ({ version: 2 as const, resolvers: resolvers as unknown as ResolverName[] });
 
 test('with no config, the candidates are the override, then the default', () => {
   const io = fakeIo({ executables: ['/bin/mine'] });

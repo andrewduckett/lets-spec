@@ -6,7 +6,7 @@ import { buildRequest } from '../../../../lets/src/resolvers/kit/protocol.ts';
 import type { Handle } from '../../../../lets/src/resolvers/kit/protocol.ts';
 import { handle } from './fixtures/handle.ts';
 
-type Options = { starts?: boolean; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };
+type Options = { starts?: boolean; instructions?: string; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
@@ -34,7 +34,7 @@ function fakeAdapter(options: Options = {}) {
     ...(options.starts === false ? {} : {
       async start(input: StartInput) {
         calls.push(['start', input]);
-        return { kind: 'pad', id: 'pad-1' };
+        return options.instructions === undefined ? { kind: 'pad', id: 'pad-1' } : { instructions: options.instructions };
       },
     }),
     async finish(h: Handle, ok: boolean, { cwd }: { cwd: string }) {
@@ -144,6 +144,12 @@ test('start starts an interactive session on the request\'s model and returns it
   const answer = await handle('start', startRequest, adapter);
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', handle: { kind: 'pad', id: 'pad-1' } });
   assert.deepEqual(adapter.calls, [['start', { name: 'fix-login', prompt: 'P', cwd: '/r', family: 'gemini', model: 'gemini-3.8-flash' }]]);
+});
+
+test('a start that gives instructions answers with a null handle and the instructions', async () => {
+  const answer = await handle('start', startRequest, fakeAdapter({ instructions: 'Carry on by hand.' }));
+  assert.equal(answer.code, 0);
+  assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', handle: null, instructions: 'Carry on by hand.' });
 });
 
 test('each error class from the adapter is its exit code, with its message as it is', async () => {

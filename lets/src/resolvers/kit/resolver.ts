@@ -22,7 +22,8 @@ export function adapterAnswer(adapter: Adapter): AnswerFn {
     if (verb === 'probe') return { resolver: adapter.name, options: await adapter.options(warn) };
     if (verb === 'start') {
       const { cwd, name, prompt, model } = request as Requests['start'];
-      return { resolver: adapter.name, handle: await adapter.start!({ name, prompt, cwd, ...modelOf(model) }) };
+      const started = await adapter.start!({ name, prompt, cwd, ...modelOf(model) });
+      return 'instructions' in started ? { resolver: adapter.name, handle: null, instructions: started.instructions } : { resolver: adapter.name, handle: started };
     }
     return run(adapter, request as Requests['run']);
   };

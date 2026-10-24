@@ -30,9 +30,10 @@ export type Adapter = {
   // Refused when the harness says no before the model gives output, after
   // cleaning up what it made. An error after the session exists names it.
   run(input: RunInput, options: { timeoutMs: number }): Promise<{ handle: Handle; text: string }>;
-  // Starts an interactive session and returns its handle. Throws Refused when
+  // Starts an interactive session and returns its handle, or the
+  // instructions a person needs when it starts none. Throws Refused when
   // the harness says no. Without it, the kit declines start, and a probe for it.
-  start?(input: StartInput): Promise<Handle>;
+  start?(input: StartInput): Promise<Handle | { instructions: string }>;
   // Cleans up after a session on ok. cwd is the finish request's folder.
   // Throws when it cannot.
   finish(handle: Handle, ok: boolean, options: { cwd: string }): Promise<void>;
