@@ -16,7 +16,7 @@ When it declines a handoff, it says
 `lets-delegate-cli: this resolver only runs headless`.
 
 Every resolver keeps [the resolver
-contract](../../docs/resolver-contract.md).
+contract](../resolver-contract.md).
 
 This page covers:
 
@@ -119,7 +119,7 @@ To try a change to the resolver, link its dev entry instead, or set
 `LETS_SPEC_RESOLVER` to its path:
 
 ```sh
-ln -sf "$PWD/contrib/cli-resolver/bin/lets-delegate-cli" ~/.local/bin/
+ln -sf "$PWD/lets/resolvers/lets-delegate-cli" ~/.local/bin/
 ```
 
 Run `pnpm install` in the checkout first.

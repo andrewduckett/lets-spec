@@ -14,10 +14,10 @@ You do not install it. `lets` ships it and runs it for you.
 | `finish` | Does nothing, and prints nothing. It never issues a handle. |
 
 To get a fresh session in another model family, install a resolver, such
-as [`lets-delegate-t3`](../t3-resolver/README.md) for T3 Code or
-[`lets-delegate-cli`](../cli-resolver/README.md) for any terminal, and
+as [`lets-delegate-t3`](t3.md) for T3 Code or
+[`lets-delegate-cli`](cli.md) for any terminal, and
 list it in your delegate config before `subagent`. Every resolver keeps
-[the resolver contract](../../docs/resolver-contract.md).
+[the resolver contract](../resolver-contract.md).
 
 ## Where lets finds it
 
@@ -32,7 +32,7 @@ carries a copy there:
 |---|---|
 | The release tarball | `contrib/lets-delegate-subagent` in the release folder |
 | The Nix `lets` package | `contrib/lets-delegate-subagent` in the package |
-| A checkout of this repository | `lets/contrib/lets-delegate-subagent`, a link to `bin/lets-delegate-subagent` here |
+| A checkout of this repository | `lets/contrib/lets-delegate-subagent`, a link to `lets/resolvers/lets-delegate-subagent` |
 
 If the copy is missing, or Node cannot run it, `lets delegate` exits 4
 and says the `lets` install is incomplete. Reinstall `lets` to fix it.
@@ -40,10 +40,10 @@ and says the `lets` install is incomplete. Reinstall `lets` to fix it.
 ## Develop it
 
 The program is built on the resolver kit's verb layer, in
-`../resolver-kit/`. `src/subagent.ts` holds its answers, and its tests are
-in `tests/subagent-resolver/`.
+`lets/src/resolvers/kit/`. `lets/src/resolvers/subagent/subagent.ts` holds
+its answers, and its tests are in `tests/lets/resolvers/subagent/`.
 
 ```sh
-node --test tests/subagent-resolver/*.test.ts
-node lets/bin/lets delegate verify contrib/subagent-resolver/bin/lets-delegate-subagent
+node --test tests/lets/resolvers/subagent/*.test.ts
+node lets/bin/lets delegate verify lets/resolvers/lets-delegate-subagent
 ```

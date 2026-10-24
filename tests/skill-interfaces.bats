@@ -154,7 +154,7 @@ flow_texts() {
 }
 
 @test "the docs name lets delegate review or handoff only with instructions or run" {
-  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo'/docs/*.md '$repo'/contrib/*/README.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
+  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo'/docs/*.md '$repo'/docs/resolvers/*.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 
