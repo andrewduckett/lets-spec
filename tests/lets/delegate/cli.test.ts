@@ -115,6 +115,15 @@ test('delegate --help describes the chain in config.yaml, and names neither setu
   assert.doesNotMatch(text, /lets-delegate-resolver/);
 });
 
+test('delegate --help gives the lets config path and a version 3 example', async () => {
+  const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
+  assert.match(text, /\$XDG_CONFIG_HOME\/lets\/config\.yaml/);
+  assert.match(text, /~\/\.config\/lets\/config\.yaml/);
+  assert.match(text, /version: 3 delegate: resolvers: - t3 - subagent review: code: guidance: .* handoff: apply: guidance: /);
+  assert.match(text, /delegate\.<strategy>\.<intent>\.guidance/);
+  assert.doesNotMatch(text, /lets-delegate\/|version: 2|delegations/);
+});
+
 test('delegate --help lists the resolvers by name, not by path', async () => {
   const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
   assert.match(text, /- t3 - subagent/);
@@ -230,5 +239,5 @@ test('each strategy\'s --help names its intents', async () => {
 test('instructions --help names its output and exit codes', async () => {
   const text = (await lets('delegate', 'review', 'instructions', '--help')).stdout.replace(/\s+/g, ' ');
   assert.match(text, /strategy, for, resolver, options and guidance/);
-  assert.match(text, /delegations\.<intent>\.guidance/);
+  assert.match(text, /delegate\.<strategy>\.<intent>\.guidance/);
 });
