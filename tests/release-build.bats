@@ -141,21 +141,21 @@ build_bundles() {
   [ "$output" = 0.0.0-dev ]
 }
 
-# The tarball ships each harness's resolver as contrib/<program>. A mise user
+# The tarball ships each harness's resolver as resolvers/<program>. A mise user
 # links one onto PATH and runs it with the system node, with no node_modules
 # beside it. Outside its harness it declines.
 # bundle_alone <program>: build every bundle, copy the program into an empty
 # folder, check it is the one executable script there, and cd to an empty
 # folder.
 bundle_alone() {
-  bin="$BATS_TEST_TMPDIR/contrib/$1"
+  bin="$BATS_TEST_TMPDIR/resolvers/$1"
   build_bundles
-  mkdir "$BATS_TEST_TMPDIR/contrib"
+  mkdir "$BATS_TEST_TMPDIR/resolvers"
   cp -p "$BATS_TEST_TMPDIR/build/$1" "$bin"
   [ -x "$bin" ]
   [ "$(head -n 1 "$bin")" = '#!/usr/bin/env node' ]
   grep -q "$1: needs Node 26" "$bin"
-  [ "$(ls -A "$BATS_TEST_TMPDIR/contrib")" = "$1" ]
+  [ "$(ls -A "$BATS_TEST_TMPDIR/resolvers")" = "$1" ]
   mkdir "$BATS_TEST_TMPDIR/empty"
   cd "$BATS_TEST_TMPDIR/empty"
 }

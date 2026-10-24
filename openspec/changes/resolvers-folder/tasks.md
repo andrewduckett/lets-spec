@@ -6,7 +6,7 @@
 ## 2. Ship the resolvers in resolvers/ [depends-on: 1]
 
 - [x] 2.1 [medium] The flake's `lets-cli` installs the default at `$out/resolvers/`, `dist` copies the four files into `$out/resolvers/`, and the `dist` check lists, probes and copies from `${dist}/resolvers` and fails if `${dist}/contrib` exists; `workspaceSource` loses its `lets/contrib` exclusion, and the comments say `resolvers/` (design.md, "Delete `lets/contrib/` and its exclusion" and "The flake installs into `resolvers/`") (verify: `nix build --no-link .#lets-cli ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).dist"`) (✓ `nix build --no-link .#lets-cli .#checks.x86_64-linux.dist` passed)
-- [ ] 2.2 [parallel] [easy] `tests/release-build.bats`'s `bundle_alone` copies each bundle into a `resolvers/` folder, and its comment says the tarball ships `resolvers/<program>` (verify: `bats tests/release-build.bats`)
+- [x] 2.2 [parallel] [easy] `tests/release-build.bats`'s `bundle_alone` copies each bundle into a `resolvers/` folder, and its comment says the tarball ships `resolvers/<program>` (verify: `bats tests/release-build.bats`) (✓ `bats tests/release-build.bats` passed: 19 ok)
 
 ## 3. Point the docs at resolvers/ [depends-on: 1]
 
