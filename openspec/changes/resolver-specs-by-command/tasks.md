@@ -19,7 +19,7 @@
 
 - [x] 4.1 [easy] Both `resolver.test.ts` files are deleted once every case has its twin, and nothing under `tests/lets/resolvers/t3/` or `cli/` imports `protocol.ts`, `resolver.ts`, `verbs.ts` or the `handle` fixture (verify: `! grep -rlE "kit/(protocol|resolver|verbs)\.ts|fixtures/handle\.ts" tests/lets/resolvers/t3 tests/lets/resolvers/cli`) (✓ grep found no such import; node --test tests/lets/resolvers: 183 passed)
 - [x] 4.2 [easy] A rehearsed archive in a copy under `.workspace/` writes `delegate-resolvers` with the 15 requirements of the delta, leaves exactly the 7 kept requirements in `resolvers` word for word, and each moved scenario keeps its assertions but for D5 to D7 (verify: `openspec validate resolver-specs-by-command --strict`, then `openspec archive resolver-specs-by-command --yes` in the copy and `diff` each spec's requirements) (✓ validate --strict passed; rehearsed archive: + 15, - 16; delegate-resolvers equals the delta; the 7 kept requirements are word for word; every moved requirement keeps its scenario count, the two cli declines each gain the merged or default-next scenario)
-- [ ] 4.3 [easy] `lets/src/` is unchanged on this branch, and the whole suite and the flake checks pass (verify: `git diff --quiet builtin-resolver-chain -- lets/src && pnpm test && nix flake check`)
+- [x] 4.3 [easy] `lets/src/` is unchanged on this branch, and the whole suite and the flake checks pass (verify: `git diff --quiet builtin-resolver-chain -- lets/src && pnpm test && nix flake check`) (✓ git diff empty for lets/src; pnpm test exit 0; nix flake check: all checks passed)
 
 ## Deviations Ledger
 
