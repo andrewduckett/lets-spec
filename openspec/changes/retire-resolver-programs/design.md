@@ -2,7 +2,7 @@
 
 Since #111, `lets` calls the `t3`, `cli` and `subagent` adapters in process through the `Adapter` type, and since #112 every adapter rule is specified and tested through `lets delegate`. What is left of the old design is a layer nobody calls:
 
-- Each program's `main.ts` calls `runResolver` or `runProgram` in `kit/main.ts`. That runs `respond` in `kit/verbs.ts`, which parses a request with `parseRequest` from `kit/protocol.ts` and calls `adapterAnswer` in `kit/resolver.ts`.
+- Each program's `main.ts` calls `runResolver` or `runProgram` in `kit/main.ts`. That runs `respond` in `kit/verbs.ts`. `respond` parses the request with `parseRequest` from `kit/protocol.ts`, then calls `adapterAnswer` in `kit/resolver.ts`.
 - `lets delegate verify` (`lets/src/delegate/verify.ts`) builds requests and parses responses with the same `protocol.ts`.
 - `lets/resolvers/` holds a dev entry per program and the `sh` example. `lets/build.mjs` bundles each program, `lets/package.json` lists each as a bin, and `flake.nix` packages, copies and checks them.
 
@@ -34,7 +34,7 @@ Since #111, `lets` calls the `t3`, `cli` and `subagent` adapters in process thro
 
 ### D1. Where the surviving names go
 
-`families.ts` takes the names about models: `FAMILIES`, `EFFORTS`, `Family`, `Effort`, `Model`, `parseModel` and `DEFAULT_TIMEOUT_MINUTES`. It already holds the family commands and the effort suffix, and it imports nothing after the move. `adapter.ts` takes the names about sessions: `Handle`, `ModelString` and `normalizeName`, which shapes the `name` every `RunInput` carries. `adapter.ts` imports `Family` and `Effort` from `families.ts`, so there is no cycle.
+`families.ts` takes the names about models: `FAMILIES`, `EFFORTS`, `Family`, `Effort`, `Model` and `parseModel`. It already holds the family commands and the effort suffix, and it imports nothing after the move. `adapter.ts` takes the names about sessions: `Handle`, `ModelString`, `normalizeName`, which shapes the `name` every `RunInput` carries, and `DEFAULT_TIMEOUT_MINUTES`, a session's time limit for each effort. `adapter.ts` imports `Family` and `Effort` from `families.ts`, so there is no cycle.
 
 Alternative: a new `kit/types.ts`. Rejected: the packet allows no new file, and the two existing homes fit.
 
@@ -62,7 +62,11 @@ The `program` helper stays and builds only `lets`. `lets-cli` no longer copies a
 
 `docs/resolvers.md` opens with the table from the README, then has one section per resolver: what it does in its harness, which models it lists (as `instructions` shows them, not `probe`), and for `t3`, *Before the first review in T3 Code* and *After a t3 update*. The README's resolver table and *After a T3 Code update* link to its sections.
 
-### D8. The spec Purposes are edited directly
+### D8. The tests that go
+
+Deleted whole: `tests/lets/delegate/verify.test.ts`, `headless-resolver.test.ts` and `fixtures/fake-resolver`; `tests/lets/resolvers/kit/verbs.test.ts`, `resolver.test.ts` and `fixtures/handle.ts`; `tests/lets/resolvers/folder-rule.test.ts`. `kit/protocol.test.ts` keeps only its `parseModel`, `normalizeName` and `DEFAULT_TIMEOUT_MINUTES` cases, which move to `kit/families.test.ts` and `kit/adapter.test.ts`. `subagent/subagent.test.ts` loses its `createAnswer` cases. `cli.test.ts` loses *verify checks a resolver*, and its path-entry case uses a plain path. In `tests/release-build.bats`, `bundle_alone` and its three bundle tests go. In `tests/skill-interfaces.bats`, the two tests that read `docs/resolver-contract.md` go, and the docs test reads `docs/*.md` without `docs/resolvers/*.md`. The command tests and fixtures that name a retired program in a path entry, or set `program`, change only that.
+
+### D9. The spec Purposes are edited directly
 
 OpenSpec deltas cannot change a Purpose, so `delegate-default`'s Purpose is edited in `openspec/specs/`, as `resolver-chain-config` did. The two retired capabilities go at archive through `retire_capabilities: true`.
 

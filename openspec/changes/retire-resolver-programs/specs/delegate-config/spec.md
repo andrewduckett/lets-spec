@@ -27,29 +27,6 @@ The config SHALL be one YAML document in `$XDG_CONFIG_HOME/lets-delegate/config.
 - **WHEN** the file holds `delegations.code.guidance: 42`
 - **THEN** `lets delegate review run --for code` reads it without error and asks the listed resolvers
 
-### Requirement: The chain is asked in order, by name
-`lets delegate` SHALL ask the resolvers the config's `resolvers` names, in the order listed. A resolver declines when it cannot run here, and one that cannot start interactive sessions declines every handoff. The first that does not decline SHALL answer, and no later one is asked. `lets` SHALL NOT take a resolver from the environment or from `PATH`, and SHALL NOT run any program to answer a review or a handoff.
-
-#### Scenario: The first declines
-- **WHEN** the config lists `t3` then `cli`, and `t3` declines the review
-- **THEN** `cli` is asked, and `lets delegate review run --for code` exits 0 with `cli`'s answer
-
-#### Scenario: The first answers
-- **WHEN** the config lists `t3` then `cli`, and `t3` answers the review
-- **THEN** `lets delegate review run --for code` prints `t3`'s answer, and `cli` is not asked
-
-#### Scenario: A headless resolver and a handoff
-- **WHEN** the config lists `cli` then `subagent`, `cli` can run here, and the user runs `lets delegate handoff run --for apply`
-- **THEN** `cli` starts nothing, and the JSON line has `"resolver":"subagent"`
-
-#### Scenario: The environment is ignored
-- **WHEN** an environment variable names an executable `/x`, and the config lists `t3`, which answers
-- **THEN** `t3` answers, and `/x` is not run
-
-#### Scenario: A resolver on PATH is not run
-- **WHEN** an executable that an older release installed, `old-resolver`, is on `PATH`, and the config lists `t3`
-- **THEN** `lets delegate review run --for code` does not run it
-
 ### Requirement: An unknown resolver name stops the command
 An entry of the config's `resolvers` that is not `t3`, `cli` or `subagent` SHALL stop every `lets delegate review` and `lets delegate handoff` command before it asks any resolver. The command SHALL exit 2 and print nothing on stdout. Stderr SHALL name the config file, the entry, and the three names. An absolute path is such an entry: `lets` SHALL NOT rewrite it to a name.
 
@@ -64,3 +41,26 @@ An entry of the config's `resolvers` that is not `t3`, `cli` or `subagent` SHALL
 #### Scenario: A bad entry after one that would answer
 - **WHEN** the config lists `subagent`, then `/opt/r/old-resolver`
 - **THEN** `lets delegate handoff run --for apply` exits 2, and no prompt is saved under `.workspace/lets-delegate/`
+
+## ADDED Requirements
+
+### Requirement: The chain is the names the config lists
+`lets delegate` SHALL ask the resolvers the config's `resolvers` names, in the order listed, and no others. A resolver declines when it cannot run here, and one that cannot start interactive sessions declines every handoff. The first that does not decline SHALL answer, and no later one is asked.
+
+#### Scenario: The first declines
+- **WHEN** the config lists `t3` then `cli`, and `t3` declines the review
+- **THEN** `cli` is asked, and `lets delegate review run --for code` exits 0 with `cli`'s answer
+
+#### Scenario: The first answers
+- **WHEN** the config lists `t3` then `cli`, and `t3` answers the review
+- **THEN** `lets delegate review run --for code` prints `t3`'s answer, and `cli` is not asked
+
+#### Scenario: A headless resolver and a handoff
+- **WHEN** the config lists `cli` then `subagent`, `cli` can run here, and the user runs `lets delegate handoff run --for apply`
+- **THEN** `cli` starts nothing, and the JSON line has `"resolver":"subagent"`
+
+## REMOVED Requirements
+
+### Requirement: The chain is asked in order, by name
+**Reason**: Replaced by *The chain is the names the config lists*, which keeps its rule and its first three scenarios. Its last two scenarios checked that `lets` ignores `LETS_SPEC_RESOLVER` and a resolver program on `PATH`. Both only guarded the move away from the programs, which are now gone, and neither leaves a concrete input a test can set.
+**Migration**: None. No command changes.

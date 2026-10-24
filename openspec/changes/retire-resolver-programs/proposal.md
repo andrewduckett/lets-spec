@@ -6,7 +6,7 @@ Since #111 and #112, nothing runs the resolver programs or speaks their JSON pro
 
 - **BREAKING** The release folder has no `resolvers/`, and the flake no longer exports `lets-delegate-t3` or `lets-delegate-cli`. `lets` has run its resolvers in process since #111, so nothing that still works depends on them.
 - **BREAKING** `lets delegate verify` is gone. It exits 2 as an unknown command (D9).
-- The resolver programs go: `lets/resolvers/` (three dev entries and the `sh` example, `headless-resolver`), each program's `main.ts`, the kit's `main.ts`, every bundle but `lets`, and every bin but `lets`.
+- The resolver programs go: `lets/resolvers/`, with three dev entries and the `sh` example, `headless-resolver`. So do each program's `main.ts`, the kit's `main.ts`, and every bundle and bin but `lets`.
 - The protocol goes: `verbs.ts`, `resolver.ts`, the request and response parts of `protocol.ts`, `ContractError`, `createAnswer`, and the `Adapter` fields only the protocol read (D4, D5). The names `lets` and the adapters share move to `families.ts` and `adapter.ts` (D3), and `protocol.ts` goes.
 - The tests that only checked the programs or the protocol go. The rest change only where they name a retired program (D7).
 - The docs: `docs/resolver-contract.md` goes, the three resolver pages fold into `docs/resolvers.md` (D10), the README's development rows are corrected (D11), the 0.6 upgrade note gains one sentence (D12), and the journey map marks Andrew's *Change* stage supported (D13).
@@ -22,7 +22,7 @@ None.
 
 ### Modified Capabilities
 
-- `delegate-config`: the example path entries stop naming a resolver program, and *The chain is asked in order, by name* states its rule without `LETS_SPEC_RESOLVER` (D7).
+- `delegate-config`: the example path entries stop naming a resolver program, and *The chain is asked in order, by name* is replaced by *The chain is the names the config lists*, without the scenarios about `LETS_SPEC_RESOLVER` and `PATH` (D7).
 - `delegate-default`: *The default never declines* and *The default finishes nothing* are removed, a new requirement, *The default answers wherever lets runs*, restates the first through `lets delegate`, and *Every lets carries the default* rewords its scenario about the program beside `lets` (D8).
 - `delegate-instructions`: the example path entry stops naming a resolver program (D7).
 
