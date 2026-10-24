@@ -4,7 +4,7 @@
 
 ## 2. The cli twins [depends-on: 1]
 
-- [ ] 2.1 [parallel] [medium] With `resolvers: [cli]`, `review instructions` lists the models each CLI on PATH reports, including inside T3 Code, and lists the bare family with a `lets delegate:` warning naming `codex` when its listing fails (verify: `node --test tests/lets/resolvers/cli/delegate.test.ts`)
+- [x] 2.1 [parallel] [medium] With `resolvers: [cli]`, `review instructions` lists the models each CLI on PATH reports, including inside T3 Code, and lists the bare family with a `lets delegate:` warning naming `codex` when its listing fails (verify: `node --test tests/lets/resolvers/cli/delegate.test.ts`) (✓ node --test tests/lets/resolvers/cli/delegate.test.ts: 3 passed; 2 failed with the expectations broken)
 - [ ] 2.2 [parallel] [medium] `cli` declines a review with no family CLI on PATH, and every handoff and handoff instructions even with every CLI on PATH, starting no process; the next name answers, or the command exits 2 (verify: `node --test tests/lets/resolvers/cli/delegate.test.ts`)
 - [ ] 2.3 [parallel] [medium] With `resolvers: [cli]`, `review run` runs the `--model` family's CLI read-only with its model and effort, prints the final message with `family`, `model` and a `process` handle on stderr, and tries a model no listing named (verify: `node --test tests/lets/resolvers/cli/delegate.test.ts`)
 - [ ] 2.4 [parallel] [medium] With `resolvers: [cli]`, a CLI that refuses or cannot start exits 3 (also after an earlier run with the same name), one that fails or ends empty exits 5, and one past the timeout exits 6 (verify: `node --test tests/lets/resolvers/cli/delegate.test.ts`)
@@ -22,3 +22,5 @@
 - [ ] 4.3 [easy] `lets/src/` is unchanged on this branch, and the whole suite and the flake checks pass (verify: `git diff --quiet builtin-resolver-chain -- lets/src && pnpm test && nix flake check`)
 
 ## Deviations Ledger
+
+- 2026-10-24: The twins test behaviour that already exists, since no code changes. So each task's red step is to break the new tests' expectations once and watch them fail, and then restore them.
