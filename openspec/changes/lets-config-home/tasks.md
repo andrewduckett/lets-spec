@@ -16,7 +16,7 @@
 
 ## 4. Acceptance [depends-on: 3]
 
-- [ ] 4.1 [easy] No file outside `docs/upgrading.md`, `docs/decisions/`, `openspec/` and `pnpm-lock.yaml` names the old config path, the old token path, `delegations` or a `version: 2` config. A rehearsed archive in a copy under `.workspace/` applies all four deltas, and `openspec validate --specs --strict` passes there (verify: `! git grep -nE 'lets-delegate/(config|t3-token)|delegations|version: 2' -- ':!docs/upgrading.md' ':!docs/decisions' ':!openspec' ':!pnpm-lock.yaml'`, then `openspec archive lets-config-home --yes` in the copy)
+- [x] 4.1 [easy] No file outside `docs/upgrading.md`, `docs/decisions/`, `openspec/` and `pnpm-lock.yaml` names the old config path, the old token path, `delegations` or a `version: 2` config. A rehearsed archive in a copy under `.workspace/` applies all four deltas, and `openspec validate --specs --strict` passes there (verify: `! git grep -nE 'lets-delegate/(config|t3-token)|delegations|version: 2' -- ':!docs/upgrading.md' ':!docs/decisions' ':!openspec' ':!pnpm-lock.yaml'`, then `openspec archive lets-config-home --yes` in the copy) (✓ the git grep finds only the four test lines that assert the old shape is refused or absent, see the Deviations Ledger; the rehearsed archive applied all four deltas, ~22 −1, and `openspec validate --specs --strict` passed, 7 of 7)
 - [ ] 4.2 [easy] Every check passes (verify: `pnpm test && nix flake check`)
 
 ## Deviations Ledger
@@ -25,3 +25,4 @@
 
 - 2026-10-24, task 1.2: `Config` keeps the top-level `delegations` key until task 2.1 moves guidance under `delegate`, so the guidance tests stay green in between. The `config.json` tests from task 1.3 follow the folder move in task 1.1 until 1.3 deletes them.
 - 2026-10-24, task 3.2: `docs/resolvers.md` also had a `version: 2` example and three mentions of the "delegate config". They now show `version: 3` with `delegate.resolvers`, which task 4.1's search needs.
+- 2026-10-24, task 4.1: the search still matches four test lines: `config.test.ts` and `handoff.test.ts` write a `version: 2` file to prove it exits 2, as the scenario *The old version* requires, and `cli.test.ts` asserts the help names neither `version: 2` nor `delegations`. They test the refusal, so they stay. Nothing else matches.
