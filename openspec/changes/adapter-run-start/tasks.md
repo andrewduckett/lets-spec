@@ -21,7 +21,7 @@
 ## 4. Integration [depends-on: 2, 3]
 
 - [x] 4.1 [easy] The whole suite passes: the Node tests, the type check with no `Session` or `SpawnRequest` left anywhere, every resolver's verify check, and the bats tests. (verify: pnpm test) (✓ pnpm test passed: 433 Node tests, tsc, pnpm verify, 123 bats tests)
-- [ ] 4.2 [easy] The flake builds every resolver and the release folder. (verify: nix flake check)
+- [x] 4.2 [easy] The flake builds every resolver and the release folder. (verify: nix flake check) (✓ nix flake check passed)
 
 ## Deviations Ledger
 
