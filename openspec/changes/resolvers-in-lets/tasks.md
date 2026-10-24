@@ -14,7 +14,7 @@
 
 ## 3. Check the whole change [depends-on: 2]
 
-- [ ] 3.1 [medium] No `contrib/` folder is left in the source tree, and both project checks pass, with the flake's `dist` check still finding the resolvers in the release folder's `contrib/` (verify: `test ! -e contrib && pnpm test && nix flake check`)
+- [x] 3.1 [medium] No `contrib/` folder is left in the source tree, and both project checks pass, with the flake's `dist` check still finding the resolvers in the release folder's `contrib/` (verify: `test ! -e contrib && pnpm test && nix flake check`) (✓ `test ! -e contrib && pnpm test && nix flake check` passed: 440 Node tests, 4 resolvers verified, 123 bats tests, all flake checks)
 
 ## Deviations Ledger
 
