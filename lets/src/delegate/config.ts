@@ -2,20 +2,20 @@
 // and the user's guidance for each kind of delegation.
 // The user writes it by hand, and lets is the only reader. Keys this lets
 // does not know are ignored, so a later lets can add one beside them.
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parse } from 'yaml';
 import type { Deps, Io } from '../io.ts';
 import { UsageError } from '../resolvers/kit/errors.ts';
 
 export const CONFIG_VERSION = 2;
-// The entry in the chain that names the default, lets-delegate-subagent,
-// which ships beside the running lets.
-export const SUBAGENT_ENTRY = 'subagent';
+// The resolvers built into lets, by the names the chain lists them under.
+export const RESOLVER_NAMES = ['t3', 'cli', 'subagent'] as const;
+export type ResolverName = (typeof RESOLVER_NAMES)[number];
 
-// Each resolver is an absolute path, or SUBAGENT_ENTRY. delegations is as
-// the user wrote it: only lets delegate <strategy> instructions reads it,
-// through guidanceFor, so a bad entry never stops a run.
-export type Config = { version: typeof CONFIG_VERSION; resolvers: string[]; delegations?: unknown };
+// Each resolver is one of RESOLVER_NAMES. delegations is as the user wrote
+// it: only lets delegate <strategy> instructions reads it, through
+// guidanceFor, so a bad entry never stops a run.
+export type Config = { version: typeof CONFIG_VERSION; resolvers: ResolverName[]; delegations?: unknown };
 
 export type ConfigDeps = { env: Deps['env']; io: Io };
 
@@ -54,9 +54,7 @@ export function parseConfig(text: string, path: string): Config {
   const { resolvers } = value;
   if (!Array.isArray(resolvers)) throw fail(`resolvers must be a list, got ${show(resolvers)}`);
   resolvers.forEach((entry: unknown, i: number) => {
-    if (entry !== SUBAGENT_ENTRY && (typeof entry !== 'string' || !isAbsolute(entry))) {
-      throw fail(`resolvers[${i}] must be an absolute path or ${SUBAGENT_ENTRY}, got ${show(entry)}`);
-    }
+    if (!(RESOLVER_NAMES as readonly unknown[]).includes(entry)) throw fail(`resolvers[${i}] must be t3, cli or subagent, got ${show(entry)}`);
   });
   return value.delegations === undefined ? { version: CONFIG_VERSION, resolvers } : { version: CONFIG_VERSION, resolvers, delegations: value.delegations };
 }

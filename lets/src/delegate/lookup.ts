@@ -5,7 +5,7 @@
 // is looked up on PATH. No process access here; everything comes through io.
 import { join, resolve as resolvePath } from 'node:path';
 import type { Deps, Io } from '../io.ts';
-import { configPath, SUBAGENT_ENTRY } from './config.ts';
+import { configPath } from './config.ts';
 import type { Config } from './config.ts';
 import { ContractError, EXIT, UsageError } from '../resolvers/kit/errors.ts';
 import { DECLINE, exitFor, parseResponse } from '../resolvers/kit/protocol.ts';
@@ -46,8 +46,8 @@ export function candidates({ env, io, cwd, config, packageRoot, nodePath }: Look
   // The default runs with lets's own Node, so it needs no node on PATH.
   const subagent = join(packageRoot, DEFAULT_RESOLVER);
   const builtIn: Candidate = { name: subagent, command: nodePath, args: [subagent], builtIn: true };
-  for (const entry of config?.resolvers ?? [SUBAGENT_ENTRY]) {
-    list.push(entry === SUBAGENT_ENTRY ? builtIn : { name: entry, command: entry, listed: true });
+  for (const entry of config?.resolvers ?? ['subagent'] as string[]) {
+    list.push(entry === 'subagent' ? builtIn : { name: entry, command: entry, listed: true });
   }
   return list;
 }
