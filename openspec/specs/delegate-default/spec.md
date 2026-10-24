@@ -6,10 +6,18 @@ Says when `lets delegate` asks the built-in default, `subagent`: when there is n
 ## Requirements
 
 ### Requirement: The default answers when nothing else does
-When no config file exists, `lets delegate` SHALL ask the default, `subagent`, which is built into `lets`. When a config file exists, `lets delegate` SHALL ask the default only where the chain holds the entry `subagent`, in that position, and only when every resolver before it declines.
+When no config file exists, or the config holds no `delegate.resolvers`, `lets delegate` SHALL ask the default, `subagent`, which is built into `lets`. When the config holds `delegate.resolvers`, `lets delegate` SHALL ask the default only where the chain holds the entry `subagent`, in that position, and only when every resolver before it declines.
 
 #### Scenario: No config
 - **WHEN** no config file exists, and the user runs `lets delegate handoff run --for apply`
+- **THEN** `lets delegate handoff run` prints a JSON line with `"resolver":"subagent"`
+
+#### Scenario: A config with no delegate section
+- **WHEN** the config holds only `version: 3`, and the user runs `lets delegate handoff run --for apply`
+- **THEN** `lets delegate handoff run` prints a JSON line with `"resolver":"subagent"`
+
+#### Scenario: A delegate section with no chain
+- **WHEN** the config holds `version: 3` and `delegate.review.code.guidance`, but no `delegate.resolvers`, and the user runs `lets delegate handoff run --for apply`
 - **THEN** `lets delegate handoff run` prints a JSON line with `"resolver":"subagent"`
 
 #### Scenario: A listed resolver answers before the default

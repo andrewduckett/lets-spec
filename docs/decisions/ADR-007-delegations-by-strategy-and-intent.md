@@ -8,6 +8,8 @@ description: Architecture decision record (ADR) for organizing lets delegate com
 
 # ADR-007: lets delegate is organized by strategy, and every call names its intent
 
+> Amended by [ADR-011](ADR-011-one-config-file-shaped-like-the-commands.md): the guidance key follows the strategy as well as the intent, `delegate.<strategy>.<intent>.guidance`, such as `delegate.review.code.guidance`. The commands, their grouping and the required `--for` still hold.
+
 ## Context
 
 `lets delegate` runs a prompt in a fresh session for three kinds of work: a plan review, a code review, and handing a planned change to a new session to build it. A delegation has three independent parts. The **command** says what `lets` does: report what can run (`instructions`), or start the session (`run`). The **strategy** says what kind of session it is. A `review` is read-only and waits for the final message. A `handoff` is interactive and returns at once. The **intent** says what the work is for: `plan`, `code` or `apply`.

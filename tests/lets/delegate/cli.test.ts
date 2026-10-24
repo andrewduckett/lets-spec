@@ -115,6 +115,15 @@ test('delegate --help describes the chain in config.yaml, and names neither setu
   assert.doesNotMatch(text, /lets-delegate-resolver/);
 });
 
+test('delegate --help gives the lets config path and a version 3 example', async () => {
+  const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
+  assert.match(text, /\$XDG_CONFIG_HOME\/lets\/config\.yaml/);
+  assert.match(text, /~\/\.config\/lets\/config\.yaml/);
+  assert.match(text, /version: 3 delegate: resolvers: - t3 - subagent review: code: guidance: .* handoff: apply: guidance: /);
+  assert.match(text, /delegate\.<strategy>\.<intent>\.guidance/);
+  assert.doesNotMatch(text, /lets-delegate\/|version: 2|delegations/);
+});
+
 test('delegate --help lists the resolvers by name, not by path', async () => {
   const text = (await lets('delegate', '--help')).stdout.replace(/\s+/g, ' ');
   assert.match(text, /- t3 - subagent/);
@@ -144,8 +153,8 @@ function repo(config?: string) {
   writeFileSync(join(cwd, 'p.md'), 'PROMPT');
   const home = mkdtempSync(join(tmpdir(), 'lets-cfg-'));
   if (config !== undefined) {
-    mkdirSync(join(home, 'lets-delegate'));
-    writeFileSync(join(home, 'lets-delegate', 'config.yaml'), config);
+    mkdirSync(join(home, 'lets'));
+    writeFileSync(join(home, 'lets', 'config.yaml'), config);
   }
   return { cwd, env: { XDG_CONFIG_HOME: home } };
 }
@@ -199,16 +208,16 @@ test('an intent from the other strategy is a usage error that names --for', asyn
 
 test('a resolver listed by path is exit 2, naming it and the config file', async () => {
   const example = '/opt/r/old-resolver';
-  const r = repo(`version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
+  const r = repo(`version: 3\ndelegate:\n  resolvers:\n    - ${example}\n    - subagent\n`);
   const { code, stdout, stderr } = await letsIn(r, 'delegate', 'handoff', 'instructions', '--for', 'apply');
   assert.equal(code, 2);
   assert.equal(stdout, '');
   assert.ok(stderr.includes(example), stderr);
-  assert.ok(stderr.includes(join(r.env.XDG_CONFIG_HOME, 'lets-delegate', 'config.yaml')), stderr);
+  assert.ok(stderr.includes(join(r.env.XDG_CONFIG_HOME, 'lets', 'config.yaml')), stderr);
 });
 
 test('a name lets does not know is exit 2, naming it and the three names', async () => {
-  const { code, stdout, stderr } = await letsIn(repo('version: 2\nresolvers: [codex]\n'), ...HANDOFF);
+  const { code, stdout, stderr } = await letsIn(repo('version: 3\ndelegate: { resolvers: [codex] }\n'), ...HANDOFF);
   assert.equal(code, 2);
   assert.equal(stdout, '');
   assert.match(stderr, /codex/);
@@ -230,5 +239,5 @@ test('each strategy\'s --help names its intents', async () => {
 test('instructions --help names its output and exit codes', async () => {
   const text = (await lets('delegate', 'review', 'instructions', '--help')).stdout.replace(/\s+/g, ' ');
   assert.match(text, /strategy, for, resolver, options and guidance/);
-  assert.match(text, /delegations\.<intent>\.guidance/);
+  assert.match(text, /delegate\.<strategy>\.<intent>\.guidance/);
 });

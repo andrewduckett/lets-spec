@@ -71,28 +71,33 @@ user's guidance, and run runs it.
 
 A resolver turns each request into a real session. Three are built into
 lets: t3 starts sessions in T3 Code, cli runs a family's CLI headless, and
-subagent, the default, starts none. lets asks each resolver your delegate
-config lists under resolvers, in order, and stops at the first that does
+subagent, the default, starts none. lets asks each resolver your config
+lists under delegate.resolvers, in order, and stops at the first that does
 not decline. Nothing is run from PATH.
 
-The config is $XDG_CONFIG_HOME/lets-delegate/config.yaml, or
-~/.config/lets-delegate/config.yaml when XDG_CONFIG_HOME is unset. You
+The config is $XDG_CONFIG_HOME/lets/config.yaml, or
+~/.config/lets/config.yaml when XDG_CONFIG_HOME is unset or empty. You
 write it by hand:
 
-  version: 2
-  resolvers:
-    - t3
-    - subagent
-  delegations:
-    code:
-      guidance: Prefer the strongest gpt model.
+  version: 3
+  delegate:
+    resolvers:
+      - t3
+      - subagent
+    review:
+      code:
+        guidance: Prefer the strongest gpt model.
+    handoff:
+      apply:
+        guidance: Prefer claude.
 
-Each entry under resolvers is t3, cli or subagent. With no config, only
-subagent is asked. It starts no session: a review exits 3, and a handoff
-gives back the prompt to carry on by hand.
+Each entry under delegate.resolvers is t3, cli or subagent. With no
+config, or no delegate.resolvers, only subagent is asked. It starts no
+session: a review exits 3, and a handoff gives back the prompt to carry on
+by hand.
 
-delegations is optional. delegations.<intent>.guidance is prose that the
-skill reads to rank the models; only instructions reads it.
+review and handoff are optional. delegate.<strategy>.<intent>.guidance is
+prose that the skill reads to rank the models; only instructions reads it.
 
 Run lets delegate from the repo root.`;
 
@@ -138,7 +143,8 @@ Exit codes:
 const INSTRUCTIONS_HELP = `
 stdout: one JSON line with strategy, for, resolver, options and guidance.
 resolver and options come from the first resolver that does not decline
-this strategy: options are the models it can run now, in its order. guidance is delegations.<intent>.guidance from the config, or null.
+this strategy: options are the models it can run now, in its order.
+guidance is delegate.<strategy>.<intent>.guidance from the config, or null.
 It starts no session.
 
 Exit codes:

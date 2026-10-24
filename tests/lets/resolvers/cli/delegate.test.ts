@@ -11,7 +11,7 @@ import { commandDeps } from '../../delegate/fixtures/command-deps.ts';
 import { fakeIo } from '../kit/fixtures/fake-io.ts';
 import type { FakeIo } from '../kit/fixtures/fake-io.ts';
 
-const ONLY_CLI = 'version: 2\nresolvers: [cli]\n';
+const ONLY_CLI = 'version: 3\ndelegate: { resolvers: [cli] }\n';
 
 // commandDeps whose config is config, with the real cli adapter on io.
 const withCli = (io: FakeIo, config = ONLY_CLI) => commandDeps({ config, real: { cli: createAdapter(io) } });
@@ -56,7 +56,7 @@ test('a review declines with no family CLI on PATH, starting nothing', async () 
 
 test('with no family CLI on PATH, the default answers the review instructions next', async () => {
   const io = fakeIo({ commands: [] });
-  const t = withCli(io, 'version: 2\nresolvers: [cli, subagent]\n');
+  const t = withCli(io, 'version: 3\ndelegate: { resolvers: [cli, subagent] }\n');
   assert.equal(await instructions(reviewInstructions, t.deps), 0);
   assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
   assert.deepEqual(io.calls, []);
@@ -73,7 +73,7 @@ test('a handoff declines with every family CLI on PATH, starting nothing', async
 
 test('handoff instructions skip cli with codex on PATH, running nothing, and the default answers', async () => {
   const io = fakeIo({ commands: ['codex'] });
-  const t = withCli(io, 'version: 2\nresolvers: [cli, subagent]\n');
+  const t = withCli(io, 'version: 3\ndelegate: { resolvers: [cli, subagent] }\n');
   assert.equal(await instructions(handoffInstructions, t.deps), 0);
   assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
   assert.deepEqual(io.calls, []);

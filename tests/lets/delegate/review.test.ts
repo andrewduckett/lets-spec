@@ -10,7 +10,7 @@ const options = (over: Partial<ReviewOptions> = {}): ReviewOptions =>
 
 // commandDeps whose config lists t3, which answers, and more as given.
 const withT3 = (over: Parameters<typeof commandDeps>[0] = {}) =>
-  commandDeps({ config: 'version: 2\nresolvers: [t3]\n', ...over, adapters: { t3: {}, ...over.adapters } });
+  commandDeps({ config: 'version: 3\ndelegate: { resolvers: [t3] }\n', ...over, adapters: { t3: {}, ...over.adapters } });
 type Calls = ReturnType<typeof commandDeps>['adapterCalls'];
 const runs = (calls: Calls) => calls('run').map(([name, , call]) => ({ name, ...(call as { input: object; options: object }) }));
 const finishes = (calls: Calls) => calls('finish').map(([name, , call]) => ({ name, ...(call as { handle: object; ok: boolean; options: object }) }));
@@ -72,13 +72,13 @@ test('a bad --model is exit 2, naming it, and no resolver is asked', async () =>
 });
 
 test('an invalid config is exit 2, naming the file and the bad value', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers:\n  - bin/old-resolver\n' });
+  const t = commandDeps({ config: 'version: 3\ndelegate:\n  resolvers:\n    - bin/old-resolver\n' });
   assert.equal(await run(options(), t.deps), 2);
   assert.match(t.stderr(), new RegExp(`${CONFIG}.*bin/old-resolver`));
 });
 
 test('a path from an older lets is exit 2, naming the file, the path and the three names', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [/opt/r/old-resolver]\n' });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [/opt/r/old-resolver] }\n' });
   assert.equal(await run(options(), t.deps), 2);
   assert.equal(t.stdout(), '');
   for (const named of [CONFIG, '/opt/r/old-resolver', 't3', 'cli', 'subagent']) assert.ok(t.stderr().includes(named), named);
@@ -93,32 +93,32 @@ test('when every listed resolver declines, a review is exit 2 with nothing on st
 });
 
 test('when the first resolver declines, the next one answers', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { declines: true }, cli: {} } });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [t3, cli] }\n', adapters: { t3: { declines: true }, cli: {} } });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(JSON.parse(t.stderr()).resolver, 'cli');
 });
 
 test('a listed resolver that answers comes before the subagent entry', async () => {
-  const t = withT3({ config: 'version: 2\nresolvers: [t3, subagent]\n' });
+  const t = withT3({ config: 'version: 3\ndelegate: { resolvers: [t3, subagent] }\n' });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(t.stdout(), 'FINDINGS\n');
   assert.equal(t.adapterCalls().some(([name]) => name === 'subagent'), false, 'the default was not asked');
 });
 
 test('the run request has no reviewers, whatever the config holds', async () => {
-  const t = withT3({ config: 'version: 2\nresolvers: [t3]\nreviewers:\n  - family: gpt\n    model: gpt-6-luna\n' });
+  const t = withT3({ config: 'version: 3\ndelegate: { resolvers: [t3] }\nreviewers:\n  - family: gpt\n    model: gpt-6-luna\n' });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal('reviewers' in (runs(t.adapterCalls)[0].input as object), false);
 });
 
 test('run ignores the guidance, even one that is not a string', async () => {
-  const t = withT3({ config: 'version: 2\nresolvers: [t3]\ndelegations:\n  code:\n    guidance: 42\n' });
+  const t = withT3({ config: 'version: 3\ndelegate:\n  resolvers: [t3]\n  review:\n    code:\n      guidance: 42\n' });
   assert.equal(await run(options(), t.deps), 0);
   assert.equal(t.stdout(), 'FINDINGS\n');
 });
 
 test('finish goes to the same resolver with the handle, with ok after a clean tree', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [cli, t3]\n', adapters: { t3: {}, cli: {} } });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [cli, t3] }\n', adapters: { t3: {}, cli: {} } });
   await run(options(), t.deps);
   assert.deepEqual(finishes(t.adapterCalls), [{ name: 'cli', handle: { kind: 'cli', id: 'cli-1' }, ok: true, options: { cwd: '/repo' } }]);
 });
@@ -145,7 +145,7 @@ test('a review whose every model is refused is exit 3, naming each model', async
 });
 
 test('a refusal never moves down the chain', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [t3, cli]\n', adapters: { t3: { refuse: ['gpt', 'gemini'] }, cli: {} } });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [t3, cli] }\n', adapters: { t3: { refuse: ['gpt', 'gemini'] }, cli: {} } });
   assert.equal(await run(options({ models: ['gpt', 'gemini'] }), t.deps), 3);
   assert.equal(t.adapterCalls().some(([name]) => name === 'cli'), false, 'cli was not asked');
 });

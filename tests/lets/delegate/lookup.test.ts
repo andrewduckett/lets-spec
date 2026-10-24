@@ -7,7 +7,7 @@ import { commandDeps, CONFIG } from './fixtures/command-deps.ts';
 import type { FakeResolver } from './fixtures/command-deps.ts';
 
 // A config whose chain is resolvers.
-const listing = (...resolvers: ResolverName[]): Config => ({ version: 2, resolvers });
+const listing = (...resolvers: ResolverName[]): Config => ({ version: 3, delegate: { resolvers } });
 // Lookup deps with these fake adapters, and this config.
 function lookup(adapters: Partial<Record<ResolverName, FakeResolver>>, config: Config | null) {
   const t = commandDeps({ adapters });

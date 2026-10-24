@@ -167,7 +167,7 @@ flow_texts() {
 }
 
 @test "the README names where the guidance lives, and --for" {
-  grep -qF 'delegations.<intent>.guidance' "$repo/README.md"
+  grep -qF 'delegate.<strategy>.<intent>.guidance' "$repo/README.md"
   grep -qF -- '--for' "$repo/README.md"
 }
 
@@ -183,7 +183,7 @@ skill_says() {
     skill_says "$skill" "lets delegate review instructions --for $intent"
     skill_says "$skill" "lets delegate review run --for $intent"
     skill_says "$skill" "--model <first> --model <second>"
-    skill_says "$skill" "delegations.$intent.guidance"
+    skill_says "$skill" "delegate.review.$intent.guidance"
   done
 }
 
@@ -208,7 +208,7 @@ skill_says() {
 @test "lets-build's handoff asks lets for options, then runs with a ranked list" {
   skill_says lets-build "lets delegate handoff instructions --for apply"
   skill_says lets-build "lets delegate handoff run --for apply"
-  skill_says lets-build "delegations.apply.guidance"
+  skill_says lets-build "delegate.handoff.apply.guidance"
   skill_says lets-build "the guidance first, then the order the options came in"
   skill_says lets-build "When \`options\` is empty, pass your own family"
   skill_says lets-build "If it exits 3, every model was refused: show the user its stderr, and stop."

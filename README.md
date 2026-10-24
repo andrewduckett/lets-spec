@@ -313,34 +313,42 @@ all. `review.md` records which ran, such as `fresh context, other family`.
 
 ### Set up delegation
 
-With no config, only the default resolver, `subagent`, answers. For fresh sessions, write `~/.config/lets-delegate/config.yaml`
-(or under `$XDG_CONFIG_HOME`) by hand, once on each machine:
+With no config, only the default resolver, `subagent`, answers. For fresh
+sessions, write `~/.config/lets/config.yaml` (or
+`$XDG_CONFIG_HOME/lets/config.yaml`) by hand, once on each machine:
 
 ```yaml
-version: 2
-resolvers:
-  - t3
-  - cli
-  - subagent
-delegations:
-  plan:
-    guidance: Prefer the strongest gpt model. Never use gemini.
-  code:
-    guidance: Prefer a gpt model.
-  apply:
-    guidance: Prefer claude. Use a small model for a chore.
+version: 3
+delegate:
+  resolvers:
+    - t3
+    - cli
+    - subagent
+  review:
+    plan:
+      guidance: Prefer the strongest gpt model. Never use gemini.
+    code:
+      guidance: Prefer a gpt model.
+  handoff:
+    apply:
+      guidance: Prefer claude. Use a small model for a chore.
 ```
 
-List the resolvers for your harnesses first, then `cli`, then
-`subagent`, the default resolver; without it, a review every resolver
-declines fails. Each entry is `t3`, `cli` or `subagent`; any other entry,
-such as a path from an older `lets`, makes `lets delegate` exit 2. An old
-`config.json` is not read; `lets delegate` names it.
+`delegate.resolvers` is the chain. List the resolvers for your harnesses
+first, then `cli`, then `subagent`, the default resolver; without it, a
+review every resolver declines fails. Each entry is `t3`, `cli` or
+`subagent`; any other entry, such as a path from an older `lets`, makes
+`lets delegate` exit 2. With no `delegate.resolvers`, only `subagent`
+answers.
 
-`delegations` is optional. `delegations.<intent>.guidance` is your advice,
-in plain words, on which models to use; its middle part is a value `--for`
-takes: `plan`, `code` or `apply`. The skill uses it only to rank and leave
+`review` and `handoff` are optional. `delegate.<strategy>.<intent>.guidance`
+is your advice, in plain words, on which models to use. Its parts are the
+command that reads it and a value `--for` takes: `review.plan`,
+`review.code` or `handoff.apply`. The skill uses it only to rank and leave
 out models. A value that is not a string makes `instructions` exit 2.
+
+Other keys are ignored, so a later `lets` can add settings beside
+`delegate`.
 
 ### The resolvers
 

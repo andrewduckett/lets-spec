@@ -1,7 +1,7 @@
 // Which resolver answers a delegation: the first in the chain, the resolvers
 // the user's delegate config names, that does not decline. With no config,
-// the chain is the default, subagent. Every resolver is built into lets, so
-// nothing is run or looked up on PATH.
+// or a config with no chain, the chain is the default, subagent. Every
+// resolver is built into lets, so nothing is run or looked up on PATH.
 import type { Adapter } from '../resolvers/kit/adapter.ts';
 import type { Deps } from '../io.ts';
 import { configPath } from './config.ts';
@@ -18,7 +18,7 @@ export type LookupDeps = Pick<Deps, 'env' | 'io' | 'resolvers'> & { config: Conf
 
 // The adapters to ask, in order.
 export function chain({ config, resolvers }: Pick<LookupDeps, 'config' | 'resolvers'>): Adapter[] {
-  return (config?.resolvers ?? ['subagent']).map((name) => resolvers[name]);
+  return (config?.delegate.resolvers ?? ['subagent']).map((name) => resolvers[name]);
 }
 
 // The first adapter in the chain that does not decline kind. An adapter

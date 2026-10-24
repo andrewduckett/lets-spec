@@ -19,7 +19,8 @@
 // - The state database (userdata/statev2.sqlite) is the only place to read a
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { configDir } from '../../config-dir.ts';
 import { exitCodeOf, Refused, SessionFailed, SpawnError } from '../kit/errors.ts';
 import { withEffort, withoutEffort } from '../kit/families.ts';
 import type { Adapter, RunInput, StartInput } from '../kit/adapter.ts';
@@ -28,9 +29,6 @@ import type { Handle, ModelString } from '../kit/adapter.ts';
 import { FAMILIES } from '../kit/families.ts';
 import type { Effort, Family } from '../kit/families.ts';
 import { pollUntil } from '../kit/wait.ts';
-
-// Where the token lives under the config folder, beside lets's config.yaml.
-export const TOKEN_FILE = 'lets-delegate/t3-token';
 
 // The protocol this adapter speaks. t3 refuses a WebSocket that names another.
 export const ORCHESTRATION_PROTOCOL = 2;
@@ -198,9 +196,8 @@ export function readFinalMessage(db: Db, runId: string): { text: string; streami
   return { text: typeof text === 'string' ? text : '', streaming: row.streaming === 1 };
 }
 
-// $XDG_CONFIG_HOME/lets-delegate/t3-token, or ~/.config/... when it is unset
-// or empty: the rule configPath in lets/src/delegate/config.ts follows.
-const tokenPath = (io: Io) => `${io.env.XDG_CONFIG_HOME || `${io.homedir()}/.config`}/${TOKEN_FILE}`;
+// t3-token in the lets config folder, beside lets's config.yaml.
+const tokenPath = (io: Io) => join(configDir(io.env, io.homedir()), 't3-token');
 
 // Issue a token with the server's own CLI, so it lands in the same auth store.
 async function issueToken(io: Io): Promise<string> {
