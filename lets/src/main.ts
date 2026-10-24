@@ -16,6 +16,10 @@ import type { Intent, Strategy } from './delegate/strategies.ts';
 import { run as verify } from './delegate/verify.ts';
 import { realIo } from './io.ts';
 import type { Deps } from './io.ts';
+import { createAdapter as cli } from './resolvers/cli/cli.ts';
+import { realIo as realResolverIo } from './resolvers/kit/io.ts';
+import { createAdapter as subagent } from './resolvers/subagent/subagent.ts';
+import { createAdapter as t3 } from './resolvers/t3/t3.ts';
 import { run as sync } from './sync/main.ts';
 
 // The folder above the one that holds this file: lets/ in the repo, and the
@@ -185,11 +189,14 @@ function version(): string {
 }
 
 function realDeps(): Deps {
+  // Building an adapter does no I/O, so a command that asks none costs nothing.
+  const resolverIo = realResolverIo();
   return {
     env: process.env,
     cwd: process.cwd(),
     packageRoot,
     nodePath: process.execPath,
+    resolvers: { t3: t3(resolverIo), cli: cli(resolverIo), subagent: subagent(resolverIo) },
     io: realIo(),
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),

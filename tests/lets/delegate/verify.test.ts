@@ -22,6 +22,8 @@ function setup(settings: Record<string, string> = {}) {
   const out: string[] = [];
   const deps: Deps = {
     env: {}, cwd, packageRoot: '/pkg', nodePath: process.execPath,
+    // verify runs the resolver it is given, and asks none of lets's own.
+    resolvers: {} as Deps['resolvers'],
     io: { ...io, execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, env: { ...process.env, ...settings } }) },
     stdout: (text) => out.push(text),
     stderr: (text) => out.push(text),

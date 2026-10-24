@@ -7,6 +7,8 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import type { ResolverName } from './delegate/config.ts';
+import type { Adapter } from './resolvers/kit/adapter.ts';
 
 // What a command printed, and its exit code. code is null when the command
 // cannot start. timedOut: the command ran past timeoutMs, and was stopped.
@@ -53,6 +55,8 @@ export type Deps = {
   packageRoot: string;
   // The Node that runs lets, which runs the default resolver too.
   nodePath: string;
+  // The resolvers built into lets, by the names the chain lists.
+  resolvers: Record<ResolverName, Adapter>;
   io: Io;
   stdout: (text: string) => void;
   stderr: (text: string) => void;

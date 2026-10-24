@@ -3,7 +3,7 @@
 - [x] 1.1 [medium] `parseConfig` accepts only `t3`, `cli` and `subagent` as `resolvers` entries, typed as resolver names; a path or any other value throws a `UsageError` that names the config file, the entry and the three names; with no config the chain is `['subagent']`, and `SUBAGENT_ENTRY` goes (verify: node --test tests/lets/delegate/config.test.ts) (✓ node --test tests/lets/delegate/config.test.ts passed)
 - [x] 1.2 [easy] `Adapter.start` may return `{ instructions }` in place of a `Handle`, and `adapterAnswer` answers such a result as `{ resolver, handle: null, instructions }`, while a `Handle` still answers as `{ resolver, handle }` (verify: node --test tests/lets/resolvers/kit/*.test.ts && pnpm check) (✓ node --test tests/lets/resolvers/kit/*.test.ts && pnpm check passed)
 - [x] 1.3 [medium] `subagent`'s `createAdapter(io)` always detects, lists no models, refuses `run` with today's message, saves a handoff's prompt under `.workspace/lets-delegate/` and returns today's instructions text, and finishes nothing; `createAnswer` keeps working on the same shared texts (verify: node --test tests/lets/resolvers/subagent/subagent.test.ts) (✓ node --test tests/lets/resolvers/subagent/subagent.test.ts passed)
-- [ ] 1.4 [medium] `Deps` carries `resolvers`, the three adapters by name, and loses `nodePath`; `realDeps()` builds them with one kit `realIo()`; `fixtures/command-deps.ts` builds fake adapters by name, each set to decline, list models, answer, refuse given models, or throw a known or plain error from `run`, `start` or `finish`, and records each call with its input (verify: pnpm check)
+- [x] 1.4 [medium] `Deps` carries `resolvers`, the three adapters by name, and loses `nodePath`; `realDeps()` builds them with one kit `realIo()`; `fixtures/command-deps.ts` builds fake adapters by name, each set to decline, list models, answer, refuse given models, or throw a known or plain error from `run`, `start` or `finish`, and records each call with its input (verify: pnpm check) (✓ pnpm check passed)
 
 ## 2. The chain in process [depends-on: 1]
 
@@ -24,3 +24,4 @@
 ## Deviations Ledger
 
 - 1.2: `pnpm check` failed after 1.1, because the old `lookup.test.ts` builds configs that list paths. Its `chain` helper casts them to resolver names until 2.1 replaces those tests.
+- 1.4: `Deps.nodePath` stays until 2.1, because the old lookup runs the default program with it until then. The fixture keeps the fake program beside the fake adapters until 2.2 to 2.4 move the command tests. Between 1.1 and 2.4 the old command tests that list paths fail; the branch is pushed only once the whole suite passes.
