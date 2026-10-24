@@ -26,34 +26,46 @@ test('no config file reads as null', () => {
 });
 
 test('a valid config reads as its chain of names, in order', () => {
-  const text = 'version: 2\nresolvers:\n  - t3\n  - cli\n  - subagent\n';
-  assert.deepEqual(readConfig(depsWith(text)), { version: 2, resolvers: ['t3', 'cli', 'subagent'] });
+  const text = 'version: 3\ndelegate:\n  resolvers:\n    - t3\n    - cli\n    - subagent\n';
+  assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['t3', 'cli', 'subagent'] } });
+});
+
+test('a config with no delegate key, or a null one, has no chain', () => {
+  for (const text of ['version: 3\n', 'version: 3\ndelegate:\n', 'version: 3\ndelegate: null\n']) {
+    assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: {} }, text);
+  }
+});
+
+test('a delegate key with no resolvers, or null ones, has no chain', () => {
+  for (const text of ['version: 3\ndelegate: {}\n', 'version: 3\ndelegate:\n  resolvers:\n']) {
+    assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: {} }, text);
+  }
 });
 
 test('an entry that is not t3, cli or subagent names the file, the entry and the three names', () => {
   for (const entry of ['/opt/r/old-resolver', 'codex', 'T3', '7']) {
-    assert.throws(() => readConfig(depsWith(`version: 2\nresolvers:\n  - t3\n  - ${entry}\n`)),
-      (error) => error instanceof UsageError && error.message.includes(HOME_CONFIG) && error.message.includes('resolvers[1]')
+    assert.throws(() => readConfig(depsWith(`version: 3\ndelegate:\n  resolvers:\n    - t3\n    - ${entry}\n`)),
+      (error) => error instanceof UsageError && error.message.includes(HOME_CONFIG) && error.message.includes('delegate.resolvers[1]')
         && error.message.includes(entry) && /t3, cli or subagent/.test(error.message), entry);
   }
 });
 
 test('an empty chain is a valid config', () => {
-  assert.deepEqual(readConfig(depsWith('version: 2\nresolvers: []\n')), { version: 2, resolvers: [] });
+  assert.deepEqual(readConfig(depsWith('version: 3\ndelegate: { resolvers: [] }\n')), { version: 3, delegate: { resolvers: [] } });
 });
 
-test('a key this lets does not know is ignored', () => {
-  const text = 'version: 2\nresolvers: [subagent]\ntelemetry: true\n';
-  assert.deepEqual(readConfig(depsWith(text)), { version: 2, resolvers: ['subagent'] });
+test('a key this lets does not know is ignored, at the top level and under delegate', () => {
+  const text = 'version: 3\nsync: true\ndelegate:\n  resolvers: [subagent]\n  telemetry: true\n';
+  assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['subagent'] } });
 });
 
 test('delegations is kept as written, unchecked', () => {
-  const text = 'version: 2\nresolvers: [subagent]\ndelegations:\n  code:\n    guidance: 42\n';
-  assert.deepEqual(readConfig(depsWith(text)), { version: 2, resolvers: ['subagent'], delegations: { code: { guidance: 42 } } });
+  const text = 'version: 3\ndelegate: { resolvers: [subagent] }\ndelegations:\n  code:\n    guidance: 42\n';
+  assert.deepEqual(readConfig(depsWith(text)), { version: 3, delegate: { resolvers: ['subagent'] }, delegations: { code: { guidance: 42 } } });
 });
 
 const CONFIG = '/c/config.yaml';
-const withDelegations = (yaml: string) => parseConfig(`version: 2\nresolvers: []\n${yaml}`, CONFIG);
+const withDelegations = (yaml: string) => parseConfig(`version: 3\n${yaml}`, CONFIG);
 
 test('guidanceFor gives the guidance for the intent', () => {
   const config = withDelegations('delegations:\n  code:\n    guidance: Use the strongest gpt model.\n');
@@ -90,16 +102,18 @@ test('guidanceFor ignores a bad entry for another intent', () => {
 
 test('an invalid config is a usage error that names the file and the bad value', () => {
   const cases: [string, string][] = [
-    ['version: 2\nresolvers: [unclosed\n', 'not YAML'],
+    ['version: 3\ndelegate: { resolvers: [unclosed\n', 'not YAML'],
     ['- just\n- a list\n', 'mapping'],
-    ['version: 1\nresolvers: []\n', 'version must be 2'],
-    ['version: "2"\nresolvers: []\n', '"2"'],
-    ['resolvers: []\n', 'version must be 2'],
-    ['version: 2\n', 'resolvers'],
-    ['version: 2\nresolvers: subagent\n', 'subagent'],
-    ['version: 2\nresolvers:\n  - bin/old-resolver\n', 'bin/old-resolver'],
-    ['version: 2\nresolvers:\n  - ~/bin/old-resolver\n', '~/bin/old-resolver'],
-    ['version: 2\nresolvers:\n  - 7\n', '7'],
+    ['version: 2\nresolvers: []\n', 'version must be 3, got 2'],
+    ['version: 2\ndelegate: [t3]\n', 'version must be 3, got 2'],
+    ['version: "3"\n', '"3"'],
+    ['delegate: { resolvers: [] }\n', 'version must be 3'],
+    ['version: 3\ndelegate: [t3]\n', 'delegate must be a mapping'],
+    ['version: 3\ndelegate: t3\n', 'delegate must be a mapping'],
+    ['version: 3\ndelegate: { resolvers: t3 }\n', 'delegate.resolvers must be a list'],
+    ['version: 3\ndelegate:\n  resolvers:\n    - bin/old-resolver\n', 'bin/old-resolver'],
+    ['version: 3\ndelegate:\n  resolvers:\n    - ~/bin/old-resolver\n', '~/bin/old-resolver'],
+    ['version: 3\ndelegate:\n  resolvers:\n    - 7\n', '7'],
   ];
   for (const [text, named] of cases) {
     assert.throws(() => readConfig(depsWith(text)),
@@ -116,11 +130,11 @@ test('a leftover config.json with no config.yaml is a usage error that names bot
 });
 
 test('a config.json beside a config.yaml is ignored', () => {
-  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: 'not json', [HOME_CONFIG]: 'version: 2\nresolvers: [subagent]\n' } }) };
-  assert.deepEqual(readConfig(deps), { version: 2, resolvers: ['subagent'] });
+  const deps = { env: {}, io: fakeIo({ files: { [HOME_JSON]: 'not json', [HOME_CONFIG]: 'version: 3\ndelegate: { resolvers: [subagent] }\n' } }) };
+  assert.deepEqual(readConfig(deps), { version: 3, delegate: { resolvers: ['subagent'] } });
 });
 
 test('a config that is not YAML says where the parser stopped, in one sentence', () => {
-  assert.throws(() => readConfig(depsWith('version: 2\nresolvers: [/x\n')),
+  assert.throws(() => readConfig(depsWith('version: 3\ndelegate: { resolvers: [/x\n')),
     (error) => error instanceof UsageError && /line 3, column 1\.$/.test(error.message));
 });

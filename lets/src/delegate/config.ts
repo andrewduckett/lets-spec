@@ -8,15 +8,16 @@ import { configDir } from '../config-dir.ts';
 import type { Deps, Io } from '../io.ts';
 import { UsageError } from '../resolvers/kit/errors.ts';
 
-export const CONFIG_VERSION = 2;
+export const CONFIG_VERSION = 3;
 // The resolvers built into lets, by the names the chain lists them under.
 export const RESOLVER_NAMES = ['t3', 'cli', 'subagent'] as const;
 export type ResolverName = (typeof RESOLVER_NAMES)[number];
 
-// Each resolver is one of RESOLVER_NAMES. delegations is as the user wrote
-// it: only lets delegate <strategy> instructions reads it, through
-// guidanceFor, so a bad entry never stops a run.
-export type Config = { version: typeof CONFIG_VERSION; resolvers: ResolverName[]; delegations?: unknown };
+// The file's shape, with the keys this lets does not know dropped. delegate
+// is {} when the file has none. Each resolver is one of RESOLVER_NAMES.
+// delegations is as the user wrote it: only lets delegate <strategy>
+// instructions reads it, through guidanceFor, so a bad entry never stops a run.
+export type Config = { version: typeof CONFIG_VERSION; delegate: { resolvers?: ResolverName[] }; delegations?: unknown };
 
 export type ConfigDeps = { env: Deps['env']; io: Io };
 
@@ -49,14 +50,21 @@ export function parseConfig(text: string, path: string): Config {
   } catch (error) {
     throw fail(`is not YAML: ${(error as Error).message.split('\n')[0].replace(/:$/, '')}`);
   }
-  if (!isObject(value)) throw fail(`must be a mapping with version and resolvers, got ${show(value)}`);
+  if (!isObject(value)) throw fail(`must be a mapping with version, got ${show(value)}`);
   if (value.version !== CONFIG_VERSION) throw fail(`version must be ${CONFIG_VERSION}, got ${show(value.version)}`);
-  const { resolvers } = value;
-  if (!Array.isArray(resolvers)) throw fail(`resolvers must be a list, got ${show(resolvers)}`);
-  resolvers.forEach((entry: unknown, i: number) => {
-    if (!(RESOLVER_NAMES as readonly unknown[]).includes(entry)) throw fail(`resolvers[${i}] must be t3, cli or subagent, got ${show(entry)}`);
-  });
-  return value.delegations === undefined ? { version: CONFIG_VERSION, resolvers } : { version: CONFIG_VERSION, resolvers, delegations: value.delegations };
+  const delegate = value.delegate ?? {};
+  if (!isObject(delegate)) throw fail(`delegate must be a mapping, got ${show(delegate)}`);
+  const config: Config = { version: CONFIG_VERSION, delegate: {} };
+  const { resolvers } = delegate;
+  if (resolvers !== undefined && resolvers !== null) {
+    if (!Array.isArray(resolvers)) throw fail(`delegate.resolvers must be a list, got ${show(resolvers)}`);
+    resolvers.forEach((entry: unknown, i: number) => {
+      if (!(RESOLVER_NAMES as readonly unknown[]).includes(entry)) throw fail(`delegate.resolvers[${i}] must be t3, cli or subagent, got ${show(entry)}`);
+    });
+    config.delegate.resolvers = resolvers;
+  }
+  if (value.delegations !== undefined) config.delegations = value.delegations;
+  return config;
 }
 
 // The user's guidance for an intent, from delegations.<intent>.guidance, or

@@ -13,7 +13,7 @@ import { createAdapter } from '../../../../lets/src/resolvers/t3/t3.ts';
 import { commandDeps } from '../../delegate/fixtures/command-deps.ts';
 import { fakeIo } from '../kit/fixtures/fake-io.ts';
 
-const ONLY_T3 = 'version: 2\nresolvers: [t3]\n';
+const ONLY_T3 = 'version: 3\ndelegate: { resolvers: [t3] }\n';
 const RUNTIME = '/home/u/.t3/userdata/server-runtime.json';
 const MANIFEST = '/home/u/.t3/userdata/model-manifest.json';
 

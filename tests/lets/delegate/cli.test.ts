@@ -199,7 +199,7 @@ test('an intent from the other strategy is a usage error that names --for', asyn
 
 test('a resolver listed by path is exit 2, naming it and the config file', async () => {
   const example = '/opt/r/old-resolver';
-  const r = repo(`version: 2\nresolvers:\n  - ${example}\n  - subagent\n`);
+  const r = repo(`version: 3\ndelegate:\n  resolvers:\n    - ${example}\n    - subagent\n`);
   const { code, stdout, stderr } = await letsIn(r, 'delegate', 'handoff', 'instructions', '--for', 'apply');
   assert.equal(code, 2);
   assert.equal(stdout, '');
@@ -208,7 +208,7 @@ test('a resolver listed by path is exit 2, naming it and the config file', async
 });
 
 test('a name lets does not know is exit 2, naming it and the three names', async () => {
-  const { code, stdout, stderr } = await letsIn(repo('version: 2\nresolvers: [codex]\n'), ...HANDOFF);
+  const { code, stdout, stderr } = await letsIn(repo('version: 3\ndelegate: { resolvers: [codex] }\n'), ...HANDOFF);
   assert.equal(code, 2);
   assert.equal(stdout, '');
   assert.match(stderr, /codex/);

@@ -8,7 +8,7 @@ const review = { strategy: 'review', for: 'code' } as const;
 const handoff = { strategy: 'handoff', for: 'apply' } as const;
 // commandDeps whose config lists t3, behaving as given, with more under it.
 const withT3 = (more = '', t3: FakeResolver = {}) =>
-  commandDeps({ config: `version: 2\nresolvers: [t3]\n${more}`, adapters: { t3 } });
+  commandDeps({ config: `version: 3\ndelegate: { resolvers: [t3] }\n${more}`, adapters: { t3 } });
 
 test('instructions prints the strategy, the intent, the resolver and its options as one JSON line', async () => {
   const t = withT3('', { options: ['gpt/gpt-6-luna', 'claude'] });
@@ -38,7 +38,7 @@ test('instructions starts, runs and finishes nothing', async () => {
 });
 
 test('a review asks for a resolver that can run, and a handoff for one that can start', async () => {
-  const deps = () => commandDeps({ config: 'version: 2\nresolvers: [cli, subagent]\n', adapters: { cli: { headless: true } } });
+  const deps = () => commandDeps({ config: 'version: 3\ndelegate: { resolvers: [cli, subagent] }\n', adapters: { cli: { headless: true } } });
   const t = deps();
   await run(review, t.deps);
   assert.equal(JSON.parse(t.stdout()).resolver, 'cli');
@@ -48,7 +48,7 @@ test('a review asks for a resolver that can run, and a handoff for one that can 
 });
 
 test('a resolver that declines passes it down the chain', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [t3, subagent]\n', adapters: { t3: { declines: true } } });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [t3, subagent] }\n', adapters: { t3: { declines: true } } });
   assert.equal(await run(handoff, t.deps), 0);
   assert.equal(JSON.parse(t.stdout()).resolver, 'subagent');
 });
@@ -98,7 +98,7 @@ test('a chain where every resolver declines is exit 2, naming the config file', 
 });
 
 test('a path from an older lets is exit 2, naming it and the config file', async () => {
-  const t = commandDeps({ config: 'version: 2\nresolvers: [/gone/old-resolver]\n' });
+  const t = commandDeps({ config: 'version: 3\ndelegate: { resolvers: [/gone/old-resolver] }\n' });
   assert.equal(await run(review, t.deps), 2);
   assert.match(t.stderr(), new RegExp(`${CONFIG}.*/gone/old-resolver`));
   assert.deepEqual(t.adapterCalls(), []);

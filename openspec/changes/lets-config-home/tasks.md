@@ -1,7 +1,7 @@
 ## 1. The config file
 
 - [x] 1.1 [easy] One function names the `lets` config folder, `$XDG_CONFIG_HOME/lets` when the variable is set and not empty, else `~/.config/lets`. `lets delegate` reads `config.yaml` there, and `t3` reads and writes `t3-token` there. The `CONFIG` and `HOME_CONFIG` fixtures, `cli.test.ts`'s config writer and the token paths in `tests/lets/resolvers/t3/` follow (design: *One function names the config folder*) (verify: `node --test tests/lets/delegate/config.test.ts tests/lets/delegate/cli.test.ts tests/lets/resolvers/t3/*.test.ts`) (✓ node --test tests/lets/delegate/config.test.ts tests/lets/delegate/cli.test.ts tests/lets/resolvers/t3/*.test.ts passed, 102 tests)
-- [ ] 1.2 [complex] A `version: 3` config's `delegate.resolvers` is the chain. A file with no `delegate`, a null `delegate`, or no `delegate.resolvers` gets the default `subagent`. A `version: 2` file exits 2 and says the version must be `3`. A `delegate` that is not a mapping, or a `delegate.resolvers` that is not a list, exits 2 naming the key. Unknown keys at the top level and under `delegate` are ignored. Every test that writes config text uses the new shape: the files design.md lists under *Tests change their text, not their structure* (verify: `pnpm check && node --test tests/lets/delegate/*.test.ts tests/lets/resolvers/*/delegate.test.ts`)
+- [x] 1.2 [complex] A `version: 3` config's `delegate.resolvers` is the chain. A file with no `delegate`, a null `delegate`, or no `delegate.resolvers` gets the default `subagent`. A `version: 2` file exits 2 and says the version must be `3`. A `delegate` that is not a mapping, or a `delegate.resolvers` that is not a list, exits 2 naming the key. Unknown keys at the top level and under `delegate` are ignored. Every test that writes config text uses the new shape: the files design.md lists under *Tests change their text, not their structure* (verify: `pnpm check && node --test tests/lets/delegate/*.test.ts tests/lets/resolvers/*/delegate.test.ts`) (✓ pnpm check && node --test tests/lets/delegate/*.test.ts tests/lets/resolvers/*/delegate.test.ts passed, 160 tests)
 - [ ] 1.3 [easy] A `config.json` beside a missing `config.yaml` is not read and stops nothing: the command asks the default. The tests of the old refusal go with it (verify: `node --test tests/lets/delegate/config.test.ts tests/lets/delegate/handoff.test.ts`)
 
 ## 2. Guidance [depends-on: 1]
@@ -22,3 +22,5 @@
 ## Deviations Ledger
 
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
+
+- 2026-10-24, task 1.2: `Config` keeps the top-level `delegations` key until task 2.1 moves guidance under `delegate`, so the guidance tests stay green in between. The `config.json` tests from task 1.3 follow the folder move in task 1.1 until 1.3 deletes them.
