@@ -20,6 +20,9 @@
       inherit (nixpkgs) lib;
       inherit (lib.importJSON ./flows.json) flows;
 
+      # The one version source. A release bumps it in the commit it tags.
+      inherit (lib.importJSON ./lets/package.json) version;
+
       # Only the folders a release is built from, so a change elsewhere, such
       # as to the README, does not make a new release.
       releaseSource = lib.fileset.toSource {
@@ -117,13 +120,31 @@
           meta.mainProgram = name;
         };
 
-        # The lets command. It runs its default resolver from contrib/
-        # beside libexec/.
-        lets-cli = (program "lets" "lets").overrideAttrs {
-          postInstall = ''
+        # The lets bundle, built once for each change to the workspace.
+        lets-bundle = program "lets" "lets";
+
+        # The release's version, the OpenSpec CLI that generated its
+        # openspec-* skills, and the commit it was built from.
+        releaseJson = pkgs.writeText "release.json" (builtins.toJSON {
+          inherit version;
+          openspec = pkgs.openspec.version;
+          commit = self.rev or "dirty";
+        });
+
+        # The lets command. It reads release.json, and runs its default
+        # resolver from contrib/, both beside libexec/. The bundle is copied,
+        # not linked, because Node finds release.json from the bundle's real
+        # path. A new commit changes only release.json, so it never rebuilds
+        # the bundle.
+        lets-cli = pkgs.runCommand "lets-${version}"
+          { nativeBuildInputs = [ pkgs.makeWrapper ]; meta.mainProgram = "lets"; }
+          ''
+            install -Dm755 ${lets-bundle}/libexec/lets $out/libexec/lets
             install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
+            install -Dm644 ${releaseJson} $out/release.json
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets \
+              --add-flags $out/libexec/lets
           '';
-        };
 
         # The resolver programs, for a user's profile. Never in a dev shell:
         # a resolver answers for the machine, not the project. It runs its
@@ -147,7 +168,8 @@
 
         # The folder the release tarball is made from: the lets bundle, one
         # release for every flow, and the contrib resolvers outside bin/, so
-        # mise never puts them on a project's PATH. CI sets the real version.
+        # mise never puts them on a project's PATH. Its release.json is the
+        # one lets-cli carries.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
           mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
@@ -156,11 +178,7 @@
           cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
-          cp ${pkgs.writeText "release.json" (builtins.toJSON {
-            version = "0.0.0-dev";
-            openspec = pkgs.openspec.version;
-            commit = self.rev or "dirty";
-          })} $out/release.json
+          cp ${lets-cli}/release.json $out/release.json
         '';
 
         # Everything a project's dev shell needs from this repo. It carries
@@ -285,7 +303,7 @@
             git init --quiet
             export LETS_SPEC_FLOW=minimal
             # The build sandbox has no /usr/bin/env, so node runs the script.
-            [ "$(node ${dist}/bin/lets --version)" = 0.0.0-dev ]
+            [ "$(node ${dist}/bin/lets --version)" = ${version} ]
             node ${dist}/bin/lets sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml
