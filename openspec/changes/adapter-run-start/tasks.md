@@ -16,7 +16,7 @@
 - [x] 3.1 [parallel] [medium] t3's `start` launches a default-mode thread on the request's model, with no effort option, and returns its handle. It shares one private launch helper with `run`. (verify: node --test tests/t3-resolver/t3.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed)
 - [x] 3.2 [parallel] [medium] t3's `run` launches a plan-mode thread and returns its handle with the final text. An error before the thread exists, such as no T3 project, passes through unchanged: exit 3, no archive, no thread named. (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed; tests/t3-resolver/resolver.test.ts passed except the refusal archive, which is 3.3)
 - [x] 3.3 [parallel] [medium] When t3's `run` is refused while it waits, it archives the thread and exits 3 with ` (thread <id>)` on stderr. When archiving fails too, the exit is still 3 and the message adds `; could not archive it: <why>`. (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts passed)
-- [ ] 3.4 [parallel] [easy] Any other kit error from t3's wait, such as a timeout or a session that stopped to ask, keeps its exit code and ends with ` (thread <id>)`. (verify: node --test tests/t3-resolver/t3.test.ts)
+- [x] 3.4 [parallel] [easy] Any other kit error from t3's wait, such as a timeout or a session that stopped to ask, keeps its exit code and ends with ` (thread <id>)`. (verify: node --test tests/t3-resolver/t3.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed)
 
 ## 4. Integration [depends-on: 2, 3]
 

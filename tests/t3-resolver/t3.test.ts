@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { Refused, SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
@@ -272,7 +272,7 @@ test('run fails a run that failed after an assistant message, with its failure',
   addMessage(db, 'a1', 'run-1', 'half a review', 0);
   addFailure(db, 'run-1', 'quota exceeded');
   await assert.rejects(running(db),
-    (error) => error instanceof SessionFailed && !(error instanceof Refused) && error.message === 'quota exceeded');
+    (error) => error instanceof SessionFailed && !(error instanceof Refused) && error.message === 'quota exceeded (thread T)');
 });
 test('run fails when the session stops to ask', async () => {
   for (const [status, pending] of [['waiting', false], ['running', true]] as const) {
@@ -280,7 +280,7 @@ test('run fails when the session stops to ask', async () => {
     addThread(db, 'T');
     addRun(db, 'T', 'run-1', 1, status);
     if (pending) addPendingRequest(db, 'T');
-    await assert.rejects(running(db), /stopped to ask/);
+    await assert.rejects(running(db), (error) => error instanceof SessionFailed && error.message === 'the session stopped to ask (thread T)');
   }
 });
 test('run fails on an interrupted, cancelled or rolled back run', async () => {
@@ -289,8 +289,14 @@ test('run fails on an interrupted, cancelled or rolled back run', async () => {
     addThread(db, 'T');
     addRun(db, 'T', 'run-1', 1, status);
     await assert.rejects(running(db),
-      (error) => error instanceof SessionFailed && error.message === reason);
+      (error) => error instanceof SessionFailed && error.message === `${reason} (thread T)`);
   }
+});
+test('run times out naming the thread, when the run does not end in time', async () => {
+  const db = database();
+  addThread(db, 'T');
+  addRun(db, 'T', 'run-1', 1, 'running');
+  await assert.rejects(running(db, [], { timeoutMs: 0 }), (error) => error instanceof TimeoutError && error.message === 'no result after 0 ms (thread T)');
 });
 test('run returns a completed run with no message as an empty one; the resolver rejects it', async () => {
   const db = database();

@@ -20,7 +20,7 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { exitCodeOf, Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
 import type { Adapter, RunInput, StartInput } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
@@ -432,8 +432,9 @@ export function createAdapter(io: Io): Adapter {
           await archive(handle).catch((why: Error) => {
             error.message += `; could not archive it: ${why.message}`;
           });
-          error.message += ` (thread ${handle.id})`;
         }
+        // A kit error names the thread, so a person can find it.
+        if (error instanceof Error && exitCodeOf(error) !== null) error.message += ` (thread ${handle.id})`;
         throw error;
       }
     },
