@@ -284,7 +284,7 @@ When `lets-delegate-t3` exits 3 for a thread it started, it SHALL archive that t
 
 #### Scenario: Handoff instructions with the example first
 - **WHEN** the delegate config lists the absolute path of `lets/resolvers/headless-resolver`, then `subagent`, and the user runs `lets delegate handoff instructions --for apply`
-- **THEN** the JSON line it prints has `"resolver":"subagent"`
+- **THEN** it exits 2, the example is not run, and stderr names that path and the config file
 
 ### Requirement: The T3 resolver keeps its token beside the lets config
 `lets-delegate-t3` SHALL read and write its T3 token at `$XDG_CONFIG_HOME/lets-delegate/t3-token` when `XDG_CONFIG_HOME` is set and not empty, and at `~/.config/lets-delegate/t3-token` otherwise. This is the folder that holds `lets`'s own `config.yaml`. It SHALL NOT read a token from the other path.
