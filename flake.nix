@@ -32,15 +32,11 @@
 
       # Only the pnpm workspace, so a skill edit does not rebuild the CLI.
       # Every workspace package must be here, or the lockfile does not match.
-      # lets/contrib/ holds only the source tree's link to the default
-      # resolver's dev entry in lets/resolvers/. The build never reads it.
       workspaceSource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.difference
-          (lib.fileset.unions [
-            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
-          ])
-          (lib.fileset.maybeMissing ./lets/contrib);
+        fileset = lib.fileset.unions [
+          ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
+        ];
       };
 
       # The workspace's dependencies from pnpm-lock.yaml. When the lockfile
@@ -138,7 +134,7 @@
         });
 
         # The lets command. It reads release.json, and runs its default
-        # resolver from contrib/, both beside libexec/. The bundle is copied,
+        # resolver from resolvers/, both beside libexec/. The bundle is copied,
         # not linked, because Node finds release.json from the bundle's real
         # path. A new commit changes only release.json, so it never rebuilds
         # the bundle.
@@ -146,7 +142,7 @@
           { nativeBuildInputs = [ pkgs.makeWrapper ]; meta.mainProgram = "lets"; }
           ''
             install -Dm755 ${lets-bundle}/libexec/lets $out/libexec/lets
-            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/resolvers/lets-delegate-subagent
             install -Dm644 ${releaseJson} $out/release.json
             makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets \
               --add-flags $out/libexec/lets
@@ -173,16 +169,16 @@
             '';
 
         # The folder the release tarball is made from: the lets bundle, one
-        # release for every flow, and the contrib resolvers outside bin/, so
+        # release for every flow, and the resolvers outside bin/, so
         # mise never puts them on a project's PATH. Its release.json is the
         # one lets-cli carries.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
-          mkdir -p $out/bin $out/releases $out/contrib
+          mkdir -p $out/bin $out/releases $out/resolvers
           cp ${lets-cli}/libexec/lets $out/bin/lets
-          cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/contrib/lets-delegate-t3
-          cp ${lets-delegate-cli}/libexec/lets-delegate-cli $out/contrib/lets-delegate-cli
-          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
-          install -m755 ${./lets/resolvers/headless-resolver} $out/contrib/headless-resolver
+          cp ${lets-delegate-t3}/libexec/lets-delegate-t3 $out/resolvers/lets-delegate-t3
+          cp ${lets-delegate-cli}/libexec/lets-delegate-cli $out/resolvers/lets-delegate-cli
+          cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/resolvers/lets-delegate-subagent
+          install -m755 ${./lets/resolvers/headless-resolver} $out/resolvers/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
           cp ${lets-cli}/release.json $out/release.json
         '';
@@ -303,13 +299,14 @@
             [ -x ${dist}/bin/lets ]
             [ "$(head -n 1 ${dist}/bin/lets)" = '#!/usr/bin/env node' ]
             [ ! -e ${dist}/node_modules ]
+            [ ! -e ${dist}/contrib ]
             # The resolvers are per user, so they are never on a project's PATH.
-            [ "$(ls ${dist}/contrib | tr '\n' ' ')" = "headless-resolver lets-delegate-cli lets-delegate-subagent lets-delegate-t3 " ]
-            [ -x ${dist}/contrib/headless-resolver ]
-            [ "$(head -n 1 ${dist}/contrib/headless-resolver)" = '#!/bin/sh' ]
+            [ "$(ls ${dist}/resolvers | tr '\n' ' ')" = "headless-resolver lets-delegate-cli lets-delegate-subagent lets-delegate-t3 " ]
+            [ -x ${dist}/resolvers/headless-resolver ]
+            [ "$(head -n 1 ${dist}/resolvers/headless-resolver)" = '#!/bin/sh' ]
             for program in lets-delegate-cli lets-delegate-subagent lets-delegate-t3; do
-              [ -x ${dist}/contrib/$program ]
-              [ "$(head -n 1 ${dist}/contrib/$program)" = '#!/usr/bin/env node' ]
+              [ -x ${dist}/resolvers/$program ]
+              [ "$(head -n 1 ${dist}/resolvers/$program)" = '#!/usr/bin/env node' ]
             done
             [ "$(ls ${dist}/releases)" = "${names}" ]
             [ "$(jq -r .openspec ${dist}/release.json)" = "${pkgs.openspec.version}" ]
@@ -328,7 +325,7 @@
             # the sandbox is not T3 Code, and has none of codex, claude or agy.
             declines() {
               status=0
-              echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ${dist}/contrib/$1 probe 2>stderr || status=$?
+              echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ${dist}/resolvers/$1 probe 2>stderr || status=$?
               [ "$status" -eq 75 ]
               [ "$(cat stderr)" = "$2" ]
             }
@@ -336,7 +333,7 @@
             declines lets-delegate-cli 'lets-delegate-cli: none of codex, claude or agy is on PATH'
             # The default never declines. A copy alone answers for itself.
             mkdir ../alone
-            cp ${dist}/contrib/lets-delegate-subagent ../alone/
+            cp ${dist}/resolvers/lets-delegate-subagent ../alone/
             [ "$(echo "{\"protocol\":2,\"cwd\":\"$PWD\"}" | node ../alone/lets-delegate-subagent probe)" = '{"resolver":"subagent","options":[]}' ]
             # With nothing else installed or configured, the tarball's lets
             # finds the default beside it.
@@ -366,7 +363,7 @@
             # Node's runner expands the glob itself. It does not take a folder.
             node --test "tests/**/*.test.ts"
             pnpm check
-            # The default, lets-delegate-subagent, the contrib resolvers and the shell example
+            # The default, lets-delegate-subagent, the resolvers and the shell example
             # keep the shape of the contract. None starts a session here.
             pnpm verify
             touch "$out"
