@@ -443,7 +443,8 @@ you Node 26, pnpm, bats, `jq`, `yq` and the OpenSpec CLI. Then run
 `nix build .#dist` builds the release folder: the `lets` bundle in `bin/`,
 a release for every flow, and the four resolvers in `contrib/`, each one
 file with no `node_modules`. `nix build .#lets-delegate-t3` and
-`.#lets-delegate-cli` build those resolvers for a user's profile. Pushing a
+`.#lets-delegate-cli` build those resolvers for a user's profile. Bump
+`version` in `lets/package.json` in the commit you tag. Pushing a
 `v<major>.<minor>.<patch>` tag publishes `lets-spec-<version>.tar.gz`, with
 the OpenSpec CLI version in its notes. Then bump this repository's own
 mise pin, and commit what `lets sync` wrote.
