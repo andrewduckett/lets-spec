@@ -8,6 +8,16 @@ made the change.
 The steps to move the pin itself are in
 [Updating](../README.md#-updating).
 
+## 0.6: the resolvers' dev entries moved
+
+The resolvers' source now lives in the `lets` package. A release, the
+Nix packages and mise installs are unchanged. Only a link into a checkout
+of this repository changes.
+
+| You installed it with | Do this |
+|---|---|
+| A checkout of this repo | Link `lets/resolvers/lets-delegate-t3` or `lets/resolvers/lets-delegate-cli` instead |
+
 ## 0.5: the default resolver answers as `subagent`
 
 The JSON line that `lets delegate handoff run` prints has `"resolver":"subagent"`.

@@ -16,8 +16,9 @@ This page covers:
 - [Write your own](#write-your-own)
 
 The code that checks the contract is
-[`contrib/resolver-kit/src/protocol.ts`](../contrib/resolver-kit/src/protocol.ts).
-The resolver kit owns it, and `lets` imports it from there.
+[`lets/src/resolvers/kit/protocol.ts`](../lets/src/resolvers/kit/protocol.ts).
+The resolver kit, a folder in `lets`, owns it, and the rest of `lets`
+imports it from there.
 
 ## How `lets` finds a resolver
 
@@ -151,7 +152,7 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in
-  [`contrib/resolver-kit/src/env.ts`](../contrib/resolver-kit/src/env.ts).
+  [`lets/src/resolvers/kit/env.ts`](../lets/src/resolvers/kit/env.ts).
 
 ## Write your own
 
@@ -168,7 +169,7 @@ resolvers:
 
 To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
-[`contrib/headless-resolver`](../contrib/headless-resolver) is a complete
+[`lets/resolvers/headless-resolver`](../lets/resolvers/headless-resolver) is a complete
 one in `sh`, to copy from. It runs `claude`
 headless and read-only. It declines `start`, and it declines a probe
 for `start`, so the default, `lets-delegate-subagent`, handles handoffs.
