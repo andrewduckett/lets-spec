@@ -323,7 +323,7 @@ builds. When it stops, read `state` once more with
      ```
 
   5. When its `handle` is `null`, no session was started. Show the user
-     its `instructions`. The default resolver, `lets-delegate-subagent`,
+     its `instructions`. The default resolver, `subagent`,
      gives instructions that hold the prompt to carry on by hand, and the
      file it is saved in.
      Otherwise tell the user the session started, and name its

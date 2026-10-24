@@ -1,6 +1,6 @@
-# lets-delegate-cli
+# cli
 
-A resolver for any terminal. When a Let's Spec skill asks `lets delegate`
+A resolver for any terminal, built into `lets`. When a Let's Spec skill asks `lets delegate`
 for a review, this resolver runs it headless with the command line tool
 (CLI) of another model family: `codex`, `claude` or `agy`. It works in a
 plain terminal, or inside another harness.
@@ -10,19 +10,10 @@ plain terminal, or inside another harness.
 | Anywhere with `codex`, `claude` or `agy` on your `PATH` | A child process of that CLI, in its read-only mode | It declines, and the next resolver in your config answers |
 | Anywhere with none of them | It declines, and the next resolver in your config answers | It declines, and the next resolver in your config answers |
 
-When none of the three is on your `PATH`, it says
-`lets-delegate-cli: none of codex, claude or agy is on PATH` on stderr.
-When it declines a handoff, it says
-`lets-delegate-cli: this resolver only runs headless`.
-
-Every resolver keeps [the resolver
-contract](../resolver-contract.md).
-
 This page covers:
 
 - [Which models it lists](#which-models-it-lists)
 - [How a review runs](#how-a-review-runs)
-- [Install it](#install-it)
 - [List it in your delegate config](#list-it-in-your-delegate-config)
 - [Check that it works](#check-that-it-works)
 
@@ -76,76 +67,27 @@ own exit code:
 
 Exit 3 is a refusal: the caller can try another model.
 
-## Install it
-
-Install it once for your user, not in a project. Which CLIs are on your
-`PATH` is a fact about your machine, not about a repository.
-
-It needs Node 26 or later, and at least one of `codex`, `claude` or `agy`
-on your `PATH`.
-
-### With home-manager
-
-Add this repo as a flake input, then add the package:
-
-```nix
-home.packages = [
-  inputs.lets-spec.packages.${pkgs.stdenv.hostPlatform.system}.lets-delegate-cli
-];
-```
-
-### With a Nix profile
-
-```sh
-nix profile add github:sidereal-io/lets-spec#lets-delegate-cli
-```
-
-### With mise
-
-The release tarball holds the resolver at `resolvers/lets-delegate-cli`,
-outside `bin/`, so mise never puts it on a project's `PATH`. Link it onto
-yours. Use the `lets-spec` version from your project's `mise.toml`:
-
-```sh
-ln -sf "$(mise where github:sidereal-io/lets-spec@<version>)/resolvers/lets-delegate-cli" ~/.local/bin/
-```
-
-The link names one version. After you update `lets-spec`, run it again
-with the new version.
-
-### From a checkout of this repo
-
-To try a change to the resolver, link its dev entry instead, or set
-`LETS_SPEC_RESOLVER` to its path:
-
-```sh
-ln -sf "$PWD/lets/resolvers/lets-delegate-cli" ~/.local/bin/
-```
-
-Run `pnpm install` in the checkout first.
-
 ## List it in your delegate config
 
-`lets` does not look for `lets-delegate-cli` on your `PATH`. After you
-install it, add its full absolute path to `resolvers` in
-`~/.config/lets-delegate/config.yaml`. List it after the resolvers for
-your harnesses, and before `subagent`:
+There is nothing to install: `cli` is part of `lets`. It needs at least
+one of `codex`, `claude` or `agy` on your `PATH`.
+
+Add `cli` to `resolvers` in `~/.config/lets-delegate/config.yaml`. List
+it after the resolvers for your harnesses, and before `subagent`:
 
 ```yaml
 version: 2
 resolvers:
-  - /home/you/.nix-profile/bin/lets-delegate-t3
-  - /home/you/.nix-profile/bin/lets-delegate-cli
+  - t3
+  - cli
   - subagent
 ```
 
-`command -v lets-delegate-cli` prints the path to use. `lets` does not
-expand `~`. The README's
-[Set up delegation](../../README.md#set-up-delegation) section explains
-the file.
+The README's [Set up delegation](../../README.md#set-up-delegation)
+section explains the file.
 
-It declines every handoff, and every probe for one, so keep `subagent`
-after it: a handoff then falls through to the default, which gives you the prompt to start any
+It declines every handoff, so keep `subagent` after it: a handoff then
+falls through to the default, which gives you the prompt to start any
 agent with.
 
 ## Check that it works
@@ -153,18 +95,19 @@ agent with.
 From inside a project, run:
 
 ```sh
-command -v lets-delegate-cli
-lets delegate verify lets-delegate-cli
+lets delegate review instructions --for code
 ```
 
-Expect a path, then `The resolver keeps the contract.` The check starts
-nothing.
+Expect one JSON line with `"resolver":"cli"`, and a model for each CLI
+on your `PATH` in `options`. It starts nothing.
 
 To run a real review, run this in a project:
 
 ```sh
-lets delegate verify --live lets-delegate-cli
+printf 'Reply with the single word READY and nothing else.\n' > .workspace/p.md
+lets delegate review run --for code --name smoke-review --prompt-file .workspace/p.md \
+  --source-family claude --effort low --model gpt
 ```
 
-It spends tokens. The handoff check passes with a note that the next
-resolver answers handoffs. CI never runs it.
+Expect `READY` on stdout, and a JSON line on stderr with
+`"resolver":"cli"`. It spends tokens. CI never runs it.

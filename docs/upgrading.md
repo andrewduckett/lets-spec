@@ -8,18 +8,24 @@ made the change.
 The steps to move the pin itself are in
 [Updating](../README.md#-updating).
 
-## 0.6: the resolvers moved to resolvers/
+## 0.6: the delegate config lists resolvers by name
 
-The release folder now ships the resolvers in `resolvers/`, not
-`contrib/`, and in a checkout the resolvers' dev entries moved into the
-`lets` package. Nix profile and home-manager users need nothing. If you
-linked a resolver onto your `PATH` by hand, link it again from its new
-place.
+The resolvers are now part of `lets`, and your delegate config names them.
+A config that still lists a path makes every `lets delegate` command exit
+2, and the message names the entry.
 
-| You installed it with | Do this |
+1. In `~/.config/lets-delegate/config.yaml`, replace each path under
+   `resolvers` with its name: `t3` for `lets-delegate-t3`, `cli` for
+   `lets-delegate-cli`, and `subagent` for `lets-delegate-subagent`.
+   Keep `version: 2` and the order.
+2. Remove the resolver programs you installed. `lets` no longer runs
+   them.
+
+| You installed them with | Do this |
 |---|---|
-| mise | Remove the old link from `~/.local/bin`, then link `resolvers/lets-delegate-t3` or `resolvers/lets-delegate-cli` from the release folder |
-| A checkout of this repo | Link `lets/resolvers/lets-delegate-t3` or `lets/resolvers/lets-delegate-cli` instead |
+| home-manager | Remove `lets-delegate-t3` and `lets-delegate-cli` from `home.packages` |
+| A Nix profile | Run `nix profile remove lets-delegate-t3`, and the same for `lets-delegate-cli` |
+| mise, or a checkout of this repo | Delete the `lets-delegate-*` links in `~/.local/bin` |
 
 ## 0.5: the default resolver answers as `subagent`
 
