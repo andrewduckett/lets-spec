@@ -122,5 +122,6 @@ test('a run in a repository T3 has no project for exits 3, naming it, and create
   const answer = await handle('run', runRequest, createAdapter(io));
   assert.equal(answer.code, 3, answer.stderr);
   assert.match(answer.stderr, /t3 has no project for \/r/);
+  assert.doesNotMatch(answer.stderr, /\(thread /);
   assert.deepEqual(sent, []);
 });

@@ -14,7 +14,7 @@
 ## 3. The t3 adapter [depends-on: 1]
 
 - [x] 3.1 [parallel] [medium] t3's `start` launches a default-mode thread on the request's model, with no effort option, and returns its handle. It shares one private launch helper with `run`. (verify: node --test tests/t3-resolver/t3.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed)
-- [ ] 3.2 [parallel] [medium] t3's `run` launches a plan-mode thread and returns its handle with the final text. An error before the thread exists, such as no T3 project, passes through unchanged: exit 3, no archive, no thread named. (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts)
+- [x] 3.2 [parallel] [medium] t3's `run` launches a plan-mode thread and returns its handle with the final text. An error before the thread exists, such as no T3 project, passes through unchanged: exit 3, no archive, no thread named. (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts) (✓ node --test tests/t3-resolver/t3.test.ts passed; tests/t3-resolver/resolver.test.ts passed except the refusal archive, which is 3.3)
 - [ ] 3.3 [parallel] [medium] When t3's `run` is refused while it waits, it archives the thread and exits 3 with ` (thread <id>)` on stderr. When archiving fails too, the exit is still 3 and the message adds `; could not archive it: <why>`. (verify: node --test tests/t3-resolver/t3.test.ts tests/t3-resolver/resolver.test.ts)
 - [ ] 3.4 [parallel] [easy] Any other kit error from t3's wait, such as a timeout or a session that stopped to ask, keeps its exit code and ends with ` (thread <id>)`. (verify: node --test tests/t3-resolver/t3.test.ts)
 
@@ -26,3 +26,6 @@
 ## Deviations Ledger
 
 <!-- Dated notes on small departures from the plan, written during apply. Stop and ask the user about a large one. -->
+
+- 2026-10-23, task 3.2: its verify command includes `tests/t3-resolver/resolver.test.ts`, whose test "a run T3 fails before any message exits 3 with its failure, and archives the thread" needs the archive from task 3.3. Task 3.2 was ticked with that one test still failing; it passes from task 3.3 on.
+- 2026-10-23, task 1.1: removing `spawn` also removed the kit's way to start a session, so task 1.1 already calls `adapter.start` for the start verb. Task 1.2 kept the rest: declining an adapter with no `start`, and removing `verbs`.

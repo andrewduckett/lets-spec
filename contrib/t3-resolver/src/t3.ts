@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Adapter, Session, SpawnRequest, StartInput } from 'resolver-kit/adapter.ts';
+import type { Adapter, RunInput, StartInput } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
@@ -369,6 +369,32 @@ export function createAdapter(io: Io): Adapter {
     return { kind: 'thread', id: threadId, origin };
   }
 
+  // Wait for the thread's run to end, and read its final message.
+  async function waitForText(handle: Handle, timeoutMs: number): Promise<{ text: string }> {
+    // Open the database fresh on each check: the server writes it, and a
+    // long-lived handle can see stale state.
+    const check = () => withDb((db) => {
+      const run = readRun(db, handle.id);
+      if (run === null) return undefined;
+      if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
+      // A run that failed before any message is a refusal, such as a model
+      // the account cannot run. The kit then archives the thread.
+      if (run.status === 'failed') {
+        const failure = run.failure ?? 'run failed';
+        throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
+      }
+      if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
+      if (run.status !== 'completed') return undefined;
+      // A completed run with no message yet is one with none at all; the
+      // resolver rejects the empty text. One still streaming will finish.
+      const message = readFinalMessage(db, run.id);
+      if (message === null) return { text: '' };
+      if (message.streaming) return undefined;
+      return { text: message.text };
+    });
+    return pollUntil(check, { intervalMs: POLL_MS, timeoutMs, now: io.now, sleep: io.sleep });
+  }
+
   return {
     name: 't3',
     program: 'lets-delegate-t3',
@@ -389,37 +415,13 @@ export function createAdapter(io: Io): Adapter {
       return optionsFromT3Manifest(manifest);
     },
 
-    async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
-      return { handle: await launchThread({ name, prompt, cwd, family, model }, { readOnly, effort }) };
+    async run({ effort, ...input }: RunInput, { timeoutMs }) {
+      const handle = await launchThread(input, { readOnly: true, effort });
+      return { handle, ...(await waitForText(handle, timeoutMs)) };
     },
 
     async start(input: StartInput) {
       return launchThread(input, { readOnly: false, effort: null });
-    },
-
-    async waitForResult({ handle }, { timeoutMs }) {
-      // Open the database fresh on each check: the server writes it, and a
-      // long-lived handle can see stale state.
-      const check = () => withDb((db) => {
-        const run = readRun(db, handle.id);
-        if (run === null) return undefined;
-        if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
-        // A run that failed before any message is a refusal, such as a model
-        // the account cannot run. The kit then archives the thread.
-        if (run.status === 'failed') {
-          const failure = run.failure ?? 'run failed';
-          throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
-        }
-        if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
-        if (run.status !== 'completed') return undefined;
-        // A completed run with no message yet is one with none at all; the
-        // resolver rejects the empty text. One still streaming will finish.
-        const message = readFinalMessage(db, run.id);
-        if (message === null) return { text: '' };
-        if (message.streaming) return undefined;
-        return { text: message.text };
-      });
-      return pollUntil(check, { intervalMs: POLL_MS, timeoutMs, now: io.now, sleep: io.sleep });
     },
 
     // Archives the thread on ok. A failure throws, and the resolver reports it.
