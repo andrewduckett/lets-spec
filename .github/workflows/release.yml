@@ -15,13 +15,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # A release bumps version in lets/package.json in the commit it tags.
+      - name: Check the tag matches the version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="$(jq -r .version lets/package.json)"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "The tag $TAG does not match version $version in lets/package.json. Bump the version in the commit you tag." >&2
+            exit 1
+          fi
+
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3
 
       - name: Build the release folder
         run: nix build .#dist
 
-      # The tag v0.1.0 makes the folder lets-spec-0.1.0 and the version 0.1.0.
+      # The tag v0.1.0 makes the folder lets-spec-0.1.0.
       - name: Make the tarball
         env:
           TAG: ${{ github.ref_name }}
@@ -30,8 +42,6 @@ jobs:
           name="lets-spec-${TAG#v}"
           cp -rL result "$name"
           chmod -R u+w "$name"
-          jq --arg v "${TAG#v}" '.version = $v' "$name/release.json" > release.json.new
-          mv release.json.new "$name/release.json"
           tar czf "$name.tar.gz" "$name"
 
       - name: Publish the release

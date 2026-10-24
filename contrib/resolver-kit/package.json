@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*.ts": "./src/*.ts",
-    "./build.mjs": "./build.mjs"
+    "./*.ts": "./src/*.ts"
   },
   "engines": {
     "node": ">=26"

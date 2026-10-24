@@ -4,32 +4,28 @@
 // everything comes through deps.
 import type { Deps } from '../io.ts';
 import { readConfig } from './config.ts';
-import { EXIT, exitCodeOf, SessionFailed, SpawnError } from './errors.ts';
+import { EXIT, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { isTreeClean, repoRoot, treeStatus } from './git.ts';
+import { guarded } from './guarded.ts';
 import { callResolver, resolveWithModels, timeoutFor } from './lookup.ts';
 import type { Candidate } from './lookup.ts';
 import { readPromptFile } from './prompt-file.ts';
-import { buildRequest, normalizeName } from './protocol.ts';
-import type { Effort, Family, Handle } from './protocol.ts';
+import { buildRequest, normalizeName } from 'resolver-kit/protocol.ts';
+import type { Effort, Family, Handle } from 'resolver-kit/protocol.ts';
+import type { Intent } from './strategies.ts';
 
-// models: each <family> or <family>/<model>, best first, sent to the
-// resolver unchanged, one at a time until one is not refused.
-export type ReviewOptions = { name: string; promptFile: string; sourceFamily: Family; effort: Effort; models: string[]; timeoutMinutes?: number };
+// for: what the review is for, recorded in the metadata line. models: each
+// <family> or <family>/<model>, best first, sent to the resolver unchanged,
+// one at a time until one is not refused.
+export type ReviewOptions = { for: Intent; name: string; promptFile: string; sourceFamily: Family; effort: Effort; models: string[]; timeoutMinutes?: number };
 
 // The exit code: 0 ok, 2 usage, 3 every model refused, 4 contract or unknown outcome,
 // 5 session failed, 6 timeout, 7 tree changed.
-export async function run(options: ReviewOptions, deps: Deps): Promise<number> {
-  try {
-    return await review(options, deps);
-  } catch (error) {
-    const code = exitCodeOf(error);
-    if (code === null) throw error;
-    deps.stderr(`lets delegate: ${(error as Error).message}\n`);
-    return code;
-  }
+export function run(options: ReviewOptions, deps: Deps): Promise<number> {
+  return guarded(deps, () => review(options, deps));
 }
 
-async function review({ name, promptFile, sourceFamily, effort, models, timeoutMinutes }: ReviewOptions, deps: Deps) {
+async function review({ for: intent, name, promptFile, sourceFamily, effort, models, timeoutMinutes }: ReviewOptions, deps: Deps) {
   const { io } = deps;
   const started = io.now();
   const config = readConfig(deps);
@@ -39,8 +35,7 @@ async function review({ name, promptFile, sourceFamily, effort, models, timeoutM
   const before = await treeStatus(cwd, io);
 
   const requestFor = (model: string) => buildRequest('run', { cwd, name: normalizeName(name), prompt, sourceFamily, effort, timeoutMinutes, model });
-  const { candidate, outcome, model: sent } = await resolveWithModels('run', requestFor, models,
-    { env: deps.env, io, cwd, config, packageRoot: deps.packageRoot, nodePath: deps.nodePath });
+  const { candidate, outcome, model: sent } = await resolveWithModels('run', requestFor, models, { ...deps, cwd, config });
   if (outcome.code !== EXIT.ok) {
     deps.stderr(`lets delegate: ${outcome.stderr.trim()}\n`);
     return outcome.code;
@@ -73,7 +68,7 @@ async function review({ name, promptFile, sourceFamily, effort, models, timeoutM
   const durationSeconds = Math.round((io.now() - started) / 1000);
   const independent = family !== sourceFamily;
   // The model that ran: the resolver's own name for it, else the one sent.
-  deps.stderr(`${JSON.stringify({ resolver, family, model: model ?? sent, independent, handle, gitClean: true, durationSeconds })}\n`);
+  deps.stderr(`${JSON.stringify({ for: intent, resolver, family, model: model ?? sent, independent, handle, gitClean: true, durationSeconds })}\n`);
   return EXIT.ok;
 }
 

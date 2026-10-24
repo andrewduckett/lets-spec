@@ -7,9 +7,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { realIo } from '../../../lets/src/io.ts';
 import type { Io } from '../../../lets/src/io.ts';
-import { SpawnError, UsageError } from '../../../lets/src/delegate/errors.ts';
+import { UsageError } from '../../../contrib/resolver-kit/src/errors.ts';
 import { callResolver, candidates, resolve, resolveWithModels } from '../../../lets/src/delegate/lookup.ts';
-import { buildRequest } from '../../../lets/src/delegate/protocol.ts';
+import { buildRequest } from '../../../contrib/resolver-kit/src/protocol.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const FAKE = fileURLToPath(new URL('fixtures/fake-resolver', import.meta.url));
@@ -22,12 +22,11 @@ const runRequest = buildRequest('run', { cwd: '/r', name: 'x', prompt: 'P', sour
 const probeRequest = buildRequest('probe', { cwd: '/r' });
 
 // The real io, with the fake resolver's settings added to the env of each
-// command it runs, and the commands it finds on PATH.
-function ioWith(settings: Record<string, string>, onPath: string[] = []): Io {
+// command it runs.
+function ioWith(settings: Record<string, string>): Io {
   const io = realIo();
   return {
     ...io,
-    commandExists: (cmd) => onPath.includes(cmd),
     execFile: (cmd, args, opts = {}) => io.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, ...settings } }),
   };
 }
@@ -65,7 +64,7 @@ test('an empty chain has no candidates', () => {
 });
 
 test('a resolver on PATH is never a candidate', () => {
-  const io = fakeIo({ executables: ['/usr/bin/lets-delegate-resolver'], commands: ['lets-delegate-resolver'] });
+  const io = fakeIo({ executables: ['/usr/bin/some-tool'] });
   const env = { PATH: '/usr/bin' };
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: null }).map((c) => c.name), [SUBAGENT]);
   assert.deepEqual(candidates({ env, io, cwd: '/r', ...SELF, config: chain('/a') }).map((c) => c.name), ['/a']);
@@ -119,12 +118,6 @@ test('a declining override with an all-declining chain is the same usage error',
   const io = fakeIo({ executables: ['/bin/mine', '/a'], results: [decline, decline] });
   await assert.rejects(resolve('probe', probeRequest, { env: { LETS_SPEC_RESOLVER: '/bin/mine' }, io, cwd: '/r', ...SELF, config: chain('/a') }),
     (error) => error instanceof UsageError && error.message.includes('declined'));
-});
-
-test('a missing default reached through the subagent entry is exit 4, naming an incomplete install', async () => {
-  const io = fakeIo();
-  await assert.rejects(resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('subagent') }),
-    (error) => error instanceof SpawnError && error.message.includes(SUBAGENT) && error.message.includes('incomplete'));
 });
 
 test('a broken default reached through the subagent entry is exit 4 with the install message', async () => {
@@ -232,28 +225,21 @@ test('a resolver that cannot start is exit 4', async () => {
   assert.match(outcome.stderr, /cannot run \/opt\/r\/lets-delegate-t3: spawn EACCES/);
 });
 
-test('a resolver past the timeout is killed and reported as exit 6', async () => {
+test('a resolver past the timeout is stopped and reported as exit 6', async () => {
   const [candidate] = candidates({ env: { LETS_SPEC_RESOLVER: FAKE }, io: ioWith({}), cwd: '/r', ...SELF, config: null });
   const started = Date.now();
   const outcome = await callResolver(candidate, 'probe', probeRequest, { io: ioWith({ FAKE_RESOLVER_SLEEP_MS: '30000' }), timeoutMs: 200 });
   assert.equal(outcome?.code, 6);
   assert.match(outcome!.stderr, /did not answer probe/);
-  assert.ok(Date.now() - started < 10000, 'the resolver was killed, not waited for');
+  assert.ok(Date.now() - started < 10000, 'the resolver was stopped, not waited for');
 });
 
 test('the backstop for run is the session timeout plus one minute', async () => {
-  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [new Promise(() => {})] });
+  const io = fakeIo({ executables: ['/opt/r/lets-delegate-t3'], results: [{ stdout: '', stderr: '', code: 1, timedOut: true }] });
   const { outcome } = await resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: chain('/opt/r/lets-delegate-t3') });
+  assert.equal(io.calls[0][2].timeoutMs, 16 * 60000);
   assert.equal(outcome.code, 6);
-  assert.deepEqual(io.sleeps, [16 * 60000]);
-  assert.deepEqual(io.killed, [4242]);
-});
-
-test('a missing default stops the lookup with exit 4, naming the path and an incomplete install', async () => {
-  const io = fakeIo();
-  await assert.rejects(resolve('run', runRequest, { env: {}, io, cwd: '/r', ...SELF, config: null }),
-    (error) => error instanceof SpawnError && error.message.includes(SUBAGENT) && error.message.includes('incomplete'));
-  assert.deepEqual(io.calls, [], 'nothing was run');
+  assert.match(outcome.stderr, /did not answer run in 16 minutes, so it was stopped/);
 });
 
 test('a default that fails puts the install message before its own stderr', async () => {

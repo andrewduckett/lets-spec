@@ -20,6 +20,9 @@
       inherit (nixpkgs) lib;
       inherit (lib.importJSON ./flows.json) flows;
 
+      # The one version source. A release bumps it in the commit it tags.
+      inherit (lib.importJSON ./lets/package.json) version;
+
       # Only the folders a release is built from, so a change elsewhere, such
       # as to the README, does not make a new release.
       releaseSource = lib.fileset.toSource {
@@ -34,9 +37,9 @@
       workspaceSource = lib.fileset.toSource {
         root = ./.;
         fileset = lib.fileset.difference
-          (lib.fileset.unions ([
-            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets
-          ] ++ lib.optional (builtins.pathExists ./contrib) ./contrib))
+          (lib.fileset.unions [
+            ./package.json ./pnpm-workspace.yaml ./pnpm-lock.yaml ./tsconfig.json ./lets ./contrib
+          ])
           (lib.fileset.maybeMissing ./lets/contrib);
       };
 
@@ -91,12 +94,12 @@
               ${lib.escapeShellArgs recipe.skills}
           '';
 
-        # The lets command: the bundle esbuild makes, in libexec, and a
-        # bin/lets that runs it with Node 26. The bundle keeps its
-        # #!/usr/bin/env node, because the tarball ships it as it is. lets
-        # runs its default resolver from contrib/ beside libexec/.
-        lets-cli = pkgs.stdenv.mkDerivation {
-          pname = "lets";
+        # One program: the bundle esbuild makes, in libexec, and a
+        # bin/<name> that runs it with Node 26. The bundle keeps its
+        # #!/usr/bin/env node, because the tarball ships it as it is. dir is
+        # the program's package folder.
+        program = name: dir: pkgs.stdenv.mkDerivation {
+          pname = name;
           version = "0.0.0";
           src = workspaceSource;
           nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
@@ -104,49 +107,54 @@
           dontPatchShebangs = true;
           buildPhase = ''
             runHook preBuild
-            pnpm --filter lets build
+            pnpm --filter ${name} build
             runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
-            install -Dm755 lets/dist/lets $out/libexec/lets
-            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets --add-flags $out/libexec/lets
+            install -Dm755 ${dir}/dist/${name} $out/libexec/${name}
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${name} \
+              --add-flags $out/libexec/${name}
             runHook postInstall
           '';
+          meta.mainProgram = name;
         };
 
-        # A resolver program, for a user's profile: the bundle esbuild makes,
-        # in libexec, and a bin/<program> that runs it with Node 26. Never in
-        # a dev shell: it answers for the machine, not the project. It runs
-        # its harness's commands, such as git and t3, from PATH, because they
-        # are the user's own install.
-        resolver = program: dir: pkgs.stdenv.mkDerivation {
-          pname = program;
-          version = "0.0.0";
-          src = workspaceSource;
-          nativeBuildInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.pnpmConfigHook pkgs.makeWrapper ];
-          inherit pnpmDeps;
-          dontPatchShebangs = true;
-          buildPhase = ''
-            runHook preBuild
-            pnpm --filter ${program} build
-            runHook postBuild
+        # The lets bundle, built once for each change to the workspace.
+        lets-bundle = program "lets" "lets";
+
+        # The release's version, the OpenSpec CLI that generated its
+        # openspec-* skills, and the commit it was built from.
+        releaseJson = pkgs.writeText "release.json" (builtins.toJSON {
+          inherit version;
+          openspec = pkgs.openspec.version;
+          commit = self.rev or "dirty";
+        });
+
+        # The lets command. It reads release.json, and runs its default
+        # resolver from contrib/, both beside libexec/. The bundle is copied,
+        # not linked, because Node finds release.json from the bundle's real
+        # path. A new commit changes only release.json, so it never rebuilds
+        # the bundle.
+        lets-cli = pkgs.runCommand "lets-${version}"
+          { nativeBuildInputs = [ pkgs.makeWrapper ]; meta.mainProgram = "lets"; }
+          ''
+            install -Dm755 ${lets-bundle}/libexec/lets $out/libexec/lets
+            install -Dm755 ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
+            install -Dm644 ${releaseJson} $out/release.json
+            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/lets \
+              --add-flags $out/libexec/lets
           '';
-          installPhase = ''
-            runHook preInstall
-            install -Dm755 contrib/${dir}/dist/${program} $out/libexec/${program}
-            makeWrapper ${pkgs.nodejs_26}/bin/node $out/bin/${program} \
-              --add-flags $out/libexec/${program}
-            runHook postInstall
-          '';
-          meta.mainProgram = program;
-        };
-        lets-delegate-t3 = resolver "lets-delegate-t3" "t3-resolver";
-        lets-delegate-cli = resolver "lets-delegate-cli" "cli-resolver";
+
+        # The resolver programs, for a user's profile. Never in a dev shell:
+        # a resolver answers for the machine, not the project. It runs its
+        # harness's commands, such as git and t3, from PATH, because they are
+        # the user's own install.
+        lets-delegate-t3 = program "lets-delegate-t3" "contrib/t3-resolver";
+        lets-delegate-cli = program "lets-delegate-cli" "contrib/cli-resolver";
         # The default resolver, for lets-cli and dist only. lets runs it from
         # beside itself, so it is not exported, and no one puts it on PATH.
-        lets-delegate-subagent = resolver "lets-delegate-subagent" "subagent-resolver";
+        lets-delegate-subagent = program "lets-delegate-subagent" "contrib/subagent-resolver";
 
         # lets, bound to one release.
         lets = flow:
@@ -160,7 +168,8 @@
 
         # The folder the release tarball is made from: the lets bundle, one
         # release for every flow, and the contrib resolvers outside bin/, so
-        # mise never puts them on a project's PATH. CI sets the real version.
+        # mise never puts them on a project's PATH. Its release.json is the
+        # one lets-cli carries.
         dist = pkgs.runCommand "lets-spec-dist" { } ''
           mkdir -p $out/bin $out/releases $out/contrib
           cp ${lets-cli}/libexec/lets $out/bin/lets
@@ -169,11 +178,7 @@
           cp ${lets-delegate-subagent}/libexec/lets-delegate-subagent $out/contrib/lets-delegate-subagent
           install -m755 ${./contrib/headless-resolver} $out/contrib/headless-resolver
           ${lib.concatMapStringsSep "\n" (flow: "cp -R ${release flow} $out/releases/${flow}") (lib.attrNames flows)}
-          cp ${pkgs.writeText "release.json" (builtins.toJSON {
-            version = "0.0.0-dev";
-            openspec = pkgs.openspec.version;
-            commit = self.rev or "dirty";
-          })} $out/release.json
+          cp ${lets-cli}/release.json $out/release.json
         '';
 
         # Everything a project's dev shell needs from this repo. It carries
@@ -230,6 +235,15 @@
             # Once the project commits the copies, the check passes.
             git add -A
             lets sync --check
+            # The packaged lets prints the version in lets/package.json.
+            [ "$(lets --version)" = ${version} ]
+            # It warns when the OpenSpec CLI on PATH is not the one its
+            # release.json records.
+            mkdir ../fake-openspec
+            printf '#!/bin/sh\necho 0.0.1\n' > ../fake-openspec/openspec
+            chmod +x ../fake-openspec/openspec
+            PATH="$PWD/../fake-openspec:$PATH" lets sync 2>warnings >/dev/null
+            grep -qF "the OpenSpec CLI on PATH is 0.0.1, but this release's openspec-* skills were generated from ${pkgs.openspec.version}." warnings
 
             openspec new change gate </dev/null >/dev/null 2>&1
             openspec instructions brainstorm --change gate </dev/null >instructions 2>stderr
@@ -298,7 +312,7 @@
             git init --quiet
             export LETS_SPEC_FLOW=minimal
             # The build sandbox has no /usr/bin/env, so node runs the script.
-            [ "$(node ${dist}/bin/lets --version)" = 0.0.0-dev ]
+            [ "$(node ${dist}/bin/lets --version)" = ${version} ]
             node ${dist}/bin/lets sync >/dev/null 2>stderr
             if grep -qi 'openspec' stderr; then cat stderr >&2; exit 1; fi
             grep -q 'schema: lets-minimal' openspec/config.yaml

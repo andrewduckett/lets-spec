@@ -134,12 +134,6 @@ flow_texts() {
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 
-@test "the resolver contract shows contrib/headless-resolver as it is" {
-  local doc="$repo/docs/resolver-contract.md"
-  diff "$repo/contrib/headless-resolver" \
-    <(awk '/^#!\/bin\/sh$/ { show = 1 } /^```$/ { show = 0 } show' "$doc")
-}
-
 @test "the resolver contract says verify probes for start, and --live matches it to start" {
   local text
   text=$(tr '\n' ' ' <"$repo/docs/resolver-contract.md")
@@ -160,7 +154,7 @@ flow_texts() {
 }
 
 @test "the docs name lets delegate review or handoff only with instructions or run" {
-  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo/docs/resolver-contract.md' '$repo'/contrib/*/README.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
+  run bash -c "grep -ohE 'lets delegate (review|handoff)( [^ \`]+)?' '$repo/README.md' '$repo'/docs/*.md '$repo'/contrib/*/README.md | grep -vE 'lets delegate (review|handoff) (instructions|run)$'"
   [ "$status" -eq 1 ] || { echo "$output"; false; }
 }
 

@@ -89,6 +89,16 @@ test('a CLI version that differs from release.json is a warning in the footer', 
   assert.ok(t.stderr().includes('- the OpenSpec CLI on PATH is 1.4.0, but this release'));
 });
 
+test('a WORKFLOW_RELEASE outside the package still warns from the package release.json', async () => {
+  const files: Record<string, string> = { ...releaseFiles };
+  files['/pkg/release.json'] = JSON.stringify({ version: '0.1.0', openspec: '1.2.3', commit: 'abc' });
+  const t = setup({ files, toplevel: '/project' });
+  const original = t.io.execFile;
+  t.io.execFile = async (cmd, args, opts) => (cmd === 'openspec' ? { stdout: '1.4.0\n', stderr: '', code: 0 } : original(cmd, args, opts));
+  assert.equal(await run({ check: false }, t.deps), 0);
+  assert.ok(t.stderr().includes("- the OpenSpec CLI on PATH is 1.4.0, but this release's openspec-* skills were generated from 1.2.3. Pin the CLI to 1.2.3."));
+});
+
 test('an empty LETS_SPEC_SKILLS means the default, committed', () => {
   assert.equal(skillsMode({ LETS_SPEC_SKILLS: '' }), 'committed');
 });

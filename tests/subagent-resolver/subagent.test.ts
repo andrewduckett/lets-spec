@@ -83,7 +83,7 @@ test('start with an unknown family is exit 2, naming model', async () => {
 
 test('start answers the same, and starts no process, whichever CLIs are on PATH', async () => {
   const bare = await ask(fakeIo({ commands: [] }), 'start', startRequest());
-  const io = fakeIo({ commands: ['codex', 'claude', 'agy', 't3', 'herdr'] });
+  const io = fakeIo({ commands: ['codex', 'claude', 'agy', 't3', 'some-tool'] });
   assert.deepEqual(await ask(io, 'start', startRequest()), bare);
   assert.deepEqual(io.calls, []);
 });

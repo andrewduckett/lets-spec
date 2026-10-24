@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
+import type { RunInput } from '../../contrib/resolver-kit/src/adapter.ts';
 import { createAdapter, runCommand } from '../../contrib/cli-resolver/src/cli.ts';
 import type { ExecResult } from '../../contrib/resolver-kit/src/io.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
@@ -126,11 +126,12 @@ test('a listing that fails lists the bare family, and warns naming the CLI', asy
   }
 });
 
-const run: SpawnRequest = { kind: 'run', name: 'x', prompt: TRICKY, cwd: '/r', family: 'gpt', model: null, effort: 'high', readOnly: true };
+const run: RunInput = { name: 'x', prompt: TRICKY, cwd: '/r', family: 'gpt', model: null, effort: 'high' };
 
 test('a run\'s handle is a process named after the session', async () => {
-  const session = await createAdapter(fakeIo({ commands: ['codex'] })).spawn(run);
-  assert.deepEqual(session.handle, { kind: 'process', id: 'x' });
+  const io = fakeIo({ commands: ['claude'], results: [{ stdout: 'FINDINGS\n', stderr: '', code: 0 }] });
+  const { handle } = await createAdapter(io).run({ ...run, family: 'claude' }, { timeoutMs: 60000 });
+  assert.deepEqual(handle, { kind: 'process', id: 'x' });
 });
 
 test('a codex run answers with the last message codex wrote', async () => {
@@ -138,15 +139,14 @@ test('a codex run answers with the last message codex wrote', async () => {
     io.files.set(args[args.indexOf('-o') + 1], 'FINDINGS\n');
     return OK;
   }] });
-  const adapter = createAdapter(io);
-  assert.deepEqual(await adapter.waitForResult(await adapter.spawn(run), { timeoutMs: 45 * 60000 }), { text: 'FINDINGS\n' });
+  const { text } = await createAdapter(io).run(run, { timeoutMs: 45 * 60000 });
+  assert.equal(text, 'FINDINGS\n');
   assert.ok(io.dirs.includes('/r/.workspace/lets-delegate'), 'the scratch folder exists before codex writes to it');
 });
 
 test('the CLI runs in the request\'s folder, with the prompt, the timeout and no session markers', async () => {
   const io = fakeIo({ commands: ['claude'], results: [{ stdout: 'FINDINGS\n', stderr: '', code: 0 }] });
-  const adapter = createAdapter(io);
-  const { text } = await adapter.waitForResult(await adapter.spawn({ ...run, family: 'claude' }), { timeoutMs: 15 * 60000 });
+  const { text } = await createAdapter(io).run({ ...run, family: 'claude' }, { timeoutMs: 15 * 60000 });
   assert.equal(text, 'FINDINGS\n');
   const [cmd, , options] = io.calls[0];
   assert.equal(cmd, 'claude');

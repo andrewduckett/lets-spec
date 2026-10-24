@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Adapter, SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
+import type { Adapter, RunInput, StartInput } from '../../contrib/resolver-kit/src/adapter.ts';
 import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import { buildRequest } from '../../contrib/resolver-kit/src/protocol.ts';
 import type { Handle } from '../../contrib/resolver-kit/src/protocol.ts';
-import { handle } from '../../contrib/resolver-kit/src/resolver.ts';
+import { handle } from './fixtures/handle.ts';
 
-type Options = { verbs?: readonly ('run' | 'start')[]; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; spawnError?: Error; waitError?: Error; finishError?: Error };
+type Options = { starts?: boolean; detects?: boolean; whyDeclined?: string; options?: string[]; text?: string; runError?: Error; finishError?: Error };
 
 // An adapter for a harness called Pond, which makes handles of kind pad.
 // It records its calls and answers as told.
@@ -19,7 +19,6 @@ function fakeAdapter(options: Options = {}) {
     harness: 'Pond',
     handleKind: 'pad',
     calls,
-    ...(options.verbs === undefined ? {} : { verbs: options.verbs }),
     detect: () => detects,
     ...(options.whyDeclined === undefined ? {} : { whyDeclined: () => options.whyDeclined! }),
     async options(warn) {
@@ -27,16 +26,17 @@ function fakeAdapter(options: Options = {}) {
       warn('pond lists slowly');
       return options.options ?? ['gpt/gpt-6.1-sol', 'claude'];
     },
-    async spawn(request: SpawnRequest) {
-      calls.push(['spawn', request]);
-      if (options.spawnError) throw options.spawnError;
-      return { handle: { kind: 'pad', id: 'pad-1' }, inProcess: true };
+    async run(input: RunInput, query: { timeoutMs: number }) {
+      calls.push(['run', { input, query }]);
+      if (options.runError) throw options.runError;
+      return { handle: { kind: 'pad', id: 'pad-1' }, text };
     },
-    async waitForResult(session, query) {
-      calls.push(['wait', query]);
-      if (options.waitError) throw options.waitError;
-      return { text };
-    },
+    ...(options.starts === false ? {} : {
+      async start(input: StartInput) {
+        calls.push(['start', input]);
+        return { kind: 'pad', id: 'pad-1' };
+      },
+    }),
     async finish(h: Handle, ok: boolean, { cwd }: { cwd: string }) {
       calls.push(['finish', { h, ok, cwd }]);
       if (options.finishError) throw options.finishError;
@@ -54,36 +54,27 @@ const probeRequest = json(buildRequest('probe', { cwd: '/r' }));
 const probeFor = (verb: 'run' | 'start') => json(buildRequest('probe', { cwd: '/r', verb }));
 const DECLINED = (why: string) => ({ code: 75, stdout: '', stderr: `lets-delegate-pond: ${why}\n` });
 
-test('an adapter that declares no verbs answers a probe for start', async () => {
+test('an adapter with a start method answers a probe for start', async () => {
   const answer = await handle('probe', probeFor('start'), fakeAdapter());
   assert.equal(answer.code, 0);
   assert.equal(JSON.parse(answer.stdout).resolver, 'pond');
 });
 
-test('an adapter that takes only run declines a probe for start, listing nothing', async () => {
-  const adapter = fakeAdapter({ verbs: ['run'] });
+test('an adapter with no start method declines a probe for start, listing nothing', async () => {
+  const adapter = fakeAdapter({ starts: false });
   assert.deepEqual(await handle('probe', probeFor('start'), adapter), DECLINED('this resolver only runs headless'));
   assert.deepEqual(adapter.calls, []);
 });
 
-test('an adapter that takes only run declines start, starting nothing', async () => {
-  const adapter = fakeAdapter({ verbs: ['run'] });
+test('an adapter with no start method declines start, starting nothing', async () => {
+  const adapter = fakeAdapter({ starts: false });
   assert.deepEqual(await handle('start', startRequest, adapter), DECLINED('this resolver only runs headless'));
   assert.deepEqual(adapter.calls, []);
 });
 
-test('an adapter that takes only run answers a probe for run', async () => {
-  const answer = await handle('probe', probeFor('run'), fakeAdapter({ verbs: ['run'] }));
+test('an adapter with no start method answers a probe for run', async () => {
+  const answer = await handle('probe', probeFor('run'), fakeAdapter({ starts: false }));
   assert.equal(answer.code, 0);
-});
-
-test('an adapter that takes only start declines every request for run', async () => {
-  for (const [verb, request] of [['probe', probeFor('run')], ['run', runRequest]]) {
-    const adapter = fakeAdapter({ verbs: ['start'] });
-    const answer = await handle(verb, request, adapter);
-    assert.deepEqual([answer.code, answer.stdout], [75, ''], verb);
-    assert.deepEqual(adapter.calls, [], verb);
-  }
 });
 
 test('outside its harness, the resolver declines each session verb with its own decline message', async () => {
@@ -127,14 +118,17 @@ test('probe inside the harness answers the adapter\'s name and options', async (
   });
 });
 
-test('run spawns the request\'s model read-only, and waits the timeout', async () => {
-  const adapter = fakeAdapter();
-  const answer = await handle('run', runRequest, adapter);
+test('run answers with the handle and text the adapter returns', async () => {
+  const answer = await handle('run', runRequest, fakeAdapter());
   assert.equal(answer.code, 0);
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', text: 'FINDINGS', family: 'gpt', model: 'gpt-6.1-sol', handle: { kind: 'pad', id: 'pad-1' } });
+});
+
+test('run makes one call to the adapter, with the request\'s model, effort and timeout', async () => {
+  const adapter = fakeAdapter();
+  await handle('run', runRequest, adapter);
   assert.deepEqual(adapter.calls, [
-    ['spawn', { kind: 'run', name: 'x', prompt: 'P', cwd: '/r', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high', readOnly: true }],
-    ['wait', { timeoutMs: 3 * 60000 }],
+    ['run', { input: { name: 'x', prompt: 'P', cwd: '/r', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high' }, query: { timeoutMs: 3 * 60000 } }],
   ]);
 });
 
@@ -142,41 +136,36 @@ test('run passes a null model for a bare family', async () => {
   const adapter = fakeAdapter();
   const answer = await handle('run', json(buildRequest('run', { ...runFields, model: 'claude' })), adapter);
   assert.deepEqual([JSON.parse(answer.stdout).family, JSON.parse(answer.stdout).model], ['claude', null]);
-  assert.deepEqual(adapter.calls[0], ['spawn', { kind: 'run', name: 'x', prompt: 'P', cwd: '/r', family: 'claude', model: null, effort: 'high', readOnly: true }]);
+  assert.deepEqual(adapter.calls[0], ['run', { input: { name: 'x', prompt: 'P', cwd: '/r', family: 'claude', model: null, effort: 'high' }, query: { timeoutMs: 3 * 60000 } }]);
 });
 
-test('start spawns an interactive session on the request\'s model and returns its handle', async () => {
+test('start starts an interactive session on the request\'s model and returns its handle', async () => {
   const adapter = fakeAdapter();
   const answer = await handle('start', startRequest, adapter);
   assert.deepEqual(JSON.parse(answer.stdout), { resolver: 'pond', handle: { kind: 'pad', id: 'pad-1' } });
-  assert.deepEqual(adapter.calls, [['spawn', { kind: 'start', name: 'fix-login', prompt: 'P', cwd: '/r', family: 'gemini', model: 'gemini-3.8-flash', effort: null, readOnly: false }]]);
+  assert.deepEqual(adapter.calls, [['start', { name: 'fix-login', prompt: 'P', cwd: '/r', family: 'gemini', model: 'gemini-3.8-flash' }]]);
 });
 
-test('each error class is its exit code, with nothing on stdout', async () => {
-  const cases: [Options, number, string][] = [
-    [{ spawnError: new Refused('pond has no project') }, 3, 'lets-delegate-pond: pond has no project\n'],
-    [{ spawnError: new SpawnError('pond did not answer') }, 4, 'lets-delegate-pond: pond did not answer\n'],
-    [{ waitError: new SessionFailed('the session stopped to ask') }, 5, 'lets-delegate-pond: the session stopped to ask (pad pad-1)\n'],
-    [{ waitError: new TimeoutError('no result') }, 6, 'lets-delegate-pond: no result (pad pad-1)\n'],
-    [{ text: ' \n' }, 5, 'lets-delegate-pond: empty final message (pad pad-1)\n'],
+test('each error class from the adapter is its exit code, with its message as it is', async () => {
+  const cases: [Error, number][] = [
+    [new Refused('pond has no project'), 3],
+    [new SpawnError('pond did not answer'), 4],
+    [new SessionFailed('the session stopped to ask'), 5],
+    [new TimeoutError('no result'), 6],
   ];
-  for (const [options, code, stderr] of cases) {
-    assert.deepEqual(await handle('run', runRequest, fakeAdapter(options)), { code, stdout: '', stderr });
+  for (const [runError, code] of cases) {
+    assert.deepEqual(await handle('run', runRequest, fakeAdapter({ runError })), { code, stdout: '', stderr: `lets-delegate-pond: ${runError.message}\n` });
   }
 });
 
-test('a session refused while it waits is finished as ok, then exits 3', async () => {
-  const adapter = fakeAdapter({ waitError: new Refused('pond cannot run gpt-6.1-sol') });
-  const answer = await handle('run', runRequest, adapter);
-  assert.deepEqual(answer, { code: 3, stdout: '', stderr: 'lets-delegate-pond: pond cannot run gpt-6.1-sol (pad pad-1)\n' });
-  assert.deepEqual(adapter.calls.at(-1), ['finish', { h: { kind: 'pad', id: 'pad-1' }, ok: true, cwd: '/r' }]);
+test('an empty final message is exit 5, naming the session', async () => {
+  assert.deepEqual(await handle('run', runRequest, fakeAdapter({ text: ' \n' })), { code: 5, stdout: '', stderr: 'lets-delegate-pond: empty final message (pad pad-1)\n' });
 });
 
-test('a refused session that cannot be finished is a warning, and the exit stays 3', async () => {
-  const adapter = fakeAdapter({ waitError: new Refused('no such model'), finishError: new SpawnError('pond is gone') });
-  const answer = await handle('run', runRequest, adapter);
-  assert.equal(answer.code, 3);
-  assert.equal(answer.stderr, 'lets-delegate-pond: could not finish pad pad-1: pond is gone\nlets-delegate-pond: no such model (pad pad-1)\n');
+test('a refused run leaves the cleanup to the adapter', async () => {
+  const adapter = fakeAdapter({ runError: new Refused('pond cannot run gpt-6.1-sol') });
+  await handle('run', runRequest, adapter);
+  assert.deepEqual(adapter.calls.map(([call]) => call), ['run']);
 });
 
 test('a malformed request is exit 2', async () => {

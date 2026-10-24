@@ -324,61 +324,90 @@ When `discovery.md` exists and no run is in progress:
 
 ## Glossary handoff
 
-Compare this run's owned glossary paths and checkpoints with its starting
-baseline, including recovered checkpoints on resume. Unrelated changes do
-not count. If no glossary edits were made, use the ordinary handoff without
-a glossary-specific PR question. Otherwise ask who carries the edits, not
-whether the accepted meanings are accepted again:
+Work through these steps in order. "You" is the agent; "the user" is the
+person shaping with you.
 
-- For one story, offer its build branch and PR, or a documentation PR if the
-  user stops after shaping. Do not create that PR unless they choose it.
-- For definitions shared by several stories, offer one selected story's PR
-  or a documentation PR that lands first. Select exactly one owner; do not
-  copy the edits into competing PRs or automatically stack independent work.
-- When shaping on a change branch splits another story, definitions stay in
-  the original change's separate glossary commit unless the user selects a
-  safe alternative. Record that original issue and PR as owner when the
-  split needs those definitions. The ownership question still applies.
+### Decide whether to ask
 
-Extend **Glossary handoff** in the owner issue or shaping parent with the
-selected owner issue/PR, affected paths, base, remote URL/branch, complete
-ordered checkpoint range and publication state. Reference this record from
-every affected packet's **Depends on** section; do not duplicate definitions
-in issue bodies. Record a pending ownership choice explicitly if the user
-stops before choosing. Such work remains an unresolved prerequisite.
+1. Compare this run's owned glossary paths and checkpoints with the
+   starting baseline. Include checkpoints you recovered on resume. Ignore
+   unrelated changes.
+2. If this run made no glossary edits, use the ordinary handoff. Ask no
+   glossary question, and skip the rest of this section.
 
-For a documentation PR, confirm its concrete issue and PR content with the
-user. Create a separate Chore issue with a one-line documentation outcome,
-Kind Chore, Priority and Size, assigned to the current user and Status
-In Progress. Use the Project operations above and `gh issue edit <i>
---add-assignee @me`; do not leave this Chore Todo for another build to pick.
-If assignment or a field update fails, report the incomplete setup and do
-not call the route ready. Resume setup on the same issue, never duplicate it.
-Use the verified glossary-only holding branch (or transfer its owned commits
-to a clean documentation branch) and open a PR with `Closes #<chore>`.
-Never close the implementation story or unfinished parent through that PR.
+### Ask who carries the edits
 
-This glossary documentation PR is a narrow shaping-output exception: it
-creates no OpenSpec implementation change. It still uses separate `docs:`
-commits, the project's checks before push, normal applicable finishing
-rules, and user-owned merge. Never commit to the default branch or merge it
-without the user's instruction. An existing change branch containing code
-cannot become the documentation PR; isolate only verified glossary commits.
+3. Ask the user which pull request carries the edits. Do not ask again
+   whether the meanings are accepted.
+   - For one story, offer its build branch and pull request, or a
+     documentation pull request if the user stops after shaping. Create
+     that pull request only if the user chooses it.
+   - For definitions several stories share, offer one story's pull
+     request, or a documentation pull request that lands first.
+4. Pick exactly one owner. Never copy the edits into other pull requests,
+   and never stack independent work automatically.
+5. If you are shaping on a change branch and split off another story, the
+   definitions stay in the original change's glossary commit, unless the
+   user picks a safe alternative. When the split story needs them, record
+   the original issue and pull request as the owner. Step 3 still applies.
 
-Ask for confirmation before adding the owner issue as a `blocked by` link
-to each other story requiring its unmerged definitions. Use the existing
-issue dependency operation, `gh issue edit <dependent> --add-blocked-by <owner>`,
-on each dependent story, never just the parent
-or a relates-to link. If the user declines links, keep **Depends on** explicit:
-owner, required definitions and unresolved prerequisite. Do not declare the
-dependent story ready; build's preclaim glossary check must still stop it.
-Independent stories can use those definitions once their owning PR merges.
+### Record the choice
 
-Restore owned paths to baseline as described above before normal build.
-Keep the storage branch until the destination safely contains its edits.
-After transfer, record destination branch, commits and PR in the issue's
-handoff. An unpublished or missing checkpoint is a limitation to resolve,
-not permission to recreate competing definitions in a later checkout.
+6. In the owner issue, or the shaping parent, extend **Glossary handoff**
+   with: the owner issue and pull request, the affected paths, the base,
+   the remote URL and branch, the full ordered checkpoint range, and
+   whether it is published.
+7. In each affected packet, point **Depends on** at that record. Never
+   copy definitions into issue bodies.
+8. If the user stops before choosing an owner, record that the choice is
+   pending. The work stays an unresolved prerequisite.
+
+### Set up a documentation pull request
+
+Only when the user chose a documentation pull request:
+
+9. Confirm the issue and the pull request content with the user.
+10. Create a Chore issue with a one-line documentation outcome. Set Kind
+    Chore, a Priority and a Size with the Project operations above, run
+    `gh issue edit <i> --add-assignee @me`, and set Status In Progress.
+    Never leave it Todo for another build to pick.
+11. If the assignment or a field update fails, tell the user the setup is
+    incomplete, and do not call it ready. Resume on the same issue. Never
+    create a second one.
+12. Use the verified glossary-only holding branch, or move its owned
+    commits to a clean documentation branch. Open the pull request with
+    `Closes #<chore>`. It never closes the implementation story or an
+    unfinished parent.
+13. This pull request creates no OpenSpec change. It still uses separate
+    `docs:` commits, runs the project's checks before you push, follows
+    the finishing rules that apply, and leaves the merge to the user.
+    Never commit to the default branch. A change branch that holds code
+    cannot become this pull request; take only the verified glossary
+    commits.
+
+### Link the blocked stories
+
+14. Ask the user before you add blockers. Then, on each other story that
+    needs the unmerged definitions, run
+    `gh issue edit <dependent> --add-blocked-by <owner>`. Never put the
+    blocker only on the parent, and never use a "relates to" link.
+15. If the user declines the links, make the dependent story's
+    **Depends on** name the owner, the definitions it needs and the
+    unresolved prerequisite. Do not call the story ready. Build's
+    glossary check must still stop it.
+16. Independent stories can use the definitions once the owner's pull
+    request merges.
+
+### Hand over
+
+17. Restore the owned paths to the baseline, as
+    [Preserve glossary edits between sessions](#preserve-glossary-edits-between-sessions)
+    says, before normal build. Keep the holding branch until the
+    destination holds its edits. After the transfer, record the
+    destination branch, commits and pull request in the issue's
+    **Glossary handoff**.
+18. If a checkpoint is unpublished or missing, resolve that first. It
+    never permits writing competing definitions in another checkout.
 
 ## Handing off to lets-build
 

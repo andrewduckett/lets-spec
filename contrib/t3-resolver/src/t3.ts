@@ -20,9 +20,9 @@
 //   finished run without holding a subscription open.
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
-import { Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
+import { exitCodeOf, Refused, SessionFailed, SpawnError } from 'resolver-kit/errors.ts';
 import { withEffort, withoutEffort } from 'resolver-kit/families.ts';
-import type { Adapter, Session, SpawnRequest } from 'resolver-kit/adapter.ts';
+import type { Adapter, RunInput, StartInput } from 'resolver-kit/adapter.ts';
 import type { Db, Io } from 'resolver-kit/io.ts';
 import { FAMILIES } from 'resolver-kit/protocol.ts';
 import type { Effort, Family, Handle, ModelString } from 'resolver-kit/protocol.ts';
@@ -342,6 +342,64 @@ export function createAdapter(io: Io): Adapter {
     return runtime;
   }
 
+  // Launch a thread for the request. A read-only one is in plan mode; a null
+  // effort is a start's, which t3ModelSelection leaves to the model.
+  async function launchThread({ name, prompt, cwd, family, model }: StartInput, { readOnly, effort }: { readOnly: boolean; effort: Effort | null }): Promise<Handle> {
+    const { origin } = runningServer();
+    // The main checkout, even when cwd is a linked worktree.
+    const repoRoot = resolve(await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']), '..');
+    const project = withDb((db) => findProject(db, repoRoot));
+    const branch = (await git(cwd, ['branch', '--show-current'])) || null;
+    // A null model is the provider's default; with none, t3 picks its own.
+    const manifest = model === null ? readManifest() : null;
+    const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: !readOnly }));
+    const modelSelection = t3ModelSelection({ family, model: chosen, effort });
+    const token = await readToken(io);
+    const { threadId } = await launch(io, { origin, token }, buildLaunch({
+      threadId: randomUUID(),
+      projectId: project.project_id,
+      title: name,
+      text: prompt,
+      modelSelection,
+      interactionMode: readOnly ? 'plan' : 'default',
+      branch,
+    }));
+    // origin is for people to read: finish sends the token only to the
+    // running server, never to the origin a handle names.
+    return { kind: 'thread', id: threadId, origin };
+  }
+
+  async function archive(handle: Handle): Promise<void> {
+    const { origin } = runningServer();
+    await dispatch(io, { origin, token: await readToken(io) }, { type: 'thread.archive', commandId: randomUUID(), threadId: handle.id });
+  }
+
+  // Wait for the thread's run to end, and read its final message.
+  async function waitForText(handle: Handle, timeoutMs: number): Promise<{ text: string }> {
+    // Open the database fresh on each check: the server writes it, and a
+    // long-lived handle can see stale state.
+    const check = () => withDb((db) => {
+      const run = readRun(db, handle.id);
+      if (run === null) return undefined;
+      if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
+      // A run that failed before any message is a refusal, such as a model
+      // the account cannot run. run then archives the thread.
+      if (run.status === 'failed') {
+        const failure = run.failure ?? 'run failed';
+        throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
+      }
+      if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
+      if (run.status !== 'completed') return undefined;
+      // A completed run with no message yet is one with none at all; the
+      // resolver rejects the empty text. One still streaming will finish.
+      const message = readFinalMessage(db, run.id);
+      if (message === null) return { text: '' };
+      if (message.streaming) return undefined;
+      return { text: message.text };
+    });
+    return pollUntil(check, { intervalMs: POLL_MS, timeoutMs, now: io.now, sleep: io.sleep });
+  }
+
   return {
     name: 't3',
     program: 'lets-delegate-t3',
@@ -353,64 +411,41 @@ export function createAdapter(io: Io): Adapter {
       return runtime !== null && io.processAlive(runtime.pid) && isAncestor(io, runtime.pid);
     },
 
-    async options() {
+    async options(warn) {
       const manifest = readManifest();
-      return manifest === null ? [] : optionsFromT3Manifest(manifest);
+      if (manifest === null) {
+        warn(`T3 has no model manifest at ${manifestPath()}, so it lists no models`);
+        return [];
+      }
+      return optionsFromT3Manifest(manifest);
     },
 
-    async spawn({ kind, name, prompt, cwd, family, model, effort, readOnly }: SpawnRequest): Promise<Session> {
-      const { origin } = runningServer();
-      // The main checkout, even when cwd is a linked worktree.
-      const repoRoot = resolve(await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']), '..');
-      const project = withDb((db) => findProject(db, repoRoot));
-      const branch = (await git(cwd, ['branch', '--show-current'])) || null;
-      // A null model is the provider's default; with none, t3 picks its own.
-      const manifest = model === null ? readManifest() : null;
-      const chosen = model ?? (manifest === null ? null : defaultModel(manifest, family, { keepEffort: kind === 'start' }));
-      const modelSelection = t3ModelSelection({ family, model: chosen, effort });
-      const token = await readToken(io);
-      const { threadId } = await launch(io, { origin, token }, buildLaunch({
-        threadId: randomUUID(),
-        projectId: project.project_id,
-        title: name,
-        text: prompt,
-        modelSelection,
-        interactionMode: readOnly ? 'plan' : 'default',
-        branch,
-      }));
-      return { handle: { kind: 'thread', id: threadId, origin } };
-    },
-
-    async waitForResult({ handle }, { timeoutMs }) {
-      // Open the database fresh on each check: the server writes it, and a
-      // long-lived handle can see stale state.
-      const check = () => withDb((db) => {
-        const run = readRun(db, handle.id);
-        if (run === null) return undefined;
-        if (run.pendingRequests > 0 || run.status === 'waiting') throw new SessionFailed('the session stopped to ask');
-        // A run that failed before any message is a refusal, such as a model
-        // the account cannot run. The kit then archives the thread.
-        if (run.status === 'failed') {
-          const failure = run.failure ?? 'run failed';
-          throw readFinalMessage(db, run.id) === null ? new Refused(failure) : new SessionFailed(failure);
+    async run({ effort, ...input }: RunInput, { timeoutMs }) {
+      // An error before the thread exists passes through: there is nothing
+      // to archive or name.
+      const handle = await launchThread(input, { readOnly: true, effort });
+      try {
+        return { handle, ...(await waitForText(handle, timeoutMs)) };
+      } catch (error) {
+        if (error instanceof Refused) {
+          // Nothing ran, so the thread goes, as finish with ok would do.
+          await archive(handle).catch((why: Error) => {
+            error.message += `; could not archive it: ${why.message}`;
+          });
         }
-        if (run.status === 'interrupted' || run.status === 'cancelled' || run.status === 'rolled_back') throw new SessionFailed(`run ${run.status.replace('_', ' ')}`);
-        if (run.status !== 'completed') return undefined;
-        // A completed run with no message yet is one with none at all; the
-        // resolver rejects the empty text. One still streaming will finish.
-        const message = readFinalMessage(db, run.id);
-        if (message === null) return { text: '' };
-        if (message.streaming) return undefined;
-        return { text: message.text };
-      });
-      return pollUntil(check, { intervalMs: POLL_MS, timeoutMs, now: io.now, sleep: io.sleep });
+        // A kit error names the thread, so a person can find it.
+        if (error instanceof Error && exitCodeOf(error) !== null) error.message += ` (thread ${handle.id})`;
+        throw error;
+      }
+    },
+
+    async start(input: StartInput) {
+      return launchThread(input, { readOnly: false, effort: null });
     },
 
     // Archives the thread on ok. A failure throws, and the resolver reports it.
     async finish(handle: Handle, ok: boolean) {
-      if (!ok) return;
-      const { origin } = runningServer();
-      await dispatch(io, { origin, token: await readToken(io) }, { type: 'thread.archive', commandId: randomUUID(), threadId: handle.id });
+      if (ok) await archive(handle);
     },
   };
 }

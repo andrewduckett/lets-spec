@@ -8,7 +8,7 @@ import { Command, CommanderError, InvalidArgumentError, Option } from 'commander
 import { run as handoff } from './delegate/handoff.ts';
 import type { HandoffOptions } from './delegate/handoff.ts';
 import { run as instructions } from './delegate/instructions.ts';
-import { EFFORTS, FAMILIES, parseModel } from './delegate/protocol.ts';
+import { EFFORTS, FAMILIES, parseModel } from 'resolver-kit/protocol.ts';
 import { run as review } from './delegate/review.ts';
 import type { ReviewOptions } from './delegate/review.ts';
 import { STRATEGIES } from './delegate/strategies.ts';
@@ -95,9 +95,10 @@ Run lets delegate from the repo root.`;
 
 const REVIEW_HELP = `
 stdout: the session's final message.
-stderr: one JSON line with resolver, family, model, independent, handle,
-gitClean and durationSeconds. independent is true when the family that
-answered is not the source family.
+stderr: one JSON line with for, resolver, family, model, independent,
+handle, gitClean and durationSeconds. for is the intent --for gave.
+independent is true when the family that answered is not the source
+family.
 
 --model may be given more than once, best first. When the resolver
 refuses a model, lets sends the next one to the same resolver.
@@ -245,7 +246,7 @@ strategyCommand('review', 'run a prompt in a fresh, read-only session and wait f
   .addOption(modelOption())
   .option('--timeout-minutes <minutes>', 'how long to wait (default: 15, or 45 with --effort high)', wholeMinutes)
   .addHelpText('after', REVIEW_HELP)
-  .action(async ({ model, for: _intent, ...options }: Omit<ReviewOptions, 'models'> & { model: string[]; for: Intent }) => {
+  .action(async ({ model, ...options }: Omit<ReviewOptions, 'models'> & { model: string[] }) => {
     process.exitCode = await review({ ...options, models: model }, realDeps());
   });
 

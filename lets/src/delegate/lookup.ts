@@ -4,14 +4,12 @@
 // stands in for the chain. The first that does not decline answers. Nothing
 // is looked up on PATH. No process access here; everything comes through io.
 import { join, resolve as resolvePath } from 'node:path';
-import type { Child, Io } from '../io.ts';
+import type { Deps, Io } from '../io.ts';
 import { configPath, SUBAGENT_ENTRY } from './config.ts';
 import type { Config } from './config.ts';
-import type { Env } from './env.ts';
-import { ContractError, EXIT, SpawnError, UsageError } from './errors.ts';
-import { DECLINE, exitFor, parseResponse } from './protocol.ts';
-import type { Requests, Responses, Verb } from './protocol.ts';
-import { withTimeout } from './wait.ts';
+import { ContractError, EXIT, UsageError } from 'resolver-kit/errors.ts';
+import { DECLINE, exitFor, parseResponse } from 'resolver-kit/protocol.ts';
+import type { Requests, Responses, Verb } from 'resolver-kit/protocol.ts';
 
 // The default resolver, relative to the folder lets runs from.
 export const DEFAULT_RESOLVER = 'contrib/lets-delegate-subagent';
@@ -31,7 +29,7 @@ export type Outcome<V extends Verb> = { code: number; response: Responses[V] | n
 
 // config: the user's delegate config, or null when there is none.
 // packageRoot: the folder lets runs from. nodePath: the Node that runs lets.
-export type LookupDeps = { env: Env; io: Io; cwd: string; config: Config | null; packageRoot: string; nodePath: string };
+export type LookupDeps = Pick<Deps, 'env' | 'io' | 'packageRoot' | 'nodePath'> & { cwd: string; config: Config | null };
 
 // The resolvers to ask, in order. Throws a UsageError when LETS_SPEC_RESOLVER
 // names a file that is missing or that this process cannot run.
@@ -62,13 +60,8 @@ export async function callResolver<V extends Verb>(
   // name, not command, in messages: the default's command is Node.
   const { name, command, args = [] } = candidate;
   const failed = (code: number, stderr: string) => ({ code, response: null, stderr });
-  const started: { child?: Child } = {};
-  const finished = io.execFile(command, [...args, verb], {
-    cwd: request.cwd, input: JSON.stringify(request), started: (child) => { started.child = child; },
-  });
-  const result = await withTimeout(io, finished, timeoutMs);
-  if (result === null) {
-    started.child?.kill();
+  const result = await io.execFile(command, [...args, verb], { cwd: request.cwd, input: JSON.stringify(request), timeoutMs });
+  if (result.timedOut) {
     const wait = timeoutMs >= 60000 ? `${Math.round(timeoutMs / 60000)} minutes` : `${Math.round(timeoutMs / 1000)} seconds`;
     return failed(EXIT.timeout, `${name} did not answer ${verb} in ${wait}, so it was stopped.`);
   }
@@ -95,25 +88,24 @@ export function timeoutFor<V extends Verb>(verb: V, request: Requests[V]): numbe
 
 // Why lets cannot use its own default resolver. lets ships it, so a missing
 // or broken one means the install is broken, not the user's setup.
-const incompleteInstall = (problem: 'find' | 'run', path: string) =>
-  `lets cannot ${problem} its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
+const incompleteInstall = (path: string) =>
+  `lets cannot run its default resolver at ${path}, so this lets install is incomplete. Reinstall lets.`;
 
 // Ask each candidate in turn. Answers with the one that did not decline, so
 // the caller can send finish to the same resolver. Throws a UsageError when
 // it reaches a listed resolver that is missing or cannot be run, or when
-// every resolver declines, and a SpawnError when the default is missing.
+// every resolver declines.
 export async function resolve<V extends Verb>(verb: V, request: Requests[V], deps: LookupDeps) {
   for (const candidate of candidates(deps)) {
     if (candidate.listed && !deps.io.isExecutable(candidate.command)) {
       throw new UsageError(`${configPath(deps)} lists the resolver ${candidate.command}, which does not exist or is not an executable file.`);
     }
-    if (candidate.builtIn && !deps.io.exists(candidate.name)) throw new SpawnError(incompleteInstall('find', candidate.name));
     const outcome = await callResolver(candidate, verb, request, { io: deps.io, timeoutMs: timeoutFor(verb, request) });
     // The default answers 0 or 3, and never declines. Anything else means
     // it could not run.
     if (candidate.builtIn && (outcome === null || (outcome.code !== EXIT.ok && outcome.code !== EXIT.noSession))) {
       const stderr = outcome === null ? 'it declined' : outcome.stderr;
-      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall('run', candidate.name)}\n${stderr}` } };
+      return { candidate, outcome: { code: EXIT.spawn, response: null, stderr: `${incompleteInstall(candidate.name)}\n${stderr}` } };
     }
     if (outcome !== null) return { candidate, outcome };
   }
@@ -132,7 +124,6 @@ export async function resolve<V extends Verb>(verb: V, request: Requests[V], dep
 export async function resolveWithModels<V extends 'run' | 'start'>(
   verb: V, requestFor: (model: string) => Requests[V], models: string[], deps: LookupDeps,
 ) {
-  if (models.length === 0) throw new UsageError('give at least one model');
   const refusals: string[] = [];
   const refused = (model: string, stderr: string) => refusals.push(`${model}: ${stderr.trim().split('\n').at(-1) || 'refused'}`);
   let [model] = models;

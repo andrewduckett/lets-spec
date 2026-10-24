@@ -3,14 +3,13 @@
 // review skills' subagent step, and a handoff hands the prompt back.
 import { join } from 'node:path';
 import { Refused } from 'resolver-kit/errors.ts';
+import { SCRATCH } from 'resolver-kit/io.ts';
 import type { Io } from 'resolver-kit/io.ts';
 import type { Request, Response, StartRequest, Verb } from 'resolver-kit/protocol.ts';
 import type { AnswerFn } from 'resolver-kit/verbs.ts';
 
 export const PROGRAM = 'lets-delegate-subagent';
 const RESOLVER = 'subagent';
-// Relative to the repo root. The instructions name it this way.
-const SCRATCH = '.workspace/lets-delegate';
 
 export function createAnswer(io: Io): AnswerFn {
   const promptFile = (name: string) => `${SCRATCH}/${name}.prompt.md`;

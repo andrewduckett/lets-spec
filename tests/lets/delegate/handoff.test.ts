@@ -81,17 +81,6 @@ test('with lets\'s own default missing, a handoff is exit 4 and writes no prompt
   assert.equal(t.repoFile('.workspace/lets-delegate/fix-login.prompt.md'), null);
 });
 
-test('the default\'s handoff instructions are the same whichever CLIs are on PATH, and name none', async () => {
-  const answer = async (commands: string[]) => {
-    const t = commandDeps({ resolver: false, commands });
-    assert.equal(await run(options, t.deps), 0);
-    return JSON.parse(t.stdout()).instructions as string;
-  };
-  const withClis = await answer(['claude', 'codex', 'agy']);
-  assert.equal(withClis, await answer([]));
-  assert.doesNotMatch(withClis, /\b(claude|codex|agy)\b/);
-});
-
 test('a null handle with no instructions is exit 4', async () => {
   const t = commandDeps({ settings: { FAKE_RESOLVER_STDOUT_START: '{"resolver":"fake","handle":null}' } });
   assert.equal(await run(options, t.deps), 4);

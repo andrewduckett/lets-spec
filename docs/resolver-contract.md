@@ -16,7 +16,8 @@ This page covers:
 - [Write your own](#write-your-own)
 
 The code that checks the contract is
-[`lets/src/delegate/protocol.ts`](../lets/src/delegate/protocol.ts).
+[`contrib/resolver-kit/src/protocol.ts`](../contrib/resolver-kit/src/protocol.ts).
+The resolver kit owns it, and `lets` imports it from there.
 
 ## How `lets` finds a resolver
 
@@ -36,6 +37,12 @@ With no config, the default takes the place of the chain. The default,
 it from `contrib/lets-delegate-subagent` beside itself with its own Node,
 and it answers as `subagent`. When that file is missing or Node cannot run
 it, `lets` exits 4 and says its install is incomplete.
+
+The default starts no session, and picks no model family. For a review,
+it runs nothing: `lets delegate review run` exits 3, and the review skill
+runs a subagent. For a handoff, it writes the prompt to
+`.workspace/lets-delegate/<name>.prompt.md`, and gives back the prompt
+and that path for you to start any agent in the repository with.
 
 `lets` asks nothing it finds on `PATH`. When every resolver declines,
 `lets` exits 2 and names the config file.
@@ -144,7 +151,7 @@ exit 3. For `gemini`, `run` adds the effort to the model, as
 - **Do not pass on the caller's session markers.** A session you start
   must not think it is a child of the one that called `lets`. The list is
   `SESSION_MARKERS` in
-  [`lets/src/delegate/env.ts`](../lets/src/delegate/env.ts).
+  [`contrib/resolver-kit/src/env.ts`](../contrib/resolver-kit/src/env.ts).
 
 ## Write your own
 
@@ -161,58 +168,10 @@ resolvers:
 
 To try one without changing the config, point `LETS_SPEC_RESOLVER` at it.
 
-Here is a complete one in `sh`,
-[`contrib/headless-resolver`](../contrib/headless-resolver). It runs `claude`
+[`contrib/headless-resolver`](../contrib/headless-resolver) is a complete
+one in `sh`, to copy from. It runs `claude`
 headless and read-only. It declines `start`, and it declines a probe
 for `start`, so the default, `lets-delegate-subagent`, handles handoffs.
-
-```sh
-#!/bin/sh
-# A complete lets delegate resolver: run sends the prompt to claude, headless
-# and read-only. It needs jq, and claude for run. It issues no handles, and
-# leaves the timeout to lets, which stops it a minute after timeoutMinutes.
-# The contract: docs/resolver-contract.md
-# Check it with: lets delegate verify contrib/headless-resolver
-
-request=$(cat)
-if ! printf '%s' "$request" | jq -e '.protocol == 2' >/dev/null 2>&1; then
-  echo "headless-resolver: not a protocol 2 request" >&2; exit 2
-fi
-field() { printf '%s' "$request" | jq -r ".$1"; }
-
-case "$1" in
-  probe)
-    # It declines start, so it declines a probe for start too, and the
-    # handoff probes the next resolver in the chain.
-    [ "$(field verb)" = start ] && { echo "headless-resolver: this resolver only runs headless" >&2; exit 75; }
-    echo '{"resolver":"headless-sh","options":["claude"]}' ;;
-  run)
-    model=$(field model)
-    case "$model" in
-      claude) id='' ;;
-      claude/?*) id=${model#claude/} ;;
-      gpt | gpt/?* | gemini | gemini/?*) echo "headless-resolver: this resolver runs only claude, not $model" >&2; exit 3 ;;
-      *) echo "headless-resolver: the request's model must be <family> or <family>/<model>, got $model" >&2; exit 2 ;;
-    esac
-    command -v claude >/dev/null || { echo "headless-resolver: claude is not on PATH" >&2; exit 3; }
-    cd "$(field cwd)" || exit 2
-    # The new session must not think it is a child of the one that called lets.
-    unset CLAUDECODE CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_SESSION_ID CLAUDE_CODE_BRIDGE_SESSION_ID \
-      CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_ENTRYPOINT CLAUDE_PID CLAUDE_EFFORT
-    # A bare family passes no --model, so claude runs its default.
-    if ! text=$(field prompt | claude -p --permission-mode plan --effort "$(field effort)" ${id:+--model "$id"}); then
-      # Nothing printed: claude said no before the model answered.
-      [ -n "$text" ] || { echo "headless-resolver: claude refused $model" >&2; exit 3; }
-      exit 5
-    fi
-    [ -n "$text" ] || { echo "headless-resolver: claude gave an empty answer" >&2; exit 5; }
-    jq -cn --arg text "$text" --arg model "$id" \
-      '{resolver: "headless-sh", family: "claude", model: (if $model == "" then null else $model end), text: $text}' ;;
-  start) echo "headless-resolver: this resolver only runs headless" >&2; exit 75 ;;
-  finish) ;; # It issues no handles, so it has nothing to finish.
-  *) echo "headless-resolver: unknown verb $1" >&2; exit 2 ;;
-esac
-```
 
 It leaves out one rule: it does not stop `claude` at `timeoutMinutes`.
 Yours should.

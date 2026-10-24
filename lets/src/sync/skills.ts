@@ -62,7 +62,7 @@ function unshipped(paths: { dst: string }[], root: string, io: Io) {
 // Make the project's managed paths match the release. Returns how many
 // files it wrote and which paths it removed. In the ignored mode git
 // ignores the copies, so there is nothing to commit.
-export function syncSkills({ release, schemaName: _schemaName, root, mode = 'committed', io, stdout }: { release: string; schemaName: string; root: string; mode?: 'committed' | 'ignored'; io: Io; stdout: (text: string) => void }) {
+export function syncSkills({ release, root, mode = 'committed', io, stdout }: { release: string; root: string; mode?: 'committed' | 'ignored'; io: Io; stdout: (text: string) => void }) {
   const paths = releasePaths({ release, io });
   let written = 0;
 
@@ -103,7 +103,7 @@ export function syncSkills({ release, schemaName: _schemaName, root, mode = 'com
 }
 
 // One line per managed file that differs, is missing or is extra.
-export function checkSkills({ release, schemaName: _schemaName, root, io }: { release: string; schemaName: string; root: string; io: Io }) {
+export function checkSkills({ release, root, io }: { release: string; root: string; io: Io }) {
   const paths = releasePaths({ release, io });
   return [...paths.flatMap((path) => staleFiles(path, root, io)), ...unshipped(paths, root, io)]
     .map((path) => `lets-spec: ${path} is out of date. Run lets sync, then commit it.`);

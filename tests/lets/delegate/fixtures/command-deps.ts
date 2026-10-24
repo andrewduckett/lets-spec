@@ -9,7 +9,6 @@
 //   gitBefore: what `git status -z` prints before the session
 //   gitAfter:  what it prints after; default gitBefore
 //   gitAfterFails: true when `git status` fails after the session
-//   commands:  the commands on PATH
 //   executables: more paths that are executable files, beside the fake
 //              resolver; they answer from results when run
 //   results:   answers for any other command, in order
@@ -38,7 +37,6 @@ type Options = {
   gitBefore?: string;
   gitAfter?: string;
   gitAfterFails?: boolean;
-  commands?: string[];
   executables?: string[];
   results?: ExecResult[];
   files?: Record<string, string>;
@@ -47,7 +45,7 @@ type Options = {
 };
 
 export function commandDeps({
-  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, gitAfterFails = false, commands = [], executables = [], results = [],
+  resolver = true, settings = {}, gitBefore = '', gitAfter = gitBefore, gitAfterFails = false, executables = [], results = [],
   files = { [PROMPT_FILE]: 'PROMPT TEXT' }, config, subagent = true,
 }: Options = {}) {
   const log = join(mkdtempSync(join(tmpdir(), 'lets-delegate-')), 'calls');
@@ -55,9 +53,7 @@ export function commandDeps({
   const repo = realpathSync(mkdtempSync(join(tmpdir(), 'lets-delegate-repo-')));
   const real = realIo();
   const all = { ...files, ...(config === undefined ? {} : { [CONFIG]: config }), ...(subagent ? { [SUBAGENT]: '' } : {}) };
-  const io = fakeIo({ files: all, commands, executables: [FAKE_RESOLVER, ...executables] });
-  // The fake resolver is a real process, so its deadlines are real too.
-  io.sleep = real.sleep;
+  const io = fakeIo({ files: all, executables: [FAKE_RESOLVER, ...executables] });
   let statusCalls = 0;
   io.execFile = async (cmd, args, opts = {}) => {
     io.calls.push([cmd, args, opts]);
@@ -70,11 +66,12 @@ export function commandDeps({
       return real.execFile(cmd, args, { ...opts, cwd: undefined, env: { ...process.env, FAKE_RESOLVER_LOG: log, ...settings } });
     }
     if (cmd === NODE && args[0] === SUBAGENT) {
+      // As Node answers when the script it is given does not exist.
+      if (!io.exists(SUBAGENT)) return { stdout: '', stderr: `Error: Cannot find module '${SUBAGENT}'`, code: 1 };
       const request = { ...JSON.parse(opts.input!), cwd: repo };
       const result = await real.execFile(process.execPath, [SUBAGENT_SOURCE, ...args.slice(1)], { ...opts, cwd: repo, input: JSON.stringify(request) });
       return { ...result, stdout: result.stdout.replaceAll(repo, '/repo') };
     }
-    opts.started?.({ pid: 4242, kill: () => io.killed.push(4242) });
     return results.shift() ?? { stdout: '', stderr: '', code: 0 };
   };
 

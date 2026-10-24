@@ -7,7 +7,7 @@ work.
 | You work in | A review runs as | A handoff starts |
 |---|---|---|
 | T3 Code | A new thread, archived when the review succeeds | A new thread in the sidebar |
-| Anything else | It declines, and the default, `lets-delegate-subagent`, answers | It declines, and the default, `lets-delegate-subagent`, answers |
+| Anything else | It declines, and the next resolver in your config answers | It declines, and the next resolver in your config answers |
 
 It counts as inside T3 Code only when the running T3 server started it,
 through any number of parent processes. A terminal outside T3 Code

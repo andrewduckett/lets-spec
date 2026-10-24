@@ -4,9 +4,8 @@
 // does not know are ignored, so a later lets can add one beside them.
 import { dirname, isAbsolute, join } from 'node:path';
 import { parse } from 'yaml';
-import type { Io } from '../io.ts';
-import type { Env } from './env.ts';
-import { UsageError } from './errors.ts';
+import type { Deps, Io } from '../io.ts';
+import { UsageError } from 'resolver-kit/errors.ts';
 
 export const CONFIG_VERSION = 2;
 // The entry in the chain that names the default, lets-delegate-subagent,
@@ -18,7 +17,7 @@ export const SUBAGENT_ENTRY = 'subagent';
 // through guidanceFor, so a bad entry never stops a run.
 export type Config = { version: typeof CONFIG_VERSION; resolvers: string[]; delegations?: unknown };
 
-export type ConfigDeps = { env: Env; io: Io };
+export type ConfigDeps = { env: Deps['env']; io: Io };
 
 // $XDG_CONFIG_HOME/lets-delegate/config.yaml, or ~/.config/... when it is unset.
 export function configPath({ env, io }: ConfigDeps): string {

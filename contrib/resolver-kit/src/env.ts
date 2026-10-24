@@ -1,6 +1,3 @@
-// The kit's own. It began as a copy of lets/src/delegate/env.ts,
-// which lets no longer needs, so the two may differ.
-
 // The variables that tie a process to the session that started it. A new
 // session must not inherit them, or it would think it is a child session.
 

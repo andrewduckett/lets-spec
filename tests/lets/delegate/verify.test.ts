@@ -55,6 +55,19 @@ test('the live part runs, checks the tree, finishes, and starts', async () => {
   assert.match(t.output(), /it started fake f-1; close it when you are done/);
 });
 
+test('a resolver that runs past its deadline fails the check, saying it was stopped', async () => {
+  const t = setup();
+  const execFile = t.deps.io.execFile;
+  t.deps.io = {
+    ...t.deps.io,
+    execFile: (cmd, args, opts = {}) => (args.at(-1) === 'probe'
+      ? Promise.resolve({ stdout: '', stderr: '', code: 1, timedOut: true })
+      : execFile(cmd, args, opts)),
+  };
+  assert.equal(await run({ command: [fixture('fake-resolver')], live: false }, t.deps), 1);
+  assert.match(t.output(), /^FAIL {2}probe answers.*: it did not exit: no answer in 60 seconds, so it was stopped$/m);
+});
+
 test('a probe answer without options fails the probe check, naming options', async () => {
   const t = setup({ FAKE_RESOLVER_STDOUT_PROBE: '{"resolver":"x"}' });
   assert.equal(await run({ command: [fixture('fake-resolver')], live: false }, t.deps), 1);

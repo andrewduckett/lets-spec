@@ -158,6 +158,23 @@ test('handoff --help names instructions and run', async () => {
   assert.match(stdout, /^ {2}run\b/m);
 });
 
+test('review run records its --for first in the metadata line on stderr', async () => {
+  const r = repo();
+  const { code, stderr } = await letsIn(r, 'delegate', 'review', 'run', '--for', 'plan', '--name', 'x', '--prompt-file', 'p.md',
+    '--source-family', 'claude', '--effort', 'low', '--model', 'gpt');
+  assert.equal(code, 0, stderr);
+  const line = stderr.trim().split('\n').at(-1)!;
+  assert.ok(line.startsWith('{"for":"plan",'), line);
+  assert.deepEqual(Object.keys(JSON.parse(line)), ['for', 'resolver', 'family', 'model', 'independent', 'handle', 'gitClean', 'durationSeconds']);
+});
+
+test('handoff run prints the resolver\'s response unchanged, without for', async () => {
+  const r = repo();
+  const { code, stdout } = await letsIn(r, 'delegate', 'handoff', 'run', '--for', 'apply', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(stdout).for, undefined);
+});
+
 test('a run without --for is a usage error that names it, and asks no resolver', async () => {
   const r = repo();
   const { code, stderr } = await letsIn(r, 'delegate', 'handoff', 'run', '--name', 'build-x', '--prompt-file', 'p.md', '--model', 'claude');

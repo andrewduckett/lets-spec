@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { Refused, SessionFailed, SpawnError } from '../../contrib/resolver-kit/src/errors.ts';
+import { Refused, SessionFailed, SpawnError, TimeoutError } from '../../contrib/resolver-kit/src/errors.ts';
 import type { Db } from '../../contrib/resolver-kit/src/io.ts';
 import {
   baseDir, buildLaunch, createAdapter, dispatch, findProject, isAncestor, launch, readFinalMessage,
   optionsFromT3Manifest, readRun, readRuntime, readToken, t3ModelSelection, TOKEN_FILE,
 } from '../../contrib/t3-resolver/src/t3.ts';
-import type { SpawnRequest } from '../../contrib/resolver-kit/src/adapter.ts';
+import type { RunInput, StartInput } from '../../contrib/resolver-kit/src/adapter.ts';
 import { fakeIo } from '../resolver-kit/fixtures/fake-io.ts';
 
 const SCHEMA = readFileSync(new URL('./fixtures/t3-schema.sql', import.meta.url), 'utf8');
@@ -223,14 +223,16 @@ test('readFinalMessage returns the run\'s newest assistant message', () => {
   assert.deepEqual(readFinalMessage(shared(db), 'run-1'), { text: 'last', streaming: true });
 });
 
-// An adapter whose database is `db` and whose sleep runs the next step.
-function waitingAdapter(db: DatabaseSync, steps: (() => void)[]) {
-  return createAdapter(fakeIo({ env: {}, openDb: () => shared(db), sleep: async () => steps.shift()?.() }));
-}
 const HANDLE = { kind: 'thread', id: 'T', origin: ORIGIN };
-const SESSION = { handle: HANDLE };
 
-test('waitForResult waits for the run to complete and the message to stop streaming', async () => {
+// Run a session in thread T, whose state is db. Each sleep runs the next step.
+// t3 answers each request with the next status, and the log keeps what was sent.
+function running(db: DatabaseSync, steps: (() => void)[] = [], { timeoutMs = 60000, statuses = [200, 200], log = [] as Log } = {}) {
+  return createAdapter(launchingIo(db, log, { sleep: async () => steps.shift()?.(), statuses })).run(runInput, { timeoutMs });
+}
+const sentTypes = (log: Log) => log.filter(([what]) => what === 'send').map(([, frame]) => (frame as { payload: { type?: string } }).payload.type ?? 'launch');
+
+test('run waits for the run to complete and the message to stop streaming', async () => {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'running');
@@ -239,51 +241,75 @@ test('waitForResult waits for the run to complete and the message to stop stream
     () => db.exec("update orchestration_v2_projection_runs set status = 'completed'"),
     () => db.exec(`update orchestration_v2_projection_messages set payload_json = '{"text":"FINDINGS"}', streaming = 0`),
   ];
-  assert.deepEqual(await waitingAdapter(db, steps).waitForResult(SESSION, { timeoutMs: 60000 }), { text: 'FINDINGS' });
+  assert.deepEqual(await running(db, steps), { handle: HANDLE, text: 'FINDINGS' });
   assert.equal(steps.length, 0);
 });
-test('waitForResult refuses a run that failed before any assistant message, with its failure', async () => {
+// A thread whose run failed before any assistant message.
+function refusedRun() {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'failed');
   addFailure(db, 'run-1', 'model not available');
-  await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
-    (error) => error instanceof Refused && error.message === 'model not available');
+  return db;
+}
+test('run refuses a run that failed before any assistant message, with its failure and thread', async () => {
+  await assert.rejects(running(refusedRun()),
+    (error) => error instanceof Refused && error.message === 'model not available (thread T)');
 });
-test('waitForResult fails a run that failed after an assistant message, with its failure', async () => {
+test('run archives a thread it was refused in', async () => {
+  const log: Log = [];
+  await assert.rejects(running(refusedRun(), [], { log }), Refused);
+  assert.deepEqual(sentTypes(log), ['launch', 'thread.archive']);
+});
+test('a refused run that cannot archive its thread is still refused, saying why', async () => {
+  await assert.rejects(running(refusedRun(), [], { statuses: [200, 401] }),
+    (error) => error instanceof Refused && /^model not available; could not archive it: .+ \(thread T\)$/.test(error.message));
+});
+test('run fails a run that failed after an assistant message, with its failure', async () => {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'failed');
   addMessage(db, 'a1', 'run-1', 'half a review', 0);
   addFailure(db, 'run-1', 'quota exceeded');
-  await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
-    (error) => error instanceof SessionFailed && !(error instanceof Refused) && error.message === 'quota exceeded');
+  await assert.rejects(running(db),
+    (error) => error instanceof SessionFailed && !(error instanceof Refused) && error.message === 'quota exceeded (thread T)');
 });
-test('waitForResult fails when the session stops to ask', async () => {
+test('run fails when the session stops to ask', async () => {
   for (const [status, pending] of [['waiting', false], ['running', true]] as const) {
     const db = database();
     addThread(db, 'T');
     addRun(db, 'T', 'run-1', 1, status);
     if (pending) addPendingRequest(db, 'T');
-    await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), /stopped to ask/);
+    await assert.rejects(running(db), (error) => error instanceof SessionFailed && error.message === 'the session stopped to ask (thread T)');
   }
 });
-test('waitForResult fails on an interrupted, cancelled or rolled back run', async () => {
+test('run fails on an interrupted, cancelled or rolled back run', async () => {
   for (const [status, reason] of [['interrupted', 'run interrupted'], ['cancelled', 'run cancelled'], ['rolled_back', 'run rolled back']]) {
     const db = database();
     addThread(db, 'T');
     addRun(db, 'T', 'run-1', 1, status);
-    await assert.rejects(waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }),
-      (error) => error instanceof SessionFailed && error.message === reason);
+    await assert.rejects(running(db),
+      (error) => error instanceof SessionFailed && error.message === `${reason} (thread T)`);
   }
 });
-test('waitForResult returns an empty final message as it is; the resolver rejects it', async () => {
+test('run times out naming the thread, when the run does not end in time', async () => {
+  const db = database();
+  addThread(db, 'T');
+  addRun(db, 'T', 'run-1', 1, 'running');
+  await assert.rejects(running(db, [], { timeoutMs: 0 }), (error) => error instanceof TimeoutError && error.message === 'no result after 0 ms (thread T)');
+});
+test('run returns a completed run with no message as an empty one; the resolver rejects it', async () => {
   const db = database();
   addThread(db, 'T');
   addRun(db, 'T', 'run-1', 1, 'completed');
-  assert.deepEqual(await waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), { text: '' });
+  assert.deepEqual(await running(db), { handle: HANDLE, text: '' });
+});
+test('run returns an empty final message as it is; the resolver rejects it', async () => {
+  const db = database();
+  addThread(db, 'T');
+  addRun(db, 'T', 'run-1', 1, 'completed');
   addMessage(db, 'a1', 'run-1', '', 0);
-  assert.deepEqual(await waitingAdapter(db, []).waitForResult(SESSION, { timeoutMs: 60000 }), { text: '' });
+  assert.deepEqual(await running(db), { handle: HANDLE, text: '' });
 });
 
 const ISSUE = ['auth', 'session', 'issue', '--base-dir', '/home/u/.t3', '--ttl', '30d', '--label', 'lets-delegate', '--token-only'];
@@ -478,9 +504,9 @@ test('finish is refused when t3 is not running', async () => {
   await assert.rejects(createAdapter(fakeIo({ env: {} })).finish(HANDLE, true, { cwd: '/r' }), (error) => error instanceof Refused && /not running/.test(error.message));
 });
 
-const runRequest: SpawnRequest = { kind: 'run', name: 'x-plan-review', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high', readOnly: true };
+const runInput: RunInput = { name: 'x-plan-review', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6.1-sol', effort: 'high' };
 
-test('spawn creates a plan-mode thread in the project for this repo, and the handle holds no token', async () => {
+test('run launches a plan-mode thread in the project for this repo, and the handle holds no token', async () => {
   const db = database();
   addProject(db, { root: '/r' });
   const log: Log = [];
@@ -492,7 +518,9 @@ test('spawn creates a plan-mode thread in the project for this repo, and the han
     fetch: fakeFetch([200], []),
     WebSocket: fakeWebSocket(LAUNCHED, log),
   });
-  const { handle } = await createAdapter(io).spawn(runRequest);
+  addRun(db, 'T', 'run-1', 1, 'completed');
+  addMessage(db, 'a1', 'run-1', 'FINDINGS', 0);
+  const { handle } = await createAdapter(io).run(runInput, { timeoutMs: 60000 });
   assert.deepEqual(io.calls.map(([cmd, args]) => [cmd, args]), [
     ['git', ['-C', '/r/sub', 'rev-parse', '--path-format=absolute', '--git-common-dir']],
     ['git', ['-C', '/r/sub', 'branch', '--show-current']],
@@ -510,7 +538,7 @@ test('spawn creates a plan-mode thread in the project for this repo, and the han
   assert.deepEqual(frame.payload.modelSelection, { instanceId: 'codex', model: 'gpt-6.1-sol', options: [{ id: 'reasoningEffort', value: 'high' }] });
 });
 
-test('spawn fails with the add hint when t3 does not know the repo', async () => {
+test('run fails with the add hint when t3 does not know the repo', async () => {
   const db = database();
   addProject(db, { title: 'other', root: '/o' });
   const io = fakeIo({
@@ -519,66 +547,92 @@ test('spawn fails with the add hint when t3 does not know the repo', async () =>
     results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }],
     openDb: () => shared(db),
   });
-  await assert.rejects(createAdapter(io).spawn({ ...runRequest, cwd: '/r' }), (error) => error instanceof Refused && /t3 project add \/r; known: other/.test(error.message));
+  await assert.rejects(createAdapter(io).run({ ...runInput, cwd: '/r' }, { timeoutMs: 60000 }), (error) => error instanceof Refused && /t3 project add \/r; known: other/.test(error.message));
 });
 
-test('spawn is refused when git fails in the repository', async () => {
+test('run is refused when git fails in the repository', async () => {
   const io = fakeIo({ env: {}, files: RUNNING, results: [{ stdout: '', stderr: 'fatal: not a git repository', code: 128 }] });
-  await assert.rejects(createAdapter(io).spawn(runRequest), (error) => error instanceof Refused && /not a git repository/.test(error.message));
+  await assert.rejects(createAdapter(io).run(runInput, { timeoutMs: 60000 }), (error) => error instanceof Refused && /not a git repository/.test(error.message));
 });
 
-test('spawn is refused when t3 is not running', async () => {
-  await assert.rejects(createAdapter(fakeIo({ env: {} })).spawn(runRequest), (error) => error instanceof Refused && /not running/.test(error.message));
+test('run is refused when t3 is not running', async () => {
+  await assert.rejects(createAdapter(fakeIo({ env: {} })).run(runInput, { timeoutMs: 60000 }), (error) => error instanceof Refused && /not running/.test(error.message));
 });
 
-// Spawn a session with a manifest that has defaults, and answer the model
-// selection t3 was sent. A run is at high effort unless told otherwise.
-async function spawnedSelection(request: Partial<SpawnRequest>, { projectDefault = null as string | null } = {}) {
-  const db = database();
+// An io inside a running T3 with a project for /r, whose state is db, and a
+// manifest that has defaults. t3 answers each request over the WebSocket
+// with LAUNCHED, which names thread T, and logs it.
+function launchingIo(db: DatabaseSync, log: Log, { projectDefault = null as string | null, sleep = async () => {}, statuses = [200, 200] } = {}) {
   addProject(db, { root: '/r', selection: projectDefault });
-  const log: Log = [];
   const manifest = { manifest: { currentModels: {}, providers: {
     codex: { defaults: null }, claudeAgent: { defaults: { chat: 'claude-fable-5-1' } }, antigravity: { defaults: { chat: 'gemini-3.8-flash-high' } },
   } } };
-  const io = fakeIo({
+  return fakeIo({
     env: {},
     files: { ...RUNNING, '/home/u/.t3/userdata/model-manifest.json': JSON.stringify(manifest) },
     results: [{ stdout: '/r/.git\n', stderr: '', code: 0 }, { stdout: 'main\n', stderr: '', code: 0 }],
     openDb: () => shared(db),
-    fetch: fakeFetch([200], []),
+    fetch: fakeFetch(statuses, []),
     WebSocket: fakeWebSocket(LAUNCHED, log),
+    sleep,
   });
-  await createAdapter(io).spawn({ ...runRequest, ...request });
-  return (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload.modelSelection;
 }
-const start = { kind: 'start', effort: null, readOnly: false } as const;
+const launched = (log: Log) => (log[1][1] as { payload: ReturnType<typeof buildLaunch> }).payload;
 
-test('a run with a null model spawns the manifest\'s default chat model for the provider', async () => {
-  assert.equal((await spawnedSelection({ family: 'claude', model: null })).model, 'claude-fable-5-1');
+// Run a session to its end, and answer the model selection t3 was sent. A
+// run is at high effort unless told otherwise.
+async function ranSelection(input: Partial<RunInput>) {
+  const db = database();
+  addRun(db, 'T', 'run-1', 1, 'completed');
+  addMessage(db, 'a1', 'run-1', 'FINDINGS', 0);
+  const log: Log = [];
+  await createAdapter(launchingIo(db, log)).run({ ...runInput, ...input }, { timeoutMs: 60000 });
+  return launched(log).modelSelection;
+}
+
+const startInput: StartInput = { name: 'fix-login', prompt: 'PROMPT', cwd: '/r/sub', family: 'gpt', model: 'gpt-6-luna' };
+
+// Start a session, and answer the model selection t3 was sent.
+async function startedSelection(input: Partial<StartInput>, options: { projectDefault?: string | null } = {}) {
+  const log: Log = [];
+  await createAdapter(launchingIo(database(), log, options)).start!({ ...startInput, ...input });
+  return launched(log).modelSelection;
+}
+
+test('start launches a default-mode thread, and returns its handle', async () => {
+  const log: Log = [];
+  const handle = await createAdapter(launchingIo(database(), log)).start!(startInput);
+  assert.deepEqual(handle, { kind: 'thread', id: 'T', origin: ORIGIN });
+  assert.equal(launched(log).interactionMode, 'default');
+  assert.equal(launched(log).title, 'fix-login');
 });
 
-test('a run with a null model spawns null when the provider has no default', async () => {
-  assert.equal((await spawnedSelection({ family: 'gpt', model: null })).model, null);
+test('a run with a null model launches the manifest\'s default chat model for the provider', async () => {
+  assert.equal((await ranSelection({ family: 'claude', model: null })).model, 'claude-fable-5-1');
 });
 
-test('a gemini run with a null model spawns the default at the review\'s effort', async () => {
-  assert.equal((await spawnedSelection({ family: 'gemini', model: null, effort: 'low' })).model, 'gemini-3.8-flash-low');
+test('a run with a null model launches null when the provider has no default', async () => {
+  assert.equal((await ranSelection({ family: 'gpt', model: null })).model, null);
+});
+
+test('a gemini run with a null model launches the default at the review\'s effort', async () => {
+  assert.equal((await ranSelection({ family: 'gemini', model: null, effort: 'low' })).model, 'gemini-3.8-flash-low');
 });
 
 test('a start runs the request\'s model, not the project default, with no effort option', async () => {
-  const selection = await spawnedSelection({ ...start, family: 'gpt', model: 'gpt-6-luna' },
+  const selection = await startedSelection({ family: 'gpt', model: 'gpt-6-luna' },
     { projectDefault: '{"instanceId":"claudeAgent","model":"claude-opus-5-5","options":[]}' });
   assert.deepEqual(selection, { instanceId: 'codex', model: 'gpt-6-luna', options: [] });
 });
 
 test('a gemini start adds medium effort to the model', async () => {
-  assert.equal((await spawnedSelection({ ...start, family: 'gemini', model: 'gemini-3.8-flash' })).model, 'gemini-3.8-flash-medium');
+  assert.equal((await startedSelection({ family: 'gemini', model: 'gemini-3.8-flash' })).model, 'gemini-3.8-flash-medium');
 });
 
 test('a start with a bare family runs the provider\'s default as the manifest names it', async () => {
-  assert.equal((await spawnedSelection({ ...start, family: 'gemini', model: null })).model, 'gemini-3.8-flash-high');
+  assert.equal((await startedSelection({ family: 'gemini', model: null })).model, 'gemini-3.8-flash-high');
 });
 
-test('a start with a bare family spawns null when the provider has no default', async () => {
-  assert.deepEqual(await spawnedSelection({ ...start, family: 'gpt', model: null }), { instanceId: 'codex', model: null, options: [] });
+test('a start with a bare family launches null when the provider has no default', async () => {
+  assert.deepEqual(await startedSelection({ family: 'gpt', model: null }), { instanceId: 'codex', model: null, options: [] });
 });

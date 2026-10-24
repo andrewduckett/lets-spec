@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { configPath, guidanceFor, parseConfig, readConfig } from '../../../lets/src/delegate/config.ts';
-import { UsageError } from '../../../lets/src/delegate/errors.ts';
+import { UsageError } from '../../../contrib/resolver-kit/src/errors.ts';
 import { fakeIo } from './fixtures/fake-io.ts';
 
 const HOME_CONFIG = '/home/u/.config/lets-delegate/config.yaml';

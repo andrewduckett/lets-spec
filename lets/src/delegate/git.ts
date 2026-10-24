@@ -2,7 +2,7 @@
 // .workspace/, where scratch files belong? Compare the tree before and
 // after, so the user's own uncommitted work does not count.
 import type { Io } from '../io.ts';
-import { SpawnError, UsageError } from './errors.ts';
+import { SpawnError, UsageError } from 'resolver-kit/errors.ts';
 
 // The root of the repo cwd is in.
 export async function repoRoot(cwd: string, io: Io): Promise<string> {
